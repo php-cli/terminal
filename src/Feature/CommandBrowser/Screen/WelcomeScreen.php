@@ -156,7 +156,6 @@ final class WelcomeScreen implements ScreenInterface
 
     public function handleInput(string $key): bool
     {
-        trap($key);
         // Modal has priority for input
         if ($this->activeModal !== null) {
             return $this->activeModal->handleInput($key);
@@ -183,6 +182,15 @@ final class WelcomeScreen implements ScreenInterface
             // Check if we have a selected command and a form
             if ($this->selectedCommand !== null && $this->commandForm !== null && $this->showingForm) {
                 $this->executeCurrentCommand();
+                // Switch focus to right panel to view output
+                $this->focusedPanelIndex = 1;
+                $this->commandList->setFocused(false);
+                if ($this->outputDisplay !== null) {
+                    $this->outputDisplay->setFocused(true);
+                }
+                if ($this->commandForm !== null) {
+                    $this->commandForm->setFocused(false);
+                }
             } elseif ($this->selectedCommand === null) {
                 // Show error modal if no command selected
                 $this->showErrorModal('No command selected. Please select a command from the list first.');
@@ -574,13 +582,6 @@ final class WelcomeScreen implements ScreenInterface
             $commandWithParams .= ' ' . implode(' ', $paramStr);
         }
 
-        $this->outputDisplay->setText(
-            "🚀 EXECUTING COMMAND\n" .
-            str_repeat('─', 50) . "\n" .
-            "$commandWithParams\n" .
-            str_repeat('─', 50) . "\n\n",
-        );
-
         $this->rightPanel->setTitle("Output: {$this->selectedCommand->name}");
         $this->rightPanel->setContent($this->outputDisplay);
 
@@ -600,13 +601,6 @@ final class WelcomeScreen implements ScreenInterface
 
             if ($result['exitCode'] === 0) {
                 $this->outputDisplay->appendText("✅ Success (exit code: 0)\n");
-
-                // Show success notification for non-list commands
-                if (!str_contains($this->selectedCommand->name, 'list')) {
-                    $this->showSuccessModal(
-                        "Command '{$this->selectedCommand->name}' executed successfully!",
-                    );
-                }
             } else {
                 $this->outputDisplay->appendText("❌ Failed (exit code: {$result['exitCode']})\n");
 

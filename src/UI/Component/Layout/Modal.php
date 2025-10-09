@@ -203,12 +203,11 @@ final class Modal extends AbstractComponent
         $modalX = $x + (int) (($width - $this->modalWidth) / 2);
         $modalY = $y + (int) (($height - $this->modalHeight) / 2);
 
-        // Draw semi-transparent overlay (darken background)
-        // Note: We can't do true transparency in terminal, so we use a dimmed background
+        // Draw subtle dimmed overlay (allows content to show through)
         $this->drawOverlay($renderer, $x, $y, $width, $height);
 
-        // Draw modal box with shadow effect
-        $this->drawShadow($renderer, $modalX + 1, $modalY + 1, $this->modalWidth, $this->modalHeight);
+        // Draw shadow on right and bottom edges for depth effect
+        $this->drawShadow($renderer, $modalX, $modalY, $this->modalWidth, $this->modalHeight);
 
         // Fill modal background
         $renderer->fillRect(
@@ -247,44 +246,44 @@ final class Modal extends AbstractComponent
     }
 
     /**
-     * Draw overlay to dim background
+     * Draw dark overlay to dim background
      */
     private function drawOverlay(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
-        // Fill screen with dim pattern
+        // Use dense pattern to darken background and make modal stand out
         for ($row = 0; $row < $height; $row++) {
             for ($col = 0; $col < $width; $col++) {
-                // Checkerboard pattern for visual "dimming" effect
-                $char = (($row + $col) % 2 === 0) ? '░' : ' ';
+                // Checkerboard pattern for darkening effect
+                $char = (($row + $col) % 2 === 0) ? '▓' : '▒';
                 $renderer->writeAt(
                     $x + $col,
                     $y + $row,
                     $char,
-                    ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY),
+                    ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_BLACK),
                 );
             }
         }
     }
 
     /**
-     * Draw shadow effect
+     * Draw shadow effect on right and bottom edges only
      */
     private function drawShadow(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $shadowColor = ColorScheme::combine(ColorScheme::BG_BLACK, ColorScheme::FG_BLACK);
 
-        // Bottom shadow
-        for ($i = 1; $i < $width; $i++) {
-            $renderer->writeAt($x + $i, $y + $height, '▀', $shadowColor);
+        // Bottom shadow (one line below modal)
+        for ($i = 1; $i <= $width; $i++) {
+            $renderer->writeAt($x + $i, $y + $height, '▄', $shadowColor);
         }
 
-        // Right shadow
+        // Right shadow (one column to the right of modal)
         for ($i = 1; $i < $height; $i++) {
-            $renderer->writeAt($x + $width, $y + $i, '▐', $shadowColor);
+            $renderer->writeAt($x + $width, $y + $i, '▌', $shadowColor);
         }
 
-        // Corner shadow
-        $renderer->writeAt($x + $width, $y + $height, '▀', $shadowColor);
+        // Bottom-right corner shadow
+        $renderer->writeAt($x + $width, $y + $height, '▄', $shadowColor);
     }
 
     /**
