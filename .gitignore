@@ -1,0 +1,10 @@
+.idea
+vendor
+protoc-gen-php-grpc*
+.env
+.php-cs-fixer.cache
+.phpunit.result.cache
+.php-cs-fixer.cache
+.phpunit.cache/
+.context
+mcp-*.log

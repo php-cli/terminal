@@ -1,0 +1,47 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Butschster\Commander\Application;
+use Butschster\Commander\Command\ExampleCommand;
+use Butschster\Commander\Screen\WelcomeScreen;
+use Butschster\Commander\Service\CommandDiscovery;
+use Butschster\Commander\Service\CommandExecutor;
+use Symfony\Component\Console\Application as SymfonyApplication;
+
+// Create Symfony Console Application
+$symfonyApp = new SymfonyApplication('My Console Application', '1.0.0');
+
+// Register example commands
+$symfonyApp->add(new ExampleCommand());
+
+// Add more commands here as needed
+// $symfonyApp->add(new AnotherCommand());
+
+// Create and run the MC-style application
+try {
+    $app = new Application($symfonyApp);
+    $app->setTargetFps(30);
+
+    // Create services
+    $commandDiscovery = new CommandDiscovery($symfonyApp);
+    $commandExecutor = new CommandExecutor($symfonyApp);
+
+    // Start with welcome screen
+    $welcomeScreen = new WelcomeScreen($commandDiscovery, $commandExecutor);
+
+    $app->run($welcomeScreen);
+} catch (\Throwable $e) {
+    // Restore terminal on error
+    echo "\033[?25h";  // Show cursor
+    echo "\033[?1049l"; // Exit alternate screen
+    echo "\033[0m";     // Reset colors
+
+    echo "Error: " . $e->getMessage() . "\n";
+    echo $e->getTraceAsString() . "\n";
+
+    exit(1);
+}

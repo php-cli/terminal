@@ -1,0 +1,17 @@
+{
+  "autoload": {
+    "psr-4": {
+      "Butschster\\Commander\\": "src/"
+    }
+  },
+  "require": {
+    "php": ">=8.3",
+    "symfony/console": "^7.3"
+  },
+  "require-dev": {
+    "spiral/code-style": "^2.2",
+    "phpunit/phpunit": "^10.5",
+    "rector/rector": "^2.1",
+    "vimeo/psalm": "^6.0"
+  }
+}
