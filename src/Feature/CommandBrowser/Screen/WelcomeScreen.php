@@ -12,6 +12,7 @@ use Butschster\Commander\UI\Component\Display\ListComponent;
 use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Input\FormComponent;
 use Butschster\Commander\UI\Component\Layout\MenuBar;
+use Butschster\Commander\UI\Component\Layout\Modal;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
@@ -42,6 +43,7 @@ final class WelcomeScreen implements ScreenInterface
     private bool $showingForm = true;
 
     private ?CommandMetadata $selectedCommand = null;
+    private ?Modal $activeModal = null;
 
     public function __construct(
         CommandDiscovery $commandDiscovery,
@@ -144,10 +146,22 @@ final class WelcomeScreen implements ScreenInterface
                 ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
             );
         }
+
+        // Render modal on top if active
+        if ($this->activeModal !== null) {
+            $this->activeModal->setFocused(true);
+            $this->activeModal->render($renderer, 0, 0, $width, $height);
+        }
     }
 
     public function handleInput(string $key): bool
     {
+        trap($key);
+        // Modal has priority for input
+        if ($this->activeModal !== null) {
+            return $this->activeModal->handleInput($key);
+        }
+
         // Don't handle input while executing
         if ($this->isExecuting) {
             return true;
@@ -158,14 +172,20 @@ final class WelcomeScreen implements ScreenInterface
             return false; // Let application handle quit
         }
 
+        // F1: Show help
+        if ($key === 'F1') {
+            $this->showHelpModal();
+            return true;
+        }
+
         // F2: Execute command (works from any panel)
         if ($key === 'F2') {
             // Check if we have a selected command and a form
             if ($this->selectedCommand !== null && $this->commandForm !== null && $this->showingForm) {
                 $this->executeCurrentCommand();
             } elseif ($this->selectedCommand === null) {
-                // Show error if no command selected
-                $this->showError('No command selected. Please select a command from the list.');
+                // Show error modal if no command selected
+                $this->showErrorModal('No command selected. Please select a command from the list first.');
             } elseif (!$this->showingForm) {
                 // If showing output, F2 switches back to form
                 $this->showCommandForm($this->selectedCommand->name);
@@ -206,19 +226,119 @@ final class WelcomeScreen implements ScreenInterface
     }
 
     /**
-     * Show error message in right panel
+     * Show success modal
+     */
+    private function showSuccessModal(string $message): void
+    {
+        $this->activeModal = Modal::info('Success', $message);
+        $this->activeModal->onClose(function () {
+            $this->activeModal = null;
+        });
+    }
+
+    /**
+     * Show help modal
+     */
+    private function showHelpModal(): void
+    {
+        $helpText = <<<HELP
+            Command Browser - Keyboard Shortcuts
+            
+            Navigation:
+              ↑/↓         Navigate through command list
+              Tab         Switch between panels
+              Enter       Select command and edit parameters
+              Escape      Go back to command list
+            
+            Execution:
+              F2          Execute selected command
+            
+            List Navigation:
+              Page Up     Scroll up one page
+              Page Down   Scroll down one page
+              Home        Jump to first command
+              End         Jump to last command
+            
+            Form Navigation:
+              ↑/↓         Navigate between fields
+              Tab         Move to next field
+              ←/→         Move cursor in text fields
+              Backspace   Delete character before cursor
+              Delete      Delete character at cursor
+            
+            Output View:
+              ↑/↓         Scroll output
+              Page Up/Down Scroll output by page
+              Home/End    Jump to start/end of output
+            
+            General:
+              F1          Show this help
+              F10         Exit application
+            HELP;
+
+        $this->activeModal = Modal::info('Help', $helpText);
+        $this->activeModal->setSize(70, 30);
+        $this->activeModal->onClose(function () {
+            $this->activeModal = null;
+        });
+    }
+
+    /**
+     * Show error message in a modal
+     */
+    private function showErrorModal(string $message): void
+    {
+        $this->activeModal = Modal::error('Error', $message);
+        $this->activeModal->onClose(function () {
+            $this->activeModal = null;
+        });
+    }
+
+    /**
+     * Show validation errors in a modal
+     */
+    private function showValidationErrorModal(array $errors): void
+    {
+        $message = "Please fix the following errors:\n\n";
+        foreach ($errors as $error) {
+            $message .= "• $error\n";
+        }
+
+        $this->activeModal = Modal::error('Validation Errors', $message);
+        $this->activeModal->onClose(function () {
+            $this->activeModal = null;
+        });
+    }
+
+    /**
+     * Show execution error in a modal
+     */
+    private function showExecutionErrorModal(string $message, ?\Throwable $exception = null): void
+    {
+        $fullMessage = $message;
+
+        if ($exception !== null) {
+            $fullMessage .= "\n\n" . get_class($exception) . ":\n" . $exception->getMessage();
+
+            if ($exception->getFile()) {
+                $fullMessage .= "\n\nFile: {$exception->getFile()}:{$exception->getLine()}";
+            }
+        }
+
+        $this->activeModal = Modal::error('Execution Error', $fullMessage);
+        $this->activeModal->setSize(80, 20); // Larger modal for exception details
+        $this->activeModal->onClose(function () {
+            $this->activeModal = null;
+        });
+    }
+
+    /**
+     * Show error message in right panel (legacy method - now uses modal)
+     * @deprecated Use showErrorModal() instead
      */
     private function showError(string $message): void
     {
-        $this->showingForm = false;
-        $this->outputDisplay = new TextDisplay();
-        $this->outputDisplay->setText(
-            "❌ ERROR\n" .
-            str_repeat('─', 50) . "\n\n" .
-            $message . "\n"
-        );
-        $this->rightPanel->setTitle('Error');
-        $this->rightPanel->setContent($this->outputDisplay);
+        $this->showErrorModal($message);
     }
 
     /**
@@ -342,12 +462,12 @@ final class WelcomeScreen implements ScreenInterface
     private function executeCurrentCommand(): void
     {
         if ($this->selectedCommand === null) {
-            $this->showError('No command selected.');
+            $this->showErrorModal('No command selected.');
             return;
         }
 
         if ($this->commandForm === null) {
-            $this->showError('Command form not initialized.');
+            $this->showErrorModal('Command form not initialized.');
             return;
         }
 
@@ -355,21 +475,79 @@ final class WelcomeScreen implements ScreenInterface
         $errors = $this->commandForm->validate();
 
         if (!empty($errors)) {
-            // Show errors
-            $errorText = "❌ VALIDATION ERRORS\n" . str_repeat('─', 50) . "\n\n";
-            foreach ($errors as $error) {
-                $errorText .= "• $error\n";
-            }
-            $errorText .= "\nPlease correct the errors and try again (F2).";
-
-            $this->outputDisplay = new TextDisplay($errorText);
-            $this->rightPanel->setTitle('Validation Errors');
-            $this->rightPanel->setContent($this->outputDisplay);
-            $this->showingForm = false;
-
+            // Show validation errors in modal
+            $this->showValidationErrorModal($errors);
             return;
         }
 
+        // Check if command is potentially dangerous and needs confirmation
+        if ($this->isDangerousCommand($this->selectedCommand->name)) {
+            $this->showConfirmationModal(
+                'Confirm Execution',
+                "You are about to execute '{$this->selectedCommand->name}'.\n\n" .
+                "This command may perform destructive operations.\n\n" .
+                "Are you sure you want to continue?",
+                function () {
+                    $this->performCommandExecution();
+                },
+            );
+            return;
+        }
+
+        // Execute directly if not dangerous
+        $this->performCommandExecution();
+    }
+
+    /**
+     * Check if command is potentially dangerous
+     */
+    private function isDangerousCommand(string $commandName): bool
+    {
+        $dangerousPatterns = [
+            'delete',
+            'remove',
+            'drop',
+            'truncate',
+            'clear',
+            'purge',
+            'destroy',
+            'cache:clear',
+            'migrate:reset',
+            'migrate:fresh',
+            'db:wipe',
+        ];
+
+        $lowerCommand = strtolower($commandName);
+
+        foreach ($dangerousPatterns as $pattern) {
+            if (str_contains($lowerCommand, $pattern)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Show confirmation modal
+     */
+    private function showConfirmationModal(string $title, string $message, callable $onConfirm): void
+    {
+        $this->activeModal = Modal::confirm($title, $message);
+        $this->activeModal->onClose(function ($confirmed) use ($onConfirm) {
+            $this->activeModal = null;
+
+            if ($confirmed) {
+                $onConfirm();
+            }
+        });
+    }
+
+    /**
+     * Perform the actual command execution
+     */
+    private function performCommandExecution(): void
+    {
         $this->isExecuting = true;
         $this->showingForm = false;
 
@@ -400,7 +578,7 @@ final class WelcomeScreen implements ScreenInterface
             "🚀 EXECUTING COMMAND\n" .
             str_repeat('─', 50) . "\n" .
             "$commandWithParams\n" .
-            str_repeat('─', 50) . "\n\n"
+            str_repeat('─', 50) . "\n\n",
         );
 
         $this->rightPanel->setTitle("Output: {$this->selectedCommand->name}");
@@ -422,11 +600,25 @@ final class WelcomeScreen implements ScreenInterface
 
             if ($result['exitCode'] === 0) {
                 $this->outputDisplay->appendText("✅ Success (exit code: 0)\n");
+
+                // Show success notification for non-list commands
+                if (!str_contains($this->selectedCommand->name, 'list')) {
+                    $this->showSuccessModal(
+                        "Command '{$this->selectedCommand->name}' executed successfully!",
+                    );
+                }
             } else {
                 $this->outputDisplay->appendText("❌ Failed (exit code: {$result['exitCode']})\n");
+
+                // Show error modal for failed commands
+                $errorMessage = "Command execution failed with exit code {$result['exitCode']}.";
+                if (!empty($result['error'])) {
+                    $errorMessage .= "\n\n" . $result['error'];
+                }
+                $this->showErrorModal($errorMessage);
             }
 
-            if (!empty($result['error'])) {
+            if (!empty($result['error']) && $result['exitCode'] === 0) {
                 $this->outputDisplay->appendText("Error: {$result['error']}\n");
             }
 
@@ -435,6 +627,9 @@ final class WelcomeScreen implements ScreenInterface
             $this->outputDisplay->appendText("\n❌ EXCEPTION\n" . str_repeat('─', 50) . "\n");
             $this->outputDisplay->appendText($e->getMessage() . "\n");
             $this->outputDisplay->appendText("\nPress F2 to run again, Tab to select another command.");
+
+            // Show exception modal
+            $this->showExecutionErrorModal('An exception occurred while executing the command.', $e);
         } finally {
             $this->isExecuting = false;
         }
