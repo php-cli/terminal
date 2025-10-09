@@ -26,10 +26,15 @@ final class KeyboardHandler
         "\033[D" => 'LEFT',
 
         // Function keys
-        "\033OP" => 'F1',
-        "\033OQ" => 'F2',
-        "\033OR" => 'F3',
-        "\033OS" => 'F4',
+        // F1-F4 can have different sequences depending on terminal
+        "\033OP" => 'F1',    // xterm
+        "\033[11~" => 'F1',  // linux console
+        "\033OQ" => 'F2',    // xterm
+        "\033[12~" => 'F2',  // linux console
+        "\033OR" => 'F3',    // xterm
+        "\033[13~" => 'F3',  // linux console
+        "\033OS" => 'F4',    // xterm
+        "\033[14~" => 'F4',  // linux console
         "\033[15~" => 'F5',
         "\033[17~" => 'F6',
         "\033[18~" => 'F7',
@@ -132,7 +137,7 @@ final class KeyboardHandler
     {
         $sequence = "\033";
         $maxLength = 10; // Max escape sequence length
-        $timeout = 10000; // 10ms timeout in microseconds
+        $timeout = 100000; // 100ms timeout in microseconds
 
         for ($i = 0; $i < $maxLength; $i++) {
             // Check if data is available
@@ -154,20 +159,56 @@ final class KeyboardHandler
 
             $sequence .= $char;
 
-            // Check if we have a complete known sequence
+            // Check if we have a complete known sequence after each character
             foreach (self::KEY_MAPPINGS as $knownSequence => $keyName) {
                 if ($sequence === $knownSequence) {
                     return $keyName;
                 }
             }
 
-            // If sequence ends with a letter or tilde, it's likely complete
-            if (ctype_alpha($char) || $char === '~') {
+            // Special handling for ESC O sequences (F1-F4 in xterm mode)
+            // ESC O needs one more character: ESC O P, ESC O Q, etc.
+            if (strlen($sequence) === 2 && $char === 'O') {
+                // Continue reading one more character
+                continue;
+            }
+
+            // For ESC [ sequences, continue until we hit a letter or ~
+            if (strlen($sequence) >= 2 && $sequence[1] === '[') {
+                // Continue if we have digits or semicolons (CSI parameters)
+                if (ctype_digit($char) || $char === ';') {
+                    continue;
+                }
+                // Stop if we hit ~ or a letter (end of CSI sequence)
+                if ($char === '~' || ctype_alpha($char)) {
+                    break;
+                }
+            }
+
+            // For ESC O sequences, after getting O, read one more letter and stop
+            if (strlen($sequence) === 3 && $sequence[1] === 'O' && ctype_alpha($char)) {
+                break;
+            }
+
+            // If we have ESC followed by a single letter (not O or [), we're done
+            if (strlen($sequence) === 2 && ctype_alpha($char) && $char !== 'O' && $char !== '[') {
                 break;
             }
         }
 
-        // Return ESCAPE if no match found
+        // Final check for known sequences
+        foreach (self::KEY_MAPPINGS as $knownSequence => $keyName) {
+            if ($sequence === $knownSequence) {
+                return $keyName;
+            }
+        }
+
+        // If we got ESC + characters but no match, return for debugging
+        if (strlen($sequence) > 1) {
+            return 'UNKNOWN_' . bin2hex(substr($sequence, 1));
+        }
+
+        // Return ESCAPE if just ESC key
         return 'ESCAPE';
     }
 
