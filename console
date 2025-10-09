@@ -6,10 +6,10 @@ declare(strict_types=1);
 require __DIR__ . '/vendor/autoload.php';
 
 use Butschster\Commander\Application;
-use Butschster\Commander\Command\ExampleCommand;
-use Butschster\Commander\Screen\WelcomeScreen;
-use Butschster\Commander\Service\CommandDiscovery;
-use Butschster\Commander\Service\CommandExecutor;
+use Butschster\Commander\Feature\CommandBrowser\Screen\WelcomeScreen;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
+use Butschster\Commander\Feature\Example\Command\ExampleCommand;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
 // Create Symfony Console Application

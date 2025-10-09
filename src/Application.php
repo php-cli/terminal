@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Butschster\Commander;
 
-use Butschster\Commander\Screen\ScreenInterface;
-use Butschster\Commander\Service\KeyboardHandler;
-use Butschster\Commander\Service\Renderer;
-use Butschster\Commander\Service\ScreenManager;
-use Butschster\Commander\Service\TerminalManager;
+use Butschster\Commander\Infrastructure\Terminal\KeyboardHandler;
+use Butschster\Commander\Infrastructure\Terminal\Renderer;
+use Butschster\Commander\Infrastructure\Terminal\TerminalManager;
+use Butschster\Commander\UI\Screen\ScreenInterface;
+use Butschster\Commander\UI\Screen\ScreenManager;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
 /**
@@ -154,7 +154,7 @@ final class Application
                 if ($this->screenManager->getDepth() > 1) {
                     $this->screenManager->popScreen();
                 } else {
-                    $this->stop();
+                    // $this->stop();
                 }
             }
         }
