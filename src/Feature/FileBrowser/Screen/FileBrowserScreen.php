@@ -225,7 +225,7 @@ final class FileBrowserScreen implements ScreenInterface
         $this->leftPanel = new Panel($this->getCurrentPathDisplay(), $this->fileList);
         $this->leftPanel->setFocused(true);
 
-        // Right panel (file preview)
+        // Right panel (file preview) - padding is now handled internally by the component
         $this->rightPanel = new Panel('Preview', $this->filePreview);
         $this->rightPanel->setFocused(false);
 

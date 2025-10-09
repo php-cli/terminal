@@ -7,23 +7,24 @@ namespace Butschster\Commander\Feature\FileBrowser\Component;
 use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
+use Butschster\Commander\UI\Component\ComponentInterface;
+use Butschster\Commander\UI\Component\Decorator\Padding;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
- * File preview component showing file contents or metadata
+ * File preview component - orchestrates display of file/directory info or content
+ * 
+ * Uses composition:
+ * - TextInfoComponent for file/directory metadata (with padding)
+ * - FileContentViewer for file contents (without padding - needs full width for line numbers)
  */
 final class FilePreviewComponent extends AbstractComponent
 {
-    /** @var array<string> */
-    private array $lines = [];
-
-    private int $scrollOffset = 0;
-    private int $visibleLines = 0;
     private ?string $currentPath = null;
     private ?array $metadata = null;
-
-    /** Flag to indicate if we're showing full file contents or just metadata */
-    private bool $showingFullContents = false;
+    
+    private ?ComponentInterface $currentContent = null;
+    private bool $showingFileContent = false;
 
     public function __construct(
         private readonly FileSystemService $fileSystem,
@@ -35,13 +36,11 @@ final class FilePreviewComponent extends AbstractComponent
     public function setFile(?string $path): void
     {
         $this->currentPath = $path;
-        $this->scrollOffset = 0;
-        $this->showingFullContents = true; // We're showing full contents
+        $this->showingFileContent = true;
 
         if ($path === null) {
-            $this->lines = [];
+            $this->currentContent = null;
             $this->metadata = null;
-            $this->showingFullContents = false;
             return;
         }
 
@@ -49,15 +48,25 @@ final class FilePreviewComponent extends AbstractComponent
         $this->metadata = $this->fileSystem->getFileMetadata($path);
 
         // If it's a directory, show directory info
-        if (\is_dir($path)) {
-            $this->lines = $this->getDirectoryInfo($path);
-            $this->showingFullContents = false; // Directory info is not file contents
+        if (is_dir($path)) {
+            $this->showDirectoryInfo($path);
             return;
         }
 
         // If it's a file, show contents
         $contents = $this->fileSystem->readFileContents($path, 1000);
-        $this->lines = \explode("\n", $contents);
+        
+        $viewer = new FileContentViewer();
+        $viewer->setContent($contents);
+        $viewer->setFocused($this->isFocused());
+        
+        // Remove old content
+        if ($this->currentContent !== null) {
+            $this->removeChild($this->currentContent);
+        }
+        
+        $this->currentContent = $viewer;
+        $this->addChild($viewer);
     }
 
     /**
@@ -66,11 +75,10 @@ final class FilePreviewComponent extends AbstractComponent
     public function setFileInfo(?string $path): void
     {
         $this->currentPath = $path;
-        $this->scrollOffset = 0;
-        $this->showingFullContents = false; // We're showing only metadata
+        $this->showingFileContent = false;
 
         if ($path === null) {
-            $this->lines = [];
+            $this->currentContent = null;
             $this->metadata = null;
             return;
         }
@@ -79,135 +87,68 @@ final class FilePreviewComponent extends AbstractComponent
         $this->metadata = $this->fileSystem->getFileMetadata($path);
 
         // If it's a directory, show directory info
-        if (\is_dir($path)) {
-            $this->lines = $this->getDirectoryInfo($path);
+        if (is_dir($path)) {
+            $this->showDirectoryInfo($path);
             return;
         }
 
         // For files, show metadata only
-        $this->lines = $this->getFileInfo($path);
-    }
-
-    public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
-    {
-        $this->setBounds($x, $y, $width, $height);
-        $this->visibleLines = $height - 3; // Reserve lines for header and metadata
-
-        // Render header
-        $this->renderHeader($renderer, $x, $y, $width);
-
-        if ($this->currentPath === null) {
-            $this->renderEmptyState($renderer, $x, $y + 3, $width, $height - 3);
-            return;
-        }
-
-        // Render metadata bar
-        $this->renderMetadata($renderer, $x, $y + 1, $width);
-
-        // Render separator
-        $separator = \str_repeat('─', $width);
-        $renderer->writeAt($x, $y + 2, $separator, ColorScheme::INACTIVE_BORDER);
-
-        // Render content
-        $this->renderContent($renderer, $x, $y + 3, $width, $height - 3);
-    }
-
-    #[\Override]
-    public function handleInput(string $key): bool
-    {
-        if (!$this->isFocused() || empty($this->lines)) {
-            return false;
-        }
-
-        switch ($key) {
-            case 'UP':
-                if ($this->scrollOffset > 0) {
-                    $this->scrollOffset--;
-                }
-                return true;
-
-            case 'DOWN':
-                if ($this->scrollOffset < \count($this->lines) - $this->visibleLines) {
-                    $this->scrollOffset++;
-                }
-                return true;
-
-            case 'PAGE_UP':
-                $this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines);
-                return true;
-
-            case 'PAGE_DOWN':
-                $this->scrollOffset = \min(
-                    \max(0, \count($this->lines) - $this->visibleLines),
-                    $this->scrollOffset + $this->visibleLines,
-                );
-                return true;
-
-            case 'HOME':
-                $this->scrollOffset = 0;
-                return true;
-
-            case 'END':
-                $this->scrollOffset = \max(0, \count($this->lines) - $this->visibleLines);
-                return true;
-        }
-
-        return false;
-    }
-
-    #[\Override]
-    public function getMinSize(): array
-    {
-        return ['width' => 40, 'height' => 10];
+        $this->showFileInfo($path);
     }
 
     /**
-     * Get file information (metadata only, no contents)
-     *
-     * @return array<string>
+     * Show file information (metadata)
      */
-    private function getFileInfo(string $path): array
+    private function showFileInfo(string $path): void
     {
         $lines = [
+            'File Information',
+            '================',
             '',
-            '  File Information',
-            '  ================',
-            '',
-            "  Name: " . \basename($path),
-            "  Path: " . \dirname($path),
+            "Name: " . basename($path),
+            "Path: " . dirname($path),
             '',
         ];
 
         if ($this->metadata !== null) {
-            $lines[] = '  Details:';
-            $lines[] = "    Type: {$this->metadata['type']}";
-            $lines[] = "    Size: " . $this->fileSystem->formatSize($this->metadata['size']);
-            $lines[] = "    Permissions: {$this->metadata['permissions']}";
-            $lines[] = "    Owner: {$this->metadata['owner']}";
-            $lines[] = "    Group: {$this->metadata['group']}";
-            $lines[] = "    Modified: " . $this->fileSystem->formatDate($this->metadata['modified']);
+            $lines[] = 'Details:';
+            $lines[] = "  Type: {$this->metadata['type']}";
+            $lines[] = "  Size: " . $this->fileSystem->formatSize($this->metadata['size']);
+            $lines[] = "  Permissions: {$this->metadata['permissions']}";
+            $lines[] = "  Owner: {$this->metadata['owner']}";
+            $lines[] = "  Group: {$this->metadata['group']}";
+            $lines[] = "  Modified: " . $this->fileSystem->formatDate($this->metadata['modified']);
 
             if ($this->metadata['lines'] > 0) {
-                $lines[] = "    Lines: {$this->metadata['lines']}";
+                $lines[] = "  Lines: {$this->metadata['lines']}";
             }
 
             $lines[] = '';
             $lines[] = '';
-            $lines[] = '  ─────────────────────────────────────────';
+            $lines[] = '─────────────────────────────────────────';
             $lines[] = '';
-            $lines[] = '    Press [F4] to view file contents';
+            $lines[] = 'Press [F4] to view file contents';
             $lines[] = '';
         }
 
-        return $lines;
+        $infoComponent = new TextInfoComponent($lines);
+        
+        // Add padding around info
+        $paddedInfo = Padding::symmetric($infoComponent, horizontal: 2, vertical: 1);
+        
+        // Remove old content
+        if ($this->currentContent !== null) {
+            $this->removeChild($this->currentContent);
+        }
+        
+        $this->currentContent = $paddedInfo;
+        $this->addChild($paddedInfo);
     }
 
     /**
-     * Get directory information
-     *
-     * @return array<string>
+     * Show directory information
      */
-    private function getDirectoryInfo(string $path): array
+    private function showDirectoryInfo(string $path): void
     {
         $items = $this->fileSystem->listDirectory($path, true);
 
@@ -229,28 +170,66 @@ final class FilePreviewComponent extends AbstractComponent
         }
 
         $lines = [
+            'Directory Information',
+            '====================',
             '',
-            '  Directory Information',
-            '  ====================',
+            "Path: {$path}",
             '',
-            "  Path: {$path}",
-            '',
-            '  Contents:',
-            "    Directories: {$dirCount}",
-            "    Files: {$fileCount}",
-            "    Total size: " . $this->fileSystem->formatSize($totalSize),
+            'Contents:',
+            "  Directories: {$dirCount}",
+            "  Files: {$fileCount}",
+            "  Total size: " . $this->fileSystem->formatSize($totalSize),
             '',
         ];
 
         if ($this->metadata !== null) {
-            $lines[] = '  Metadata:';
-            $lines[] = "    Permissions: {$this->metadata['permissions']}";
-            $lines[] = "    Owner: {$this->metadata['owner']}";
-            $lines[] = "    Group: {$this->metadata['group']}";
-            $lines[] = "    Modified: " . $this->fileSystem->formatDate($this->metadata['modified']);
+            $lines[] = 'Metadata:';
+            $lines[] = "  Permissions: {$this->metadata['permissions']}";
+            $lines[] = "  Owner: {$this->metadata['owner']}";
+            $lines[] = "  Group: {$this->metadata['group']}";
+            $lines[] = "  Modified: " . $this->fileSystem->formatDate($this->metadata['modified']);
         }
 
-        return $lines;
+        $infoComponent = new TextInfoComponent($lines);
+        
+        // Add padding around info
+        $paddedInfo = Padding::symmetric($infoComponent, horizontal: 2, vertical: 1);
+        
+        // Remove old content
+        if ($this->currentContent !== null) {
+            $this->removeChild($this->currentContent);
+        }
+        
+        $this->currentContent = $paddedInfo;
+        $this->addChild($paddedInfo);
+    }
+
+    public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
+    {
+        $this->setBounds($x, $y, $width, $height);
+
+        // Render header
+        $this->renderHeader($renderer, $x, $y, $width);
+
+        if ($this->currentPath === null) {
+            $this->renderEmptyState($renderer, $x, $y + 3, $width, $height - 3);
+            return;
+        }
+
+        // Render metadata bar
+        $this->renderMetadata($renderer, $x, $y + 1, $width);
+
+        // Render separator
+        $separator = str_repeat('─', $width);
+        $renderer->writeAt($x, $y + 2, $separator, ColorScheme::INACTIVE_BORDER);
+
+        // Render current content (info or file viewer)
+        if ($this->currentContent !== null) {
+            $contentY = $y + 3;
+            $contentHeight = $height - 3;
+            
+            $this->currentContent->render($renderer, $x, $contentY, $width, $contentHeight);
+        }
     }
 
     /**
@@ -258,13 +237,13 @@ final class FilePreviewComponent extends AbstractComponent
      */
     private function renderHeader(Renderer $renderer, int $x, int $y, int $width): void
     {
-        $title = $this->currentPath !== null ? \basename($this->currentPath) : 'File Preview';
-        $headerText = ' ' . \mb_substr($title, 0, $width - 2) . ' ';
+        $title = $this->currentPath !== null ? basename($this->currentPath) : 'File Preview';
+        $headerText = ' ' . mb_substr($title, 0, $width - 2) . ' ';
 
         $renderer->writeAt(
             $x,
             $y,
-            \str_pad($headerText, $width),
+            str_pad($headerText, $width),
             ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
         );
     }
@@ -278,7 +257,7 @@ final class FilePreviewComponent extends AbstractComponent
             return;
         }
 
-        $metaText = \sprintf(
+        $metaText = sprintf(
             '%s | %s | %s',
             $this->metadata['type'],
             $this->fileSystem->formatSize($this->metadata['size']),
@@ -289,12 +268,12 @@ final class FilePreviewComponent extends AbstractComponent
             $metaText .= " | {$this->metadata['lines']} lines";
         }
 
-        $metaText = ' ' . \mb_substr($metaText, 0, $width - 2) . ' ';
+        $metaText = ' ' . mb_substr($metaText, 0, $width - 2) . ' ';
 
         $renderer->writeAt(
             $x,
             $y,
-            \str_pad($metaText, $width),
+            str_pad($metaText, $width),
             ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY),
         );
     }
@@ -305,99 +284,34 @@ final class FilePreviewComponent extends AbstractComponent
     private function renderEmptyState(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $emptyText = 'Select a file to preview';
-        $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
+        $emptyX = $x + (int) (($width - mb_strlen($emptyText)) / 2);
         $emptyY = $y + (int) ($height / 2);
 
         $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::NORMAL_TEXT);
     }
 
-    /**
-     * Render file contents
-     */
-    private function renderContent(Renderer $renderer, int $x, int $y, int $width, int $height): void
+    public function handleInput(string $key): bool
     {
-        if (empty($this->lines)) {
-            return;
+        // Delegate to current content if it exists
+        if ($this->currentContent !== null && $this->currentContent->isFocused()) {
+            return $this->currentContent->handleInput($key);
         }
 
-        $endIndex = \min(
-            $this->scrollOffset + $height,
-            \count($this->lines),
-        );
+        return false;
+    }
 
-        // Render lines
-        for ($i = $this->scrollOffset; $i < $endIndex; $i++) {
-            $rowY = $y + ($i - $this->scrollOffset);
-            $line = $this->lines[$i];
+    public function setFocused(bool $focused): void
+    {
+        parent::setFocused($focused);
 
-            // Add line numbers ONLY when viewing actual file contents
-            $lineNumber = '';
-            if ($this->showingFullContents) {
-                // Line numbers with right padding: "   1 │ "
-                $lineNumber = ' ' . \str_pad((string) ($i + 1), 4, ' ', STR_PAD_LEFT) . ' │ ';
-            }
-
-            // Combine line number and content
-            $displayText = $lineNumber . $line;
-
-            // Truncate or pad line to fit width
-            $displayText = \mb_substr($displayText, 0, $width);
-            $displayText = \str_pad($displayText, $width);
-
-            // Syntax highlighting based on file type
-            $color = $this->getLineColor($line);
-
-            $renderer->writeAt($x, $rowY, $displayText, $color);
-        }
-
-        // Draw scrollbar if needed
-        if (\count($this->lines) > $height) {
-            $this->drawScrollbar($renderer, $x + $width - 1, $y, $height);
-        }
-
-        // Show scroll position indicator
-        if (\count($this->lines) > $height) {
-            $position = \sprintf(
-                '%d-%d/%d',
-                $this->scrollOffset + 1,
-                \min($this->scrollOffset + $height, \count($this->lines)),
-                \count($this->lines),
-            );
-            $renderer->writeAt(
-                $x + $width - \mb_strlen($position) - 1,
-                $y + $height - 1,
-                $position,
-                ColorScheme::combine(ColorScheme::BG_CYAN, ColorScheme::FG_BLACK),
-            );
+        // Propagate focus to current content
+        if ($this->currentContent !== null) {
+            $this->currentContent->setFocused($focused);
         }
     }
 
-    /**
-     * Get color for a line (no syntax highlighting)
-     */
-    private function getLineColor(string $line): string
+    public function getMinSize(): array
     {
-        return ColorScheme::NORMAL_TEXT;
-    }
-
-    /**
-     * Draw scrollbar indicator
-     */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
-    {
-        $totalLines = \count($this->lines);
-
-        if ($totalLines <= $this->visibleLines) {
-            return;
-        }
-
-        // Calculate thumb size and position
-        $thumbHeight = \max(1, (int) ($height * $this->visibleLines / $totalLines));
-        $thumbPosition = (int) ($height * $this->scrollOffset / $totalLines);
-
-        for ($i = 0; $i < $height; $i++) {
-            $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::SCROLLBAR);
-        }
+        return ['width' => 40, 'height' => 10];
     }
 }
