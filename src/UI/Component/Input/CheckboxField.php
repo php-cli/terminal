@@ -24,13 +24,13 @@ final class CheckboxField extends FormField
     public function render(Renderer $renderer, int $x, int $y, int $width, bool $focused): int
     {
         $currentY = $y;
-        
+
         $checkbox = $this->value ? '[X]' : '[ ]';
-        
+
         $color = $focused
             ? ColorScheme::SELECTED_TEXT
             : ColorScheme::NORMAL_TEXT;
-        
+
         // Render description first (if present)
         if ($this->description !== '') {
             $descText = $checkbox . ' ' . $this->description;
@@ -38,17 +38,17 @@ final class CheckboxField extends FormField
                 $x,
                 $currentY,
                 mb_substr($descText, 0, $width),
-                $color
+                $color,
             );
             $currentY++;
-            
+
             // Render field name (muted) with indent
             $nameText = '    ' . $this->label; // 4 spaces indent
             $renderer->writeAt(
                 $x,
                 $currentY,
                 mb_substr($nameText, 0, $width),
-                ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY)
+                ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY),
             );
             $currentY++;
         } else {

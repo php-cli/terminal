@@ -160,17 +160,4 @@ final class TerminalManager
         $this->exitAlternateScreen();
         $this->disableRawMode();
     }
-
-    /**
-     * Check if terminal supports colors
-     */
-    public function supportsColors(): bool
-    {
-        $term = getenv('TERM');
-        return $term && (
-                strpos($term, 'color') !== false ||
-                strpos($term, '256color') !== false ||
-                strpos($term, 'xterm') !== false
-            );
-    }
 }

@@ -15,10 +15,10 @@ final class TextDisplay extends AbstractComponent
 {
     /** @var array<string> */
     private array $lines = [];
-    
+
     private int $scrollOffset = 0;
     private int $visibleLines = 0;
-    
+
     private bool $autoScroll = true;
 
     /**
@@ -37,7 +37,7 @@ final class TextDisplay extends AbstractComponent
     public function setText(string $text): void
     {
         $this->lines = explode("\n", $text);
-        
+
         // Auto-scroll to bottom if enabled
         if ($this->autoScroll) {
             $this->scrollToBottom();
@@ -50,14 +50,14 @@ final class TextDisplay extends AbstractComponent
     public function appendText(string $text): void
     {
         $newLines = explode("\n", $text);
-        
+
         if (!empty($this->lines) && !empty($newLines)) {
             // Append first new line to last existing line
             $this->lines[count($this->lines) - 1] .= array_shift($newLines);
         }
-        
+
         $this->lines = array_merge($this->lines, $newLines);
-        
+
         // Auto-scroll to bottom if enabled
         if ($this->autoScroll) {
             $this->scrollToBottom();
@@ -103,7 +103,7 @@ final class TextDisplay extends AbstractComponent
         // Calculate visible range
         $endIndex = min(
             $this->scrollOffset + $this->visibleLines,
-            count($this->lines)
+            count($this->lines),
         );
 
         // Render lines
@@ -113,7 +113,7 @@ final class TextDisplay extends AbstractComponent
 
             // Word wrap if line is too long
             $wrappedLines = $this->wrapLine($line, $width);
-            
+
             foreach ($wrappedLines as $wrappedLine) {
                 if ($rowY >= $y + $height) {
                     break;
@@ -123,9 +123,9 @@ final class TextDisplay extends AbstractComponent
                     $x,
                     $rowY,
                     $wrappedLine,
-                    ColorScheme::NORMAL_TEXT
+                    ColorScheme::NORMAL_TEXT,
                 );
-                
+
                 $rowY++;
             }
         }
@@ -187,7 +187,7 @@ final class TextDisplay extends AbstractComponent
             case 'PAGE_DOWN':
                 $this->scrollOffset = min(
                     count($this->lines) - $this->visibleLines,
-                    $this->scrollOffset + $this->visibleLines
+                    $this->scrollOffset + $this->visibleLines,
                 );
                 return true;
 
@@ -211,14 +211,14 @@ final class TextDisplay extends AbstractComponent
     private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
     {
         $totalLines = count($this->lines);
-        
+
         if ($totalLines <= $this->visibleLines) {
             return;
         }
 
         // Calculate thumb size and position
-        $thumbHeight = max(1, (int)($height * $this->visibleLines / $totalLines));
-        $thumbPosition = (int)($height * $this->scrollOffset / $totalLines);
+        $thumbHeight = max(1, (int) ($height * $this->visibleLines / $totalLines));
+        $thumbPosition = (int) ($height * $this->scrollOffset / $totalLines);
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';

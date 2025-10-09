@@ -32,7 +32,6 @@ final class Renderer
 
     /** Performance metrics */
     private int $cellsUpdated = 0;
-    private int $totalCells = 0;
 
     public function __construct(
         private readonly TerminalManager $terminal,
@@ -243,21 +242,5 @@ final class Renderer
             $this->initBuffers();
             $this->terminal->clearScreen();
         }
-    }
-
-    /**
-     * Get rendering statistics
-     *
-     * @return array{cellsUpdated: int, totalCells: int, updatePercentage: float}
-     */
-    public function getStats(): array
-    {
-        return [
-            'cellsUpdated' => $this->cellsUpdated,
-            'totalCells' => $this->totalCells,
-            'updatePercentage' => $this->totalCells > 0
-                ? ($this->cellsUpdated / $this->totalCells) * 100
-                : 0,
-        ];
     }
 }

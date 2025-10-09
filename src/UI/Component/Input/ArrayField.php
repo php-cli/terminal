@@ -16,10 +16,10 @@ final class ArrayField extends TextField
         string $description = '',
     ) {
         // Append "(comma-separated)" to description instead of label
-        $fullDescription = $description !== '' 
+        $fullDescription = $description !== ''
             ? $description . ' (comma-separated)'
             : 'Comma-separated values';
-            
+
         parent::__construct($name, $label, $required, '', $fullDescription);
     }
 
@@ -31,6 +31,6 @@ final class ArrayField extends TextField
             return [];
         }
 
-        return array_map('trim', explode(',', $valueStr));
+        return array_map(trim(...), explode(',', $valueStr));
     }
 }

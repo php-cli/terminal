@@ -18,7 +18,7 @@ final class KeyboardHandler
     private bool $nonBlockingEnabled = false;
 
     /** Key code mappings */
-    private const KEY_MAPPINGS = [
+    private const array KEY_MAPPINGS = [
         // Arrow keys
         "\033[A" => 'UP',
         "\033[B" => 'DOWN',
