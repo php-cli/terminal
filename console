@@ -9,18 +9,13 @@ use Butschster\Commander\Application;
 use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
-use Butschster\Commander\Feature\Example\Command\ExampleCommand;
 use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
 use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
 use Butschster\Commander\UI\Component\Layout\MenuBar;
-use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
 // Create Symfony Console Application
 $symfonyApp = new SymfonyApplication('My Console Application', '1.0.0');
-
-// Register example commands
-$symfonyApp->add(new ExampleCommand());
 
 // Add more commands here as needed
 // $symfonyApp->add(new AnotherCommand());
