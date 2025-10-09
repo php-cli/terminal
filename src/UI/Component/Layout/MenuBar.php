@@ -45,13 +45,17 @@ final class MenuBar extends AbstractComponent
                 break;
             }
 
+            // Ensure key and label are strings
+            $keyStr = (string) $key;
+            $labelStr = (string) $label;
+
             // Render key (highlighted)
-            $renderer->writeAt($currentX, $y, $key, ColorScheme::MENU_HOTKEY);
-            $currentX += mb_strlen($key);
+            $renderer->writeAt($currentX, $y, $keyStr, ColorScheme::MENU_HOTKEY);
+            $currentX += mb_strlen($keyStr);
 
             // Render label
-            $renderer->writeAt($currentX, $y, $label, ColorScheme::MENU_TEXT);
-            $currentX += mb_strlen($label) + 2; // Add spacing
+            $renderer->writeAt($currentX, $y, $labelStr, ColorScheme::MENU_TEXT);
+            $currentX += mb_strlen($labelStr) + 2; // Add spacing
         }
     }
 

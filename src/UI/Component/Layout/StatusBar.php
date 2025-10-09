@@ -39,23 +39,29 @@ final class StatusBar extends AbstractComponent
         $renderer->fillRect($x, $y, $width, 1, ' ', ColorScheme::STATUS_TEXT);
 
         // Render hints
-        $currentX = $x;
-        $spacing = 1;
+        $currentX = $x + 1; // Add left padding
+        $itemSpacing = 2; // Space between items
 
         foreach ($this->hints as $key => $description) {
-            $itemWidth = mb_strlen($key) + mb_strlen($description) + $spacing;
+            // Ensure key and description are strings
+            $keyStr = (string) $key;
+            $descStr = (string) $description;
+            
+            // Calculate item width: "F1" + "Help" + space
+            $itemWidth = mb_strlen($keyStr) + mb_strlen($descStr) + 1; // 1 for space between key and description
 
-            if ($currentX + $itemWidth >= $x + $width) {
+            // Check if we have room for this item
+            if ($currentX + $itemWidth >= $x + $width - 1) {
                 break;
             }
 
-            // Render key number/name (bold)
-            $renderer->writeAt($currentX, $y, $key, ColorScheme::STATUS_KEY);
-            $currentX += mb_strlen($key);
+            // Render key number/name (bold white)
+            $renderer->writeAt($currentX, $y, $keyStr, ColorScheme::STATUS_KEY);
+            $currentX += mb_strlen($keyStr);
 
-            // Render description
-            $renderer->writeAt($currentX, $y, $description, ColorScheme::STATUS_TEXT);
-            $currentX += mb_strlen($description) + $spacing;
+            // Render description (black text on cyan)
+            $renderer->writeAt($currentX, $y, $descStr, ColorScheme::STATUS_TEXT);
+            $currentX += mb_strlen($descStr) + $itemSpacing;
         }
     }
 

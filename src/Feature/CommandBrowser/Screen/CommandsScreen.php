@@ -11,7 +11,6 @@ use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Display\ListComponent;
 use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Input\FormComponent;
-use Butschster\Commander\UI\Component\Layout\MenuBar;
 use Butschster\Commander\UI\Component\Layout\Modal;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
@@ -23,9 +22,8 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  * Left: List of available Symfony Console commands
  * Right: Command form or output when executed
  */
-final class WelcomeScreen implements ScreenInterface
+final class CommandsScreen implements ScreenInterface
 {
-    private MenuBar $menuBar;
     private StatusBar $statusBar;
 
     private Panel $leftPanel;
@@ -57,21 +55,9 @@ final class WelcomeScreen implements ScreenInterface
 
     private function initializeComponents(): void
     {
-        // Top menu
-        $this->menuBar = new MenuBar([
-            'F1' => 'Help',
-            'F2' => 'Exec',
-            'F10' => 'Quit',
-        ]);
-
-        // Bottom status bar
-        $this->statusBar = new StatusBar([
-            'F1' => 'Help',
-            'F2' => 'Execute',
-            'Tab' => 'Switch',
-            'Esc' => 'Back',
-            'F10' => 'Quit',
-        ]);
+        // Bottom status bar - will be updated dynamically based on context
+        $this->statusBar = new StatusBar([]);
+        $this->updateStatusBar();
 
         // Left panel - Command list
         $commands = $this->commandDiscovery->getAllCommands();
@@ -94,6 +80,7 @@ final class WelcomeScreen implements ScreenInterface
             if ($this->commandForm !== null) {
                 $this->commandForm->setFocused(true);
             }
+            $this->updateStatusBar();
         });
 
         $this->leftPanel = new Panel('Commands (' . count($commands) . ')', $this->commandList);
@@ -108,21 +95,56 @@ final class WelcomeScreen implements ScreenInterface
         }
     }
 
+    /**
+     * Update status bar based on current screen state
+     */
+    private function updateStatusBar(): void
+    {
+        $hints = [];
+
+        if ($this->focusedPanelIndex === 0) {
+            // Left panel (command list) is focused
+            $hints = [
+                '↑↓' => ' Navigate',
+                'Enter' => ' Select',
+                'Tab' => ' Switch',
+                'F4' => ' Execute',
+            ];
+        } elseif ($this->showingForm && $this->commandForm !== null) {
+            // Right panel with form is focused
+            $hints = [
+                '↑↓' => ' Fields',
+                'Tab' => ' Switch',
+                'F4' => ' Execute',
+                'ESC' => ' Cancel',
+            ];
+        } else {
+            // Right panel with output is focused
+            $hints = [
+                '↑↓' => ' Scroll',
+                'PgUp/Dn' => ' Page',
+                'Tab' => ' Switch',
+                'F4' => ' Run Again',
+                'ESC' => ' Back',
+            ];
+        }
+
+        $this->statusBar->setHints($hints);
+    }
+
     public function render(Renderer $renderer): void
     {
         $size = $renderer->getSize();
         $width = $size['width'];
         $height = $size['height'];
 
-        // Render menu bar (top)
-        $this->menuBar->render($renderer, 0, 0, $width, 1);
-
         // Render status bar (bottom)
         $this->statusBar->render($renderer, 0, $height - 1, $width, 1);
 
-        // Calculate panel dimensions (40% left, 60% right)
+        // Calculate panel dimensions (30% left, 70% right)
+        // Account for global menu bar (top) and screen status bar (bottom)
         $panelHeight = $height - 2;
-        $leftWidth = (int) ($width * 0.4);
+        $leftWidth = (int) ($width * 0.3);
         $rightWidth = $width - $leftWidth;
 
         // Update focus state
@@ -178,7 +200,7 @@ final class WelcomeScreen implements ScreenInterface
         }
 
         // F2: Execute command (works from any panel)
-        if ($key === 'F2') {
+        if ($key === 'F4') {
             // Check if we have a selected command and a form
             if ($this->selectedCommand !== null && $this->commandForm !== null && $this->showingForm) {
                 $this->executeCurrentCommand();
@@ -259,7 +281,7 @@ final class WelcomeScreen implements ScreenInterface
               Escape      Go back to command list
             
             Execution:
-              F2          Execute selected command
+              F4          Execute selected command
             
             List Navigation:
               Page Up     Scroll up one page
@@ -363,6 +385,9 @@ final class WelcomeScreen implements ScreenInterface
         } elseif (!$this->showingForm && $this->outputDisplay !== null) {
             $this->outputDisplay->setFocused($this->focusedPanelIndex === 1);
         }
+
+        // Update status bar to reflect new context
+        $this->updateStatusBar();
     }
 
     /**
@@ -450,6 +475,7 @@ final class WelcomeScreen implements ScreenInterface
             if ($this->commandForm !== null) {
                 $this->commandForm->setFocused(false);
             }
+            $this->updateStatusBar();
         });
 
         $this->commandForm = $form;
@@ -462,6 +488,9 @@ final class WelcomeScreen implements ScreenInterface
         if ($this->focusedPanelIndex === 1) {
             $form->setFocused(true);
         }
+
+        // Update status bar to reflect form context
+        $this->updateStatusBar();
     }
 
     /**
@@ -626,6 +655,8 @@ final class WelcomeScreen implements ScreenInterface
             $this->showExecutionErrorModal('An exception occurred while executing the command.', $e);
         } finally {
             $this->isExecuting = false;
+            // Update status bar to show output view hints
+            $this->updateStatusBar();
         }
     }
 

@@ -6,10 +6,14 @@ declare(strict_types=1);
 require __DIR__ . '/vendor/autoload.php';
 
 use Butschster\Commander\Application;
-use Butschster\Commander\Feature\CommandBrowser\Screen\WelcomeScreen;
+use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
 use Butschster\Commander\Feature\Example\Command\ExampleCommand;
+use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
+use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
+use Butschster\Commander\UI\Component\Layout\MenuBar;
+use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
 // Create Symfony Console Application
@@ -26,12 +30,55 @@ try {
     $app = new Application($symfonyApp);
     $app->setTargetFps(30);
 
+    // Get screen manager from application
+    $screenManager = $app->getScreenManager();
+
     // Create services
     $commandDiscovery = new CommandDiscovery($symfonyApp);
     $commandExecutor = new CommandExecutor($symfonyApp);
+    $fileSystem = new FileSystemService();
 
-    // Start with welcome screen
-    $welcomeScreen = new WelcomeScreen($commandDiscovery, $commandExecutor);
+    // Setup global menu bar
+    $globalMenu = new MenuBar([
+            'F1' => ' Help',
+            'F2' => ' Exec',
+            'F3' => ' Files',
+            'F10' => ' Quit',
+    ]);
+    $app->setGlobalMenuBar($globalMenu);
+
+    // Register global shortcuts
+    // F2: Switch to Command Browser
+    $app->registerGlobalShortcut('F2', function ($screenManager) use ($commandDiscovery, $commandExecutor) {
+        // Pop to root and push command browser
+        $screenManager->popUntil(fn($screen) => $screen instanceof CommandsScreen);
+
+        // If not on welcome screen, push it
+        if (!($screenManager->getCurrentScreen() instanceof CommandsScreen)) {
+            $welcomeScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
+            $screenManager->pushScreen($welcomeScreen);
+        }
+    });
+
+    // F3: Switch to File Browser
+    $app->registerGlobalShortcut('F3', function ($screenManager) use ($fileSystem) {
+        // Pop to root and push file browser
+        $screenManager->popUntil(fn($screen) => $screen instanceof FileBrowserScreen);
+
+        // If not on file browser screen, push it
+        if (!($screenManager->getCurrentScreen() instanceof FileBrowserScreen)) {
+            $fileBrowserScreen = new FileBrowserScreen($fileSystem, $screenManager, getcwd());
+            $screenManager->pushScreen($fileBrowserScreen);
+        }
+    });
+
+    // F10: Quit application
+    $app->registerGlobalShortcut('F10', function ($screenManager) use ($app) {
+        $app->stop();
+    });
+
+    // Start with welcome screen (Command Browser)
+    $welcomeScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
 
     $app->run($welcomeScreen);
 } catch (\Throwable $e) {

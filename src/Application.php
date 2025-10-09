@@ -7,6 +7,7 @@ namespace Butschster\Commander;
 use Butschster\Commander\Infrastructure\Terminal\KeyboardHandler;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\Infrastructure\Terminal\TerminalManager;
+use Butschster\Commander\UI\Component\Layout\MenuBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
 use Symfony\Component\Console\Application as SymfonyApplication;
@@ -28,6 +29,12 @@ final class Application
     private ScreenManager $screenManager;
 
     private ?SymfonyApplication $symfonyApp = null;
+
+    /** @var array<string, callable> Global function key shortcuts */
+    private array $globalShortcuts = [];
+
+    /** @var MenuBar|null Global menu bar */
+    private ?MenuBar $globalMenuBar = null;
 
     public function __construct(?SymfonyApplication $symfonyApp = null)
     {
@@ -51,6 +58,25 @@ final class Application
     {
         $this->targetFps = max(1, min(60, $fps));
         $this->frameTime = 1.0 / $this->targetFps;
+    }
+
+    /**
+     * Register a global function key shortcut
+     *
+     * @param string $key Function key (e.g., 'F3', 'F4')
+     * @param callable $callback Callback to execute (receives ScreenManager)
+     */
+    public function registerGlobalShortcut(string $key, callable $callback): void
+    {
+        $this->globalShortcuts[$key] = $callback;
+    }
+
+    /**
+     * Set global menu bar
+     */
+    public function setGlobalMenuBar(?MenuBar $menuBar): void
+    {
+        $this->globalMenuBar = $menuBar;
     }
 
     /**
@@ -140,6 +166,13 @@ final class Application
     private function handleInput(): void
     {
         while (($key = $this->keyboard->getKey()) !== null) {
+            // Global shortcuts have highest priority
+            if (isset($this->globalShortcuts[$key])) {
+                $callback = $this->globalShortcuts[$key];
+                $callback($this->screenManager);
+                continue;
+            }
+
             // Global shortcuts
             if ($key === 'CTRL_C') {
                 $this->stop();
@@ -171,7 +204,16 @@ final class Application
         // Begin frame
         $this->renderer->beginFrame();
 
-        // Render current screen
+        $size = $this->renderer->getSize();
+        $width = $size['width'];
+        $height = $size['height'];
+
+        // Render global menu bar at top if set
+        if ($this->globalMenuBar !== null) {
+            $this->globalMenuBar->render($this->renderer, 0, 0, $width, 1);
+        }
+
+        // Render current screen (screen handles its own status bar)
         $this->screenManager->render($this->renderer);
 
         // End frame (flush to terminal)
