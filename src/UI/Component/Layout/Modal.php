@@ -41,9 +41,9 @@ final class Modal extends AbstractComponent
      * @param string $type Modal type (info, error, warning, confirm)
      */
     public function __construct(
-        private string $title,
+        private readonly string $title,
         string $content,
-        private string $type = self::TYPE_INFO,
+        private readonly string $type = self::TYPE_INFO,
     ) {
         $this->setContent($content);
         $this->setupDefaultButtons();
@@ -80,8 +80,8 @@ final class Modal extends AbstractComponent
     {
         $modal = new self($title, $message, self::TYPE_CONFIRM);
         $modal->setButtons([
-            'Yes' => fn() => true,
-            'No' => fn() => false,
+            'Yes' => static fn() => true,
+            'No' => static fn() => false,
         ]);
         return $modal;
     }
@@ -91,7 +91,7 @@ final class Modal extends AbstractComponent
      */
     public function setContent(string $content): void
     {
-        $this->contentLines = explode("\n", $content);
+        $this->contentLines = \explode("\n", $content);
     }
 
     /**
@@ -99,8 +99,8 @@ final class Modal extends AbstractComponent
      */
     public function setSize(int $width, int $height): void
     {
-        $this->modalWidth = max(30, $width);
-        $this->modalHeight = max(10, $height);
+        $this->modalWidth = \max(30, $width);
+        $this->modalHeight = \max(10, $height);
     }
 
     /**
@@ -133,66 +133,6 @@ final class Modal extends AbstractComponent
     public function onClose(callable $callback): void
     {
         $this->onClose = $callback;
-    }
-
-    /**
-     * Setup default buttons based on modal type
-     */
-    private function setupDefaultButtons(): void
-    {
-        switch ($this->type) {
-            case self::TYPE_CONFIRM:
-                $this->buttons = [
-                    'Yes' => fn() => $this->close(true),
-                    'No' => fn() => $this->close(false),
-                ];
-                break;
-
-            case self::TYPE_ERROR:
-            case self::TYPE_WARNING:
-            case self::TYPE_INFO:
-            default:
-                $this->buttons = [
-                    'OK' => fn() => $this->close(),
-                ];
-                break;
-        }
-    }
-
-    /**
-     * Close the modal
-     */
-    private function close(mixed $result = null): void
-    {
-        if ($this->onClose !== null) {
-            ($this->onClose)($result);
-        }
-    }
-
-    /**
-     * Get title color based on modal type
-     */
-    private function getTitleColor(): string
-    {
-        return match ($this->type) {
-            self::TYPE_ERROR => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_RED, ColorScheme::BOLD),
-            self::TYPE_WARNING => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
-            self::TYPE_CONFIRM => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_CYAN, ColorScheme::BOLD),
-            default => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_BRIGHT_WHITE, ColorScheme::BOLD),
-        };
-    }
-
-    /**
-     * Get icon for modal type
-     */
-    private function getIcon(): string
-    {
-        return match ($this->type) {
-            self::TYPE_ERROR => '✗',
-            self::TYPE_WARNING => '⚠',
-            self::TYPE_CONFIRM => '?',
-            default => 'ℹ',
-        };
     }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
@@ -231,11 +171,11 @@ final class Modal extends AbstractComponent
         // Draw title bar with icon
         $icon = $this->getIcon();
         $titleText = " {$icon} {$this->title} ";
-        $titleX = $modalX + (int) (($this->modalWidth - mb_strlen($titleText)) / 2);
+        $titleX = $modalX + (int) (($this->modalWidth - \mb_strlen($titleText)) / 2);
         $renderer->writeAt($titleX, $modalY, $titleText, $this->getTitleColor());
 
         // Draw horizontal separator after title
-        $separator = str_repeat('─', $this->modalWidth - 2);
+        $separator = \str_repeat('─', $this->modalWidth - 2);
         $renderer->writeAt($modalX + 1, $modalY + 1, $separator, ColorScheme::INACTIVE_BORDER);
 
         // Draw content
@@ -243,6 +183,127 @@ final class Modal extends AbstractComponent
 
         // Draw buttons
         $this->drawButtons($renderer, $modalX, $modalY);
+    }
+
+    #[\Override]
+    public function handleInput(string $key): bool
+    {
+        if (empty($this->buttons)) {
+            return false;
+        }
+
+        $buttonLabels = \array_keys($this->buttons);
+
+        switch ($key) {
+            case 'LEFT':
+                if ($this->selectedButtonIndex > 0) {
+                    $this->selectedButtonIndex--;
+                }
+                return true;
+
+            case 'RIGHT':
+            case 'TAB':
+                if ($this->selectedButtonIndex < \count($this->buttons) - 1) {
+                    $this->selectedButtonIndex++;
+                }
+                return true;
+
+            case 'ENTER':
+            case ' ':
+                // Execute selected button callback
+                $selectedLabel = $buttonLabels[$this->selectedButtonIndex];
+                $callback = $this->buttons[$selectedLabel];
+                $callback();
+                return true;
+
+            case 'ESCAPE':
+                // Close modal (equivalent to last button, usually Cancel/No)
+                $lastLabel = \end($buttonLabels);
+                $callback = $this->buttons[$lastLabel];
+                $callback();
+                return true;
+
+                // Quick access keys (1-9 for button indices)
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                $index = (int) $key - 1;
+                if (isset($buttonLabels[$index])) {
+                    $callback = $this->buttons[$buttonLabels[$index]];
+                    $callback();
+                    return true;
+                }
+                return false;
+        }
+
+        return false;
+    }
+
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return [
+            'width' => $this->modalWidth + 10,  // Add margin around modal
+            'height' => $this->modalHeight + 6, // Add margin around modal
+        ];
+    }
+
+    /**
+     * Setup default buttons based on modal type
+     */
+    private function setupDefaultButtons(): void
+    {
+        $this->buttons = match ($this->type) {
+            self::TYPE_CONFIRM => [
+                'Yes' => fn() => $this->close(true),
+                'No' => fn() => $this->close(false),
+            ],
+            default => [
+                'OK' => fn() => $this->close(),
+            ],
+        };
+    }
+
+    /**
+     * Close the modal
+     */
+    private function close(mixed $result = null): void
+    {
+        if ($this->onClose !== null) {
+            ($this->onClose)($result);
+        }
+    }
+
+    /**
+     * Get title color based on modal type
+     */
+    private function getTitleColor(): string
+    {
+        return match ($this->type) {
+            self::TYPE_ERROR => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_RED, ColorScheme::BOLD),
+            self::TYPE_WARNING => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
+            self::TYPE_CONFIRM => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_CYAN, ColorScheme::BOLD),
+            default => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_BRIGHT_WHITE, ColorScheme::BOLD),
+        };
+    }
+
+    /**
+     * Get icon for modal type
+     */
+    private function getIcon(): string
+    {
+        return match ($this->type) {
+            self::TYPE_ERROR => '✗',
+            self::TYPE_WARNING => '⚠',
+            self::TYPE_CONFIRM => '?',
+            default => 'ℹ',
+        };
     }
 
     /**
@@ -336,10 +397,10 @@ final class Modal extends AbstractComponent
 
         // Calculate total width of all buttons
         $totalButtonWidth = 0;
-        $buttonLabels = array_keys($this->buttons);
+        $buttonLabels = \array_keys($this->buttons);
 
         foreach ($buttonLabels as $label) {
-            $totalButtonWidth += mb_strlen($label) + 6; // [  Label  ] = 6 extra chars
+            $totalButtonWidth += \mb_strlen($label) + 6; // [  Label  ] = 6 extra chars
         }
 
         // Center buttons horizontally
@@ -358,7 +419,7 @@ final class Modal extends AbstractComponent
 
             $renderer->writeAt($currentX, $buttonsY, $buttonText, $buttonColor);
 
-            $currentX += mb_strlen($buttonText) + 2; // Add spacing between buttons
+            $currentX += \mb_strlen($buttonText) + 2; // Add spacing between buttons
         }
     }
 
@@ -369,18 +430,18 @@ final class Modal extends AbstractComponent
      */
     private function wrapLine(string $line, int $width): array
     {
-        if (mb_strlen($line) <= $width) {
+        if (\mb_strlen($line) <= $width) {
             return [$line];
         }
 
         $wrapped = [];
-        $words = explode(' ', $line);
+        $words = \explode(' ', $line);
         $currentLine = '';
 
         foreach ($words as $word) {
             $testLine = $currentLine === '' ? $word : $currentLine . ' ' . $word;
 
-            if (mb_strlen($testLine) <= $width) {
+            if (\mb_strlen($testLine) <= $width) {
                 $currentLine = $testLine;
             } else {
                 if ($currentLine !== '') {
@@ -389,9 +450,9 @@ final class Modal extends AbstractComponent
                 $currentLine = $word;
 
                 // Handle words longer than width
-                while (mb_strlen($currentLine) > $width) {
-                    $wrapped[] = mb_substr($currentLine, 0, $width);
-                    $currentLine = mb_substr($currentLine, $width);
+                while (\mb_strlen($currentLine) > $width) {
+                    $wrapped[] = \mb_substr($currentLine, 0, $width);
+                    $currentLine = \mb_substr($currentLine, $width);
                 }
             }
         }
@@ -401,72 +462,5 @@ final class Modal extends AbstractComponent
         }
 
         return $wrapped;
-    }
-
-    public function handleInput(string $key): bool
-    {
-        if (empty($this->buttons)) {
-            return false;
-        }
-
-        $buttonLabels = array_keys($this->buttons);
-
-        switch ($key) {
-            case 'LEFT':
-                if ($this->selectedButtonIndex > 0) {
-                    $this->selectedButtonIndex--;
-                }
-                return true;
-
-            case 'RIGHT':
-            case 'TAB':
-                if ($this->selectedButtonIndex < count($this->buttons) - 1) {
-                    $this->selectedButtonIndex++;
-                }
-                return true;
-
-            case 'ENTER':
-            case ' ':
-                // Execute selected button callback
-                $selectedLabel = $buttonLabels[$this->selectedButtonIndex];
-                $callback = $this->buttons[$selectedLabel];
-                $callback();
-                return true;
-
-            case 'ESCAPE':
-                // Close modal (equivalent to last button, usually Cancel/No)
-                $lastLabel = end($buttonLabels);
-                $callback = $this->buttons[$lastLabel];
-                $callback();
-                return true;
-
-            // Quick access keys (1-9 for button indices)
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                $index = (int) $key - 1;
-                if (isset($buttonLabels[$index])) {
-                    $callback = $this->buttons[$buttonLabels[$index]];
-                    $callback();
-                    return true;
-                }
-                return false;
-        }
-
-        return false;
-    }
-
-    public function getMinSize(): array
-    {
-        return [
-            'width' => $this->modalWidth + 10,  // Add margin around modal
-            'height' => $this->modalHeight + 6, // Add margin around modal
-        ];
     }
 }

@@ -6,12 +6,20 @@
   },
   "require": {
     "php": ">=8.3",
-    "symfony/console": "^7.3"
+    "symfony/console": "^7.3",
+    "symfony/finder": "^7.3"
   },
   "require-dev": {
     "spiral/code-style": "^2.2",
     "phpunit/phpunit": "^10.5",
     "rector/rector": "^2.1",
-    "vimeo/psalm": "^6.0"
+    "vimeo/psalm": "^6.0",
+    "buggregator/trap": "^1.13"
+  },
+  "scripts": {
+    "cs-fix": "vendor/bin/php-cs-fixer fix",
+    "psalm": "vendor/bin/psalm --config=psalm.xml ./src",
+    "refactor": "rector process --config=rector.php",
+    "test": "vendor/bin/phpunit"
   }
 }

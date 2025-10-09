@@ -28,24 +28,24 @@ final class FileSystemService
      */
     public function listDirectory(string $path, bool $showHidden = false): array
     {
-        if (!is_dir($path)) {
+        if (!\is_dir($path)) {
             return [];
         }
 
         $items = [];
 
         // Add parent directory entry if not root
-        if ($path !== '/' && dirname($path) !== $path) {
-            $parentPath = dirname($path);
-            $parentStat = @stat($parentPath);
+        if ($path !== '/' && \dirname($path) !== $path) {
+            $parentPath = \dirname($path);
+            $parentStat = @\stat($parentPath);
             $items[] = [
                 'name' => '..',
                 'path' => $parentPath,
                 'type' => 'dir',
                 'size' => 0,
-                'modified' => $parentStat !== false ? $parentStat['mtime'] : filemtime($parentPath),
-                'readable' => is_readable($parentPath),
-                'writable' => is_writable($parentPath),
+                'modified' => $parentStat !== false ? $parentStat['mtime'] : \filemtime($parentPath),
+                'readable' => \is_readable($parentPath),
+                'writable' => \is_writable($parentPath),
                 'isDir' => true,
             ];
         }
@@ -84,12 +84,12 @@ final class FileSystemService
             }
 
             // Sort directories and files separately by name
-            usort($directories, fn($a, $b) => strcasecmp($a['name'], $b['name']));
-            usort($files, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+            \usort($directories, static fn($a, $b) => \strcasecmp($a['name'], $b['name']));
+            \usort($files, static fn($a, $b) => \strcasecmp($a['name'], $b['name']));
 
             // Merge: directories first, then files
-            $items = array_merge($items, $directories, $files);
-        } catch (\Exception $e) {
+            $items = \array_merge($items, $directories, $files);
+        } catch (\Exception) {
             // Handle permission errors gracefully
             return $items;
         }
@@ -106,7 +106,7 @@ final class FileSystemService
      */
     public function readFileContents(string $path, int $maxLines = 1000): string
     {
-        if (!is_file($path) || !is_readable($path)) {
+        if (!\is_file($path) || !\is_readable($path)) {
             return '';
         }
 
@@ -116,7 +116,7 @@ final class FileSystemService
         }
 
         try {
-            $handle = fopen($path, 'r');
+            $handle = \fopen($path, 'r');
             if ($handle === false) {
                 return '';
             }
@@ -124,8 +124,8 @@ final class FileSystemService
             $contents = '';
             $lineCount = 0;
 
-            while (!feof($handle) && ($maxLines === 0 || $lineCount < $maxLines)) {
-                $line = fgets($handle);
+            while (!\feof($handle) && ($maxLines === 0 || $lineCount < $maxLines)) {
+                $line = \fgets($handle);
                 if ($line === false) {
                     break;
                 }
@@ -133,7 +133,7 @@ final class FileSystemService
                 $lineCount++;
             }
 
-            fclose($handle);
+            \fclose($handle);
 
             if ($maxLines > 0 && $lineCount >= $maxLines) {
                 $contents .= "\n\n... (file truncated, showing first {$maxLines} lines)";
@@ -163,28 +163,28 @@ final class FileSystemService
      */
     public function getFileMetadata(string $path): ?array
     {
-        if (!file_exists($path)) {
+        if (!\file_exists($path)) {
             return null;
         }
 
-        $stat = stat($path);
+        $stat = \stat($path);
         if ($stat === false) {
             return null;
         }
 
-        $isFile = is_file($path);
+        $isFile = \is_file($path);
 
         return [
-            'name' => basename($path),
-            'path' => realpath($path) ?: $path,
+            'name' => \basename($path),
+            'path' => \realpath($path) ?: $path,
             'size' => $stat['size'],
             'modified' => $stat['mtime'],
             'permissions' => $this->formatPermissions($stat['mode']),
-            'owner' => function_exists('posix_getpwuid')
-                ? (posix_getpwuid($stat['uid'])['name'] ?? $stat['uid'])
+            'owner' => \function_exists('posix_getpwuid')
+                ? (\posix_getpwuid($stat['uid'])['name'] ?? $stat['uid'])
                 : (string) $stat['uid'],
-            'group' => function_exists('posix_getgrgid')
-                ? (posix_getgrgid($stat['gid'])['name'] ?? $stat['gid'])
+            'group' => \function_exists('posix_getgrgid')
+                ? (\posix_getgrgid($stat['gid'])['name'] ?? $stat['gid'])
                 : (string) $stat['gid'],
             'type' => $isFile ? $this->detectFileType(new \SplFileInfo($path)) : 'directory',
             'mimeType' => $isFile ? $this->getMimeType($path) : 'directory',
@@ -202,10 +202,10 @@ final class FileSystemService
         }
 
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $power = floor(log($bytes, 1024));
-        $power = min($power, count($units) - 1);
+        $power = \floor(\log($bytes, 1024));
+        $power = \min($power, \count($units) - 1);
 
-        return round($bytes / (1024 ** $power), 2) . ' ' . $units[$power];
+        return \round($bytes / (1024 ** $power), 2) . ' ' . $units[$power];
     }
 
     /**
@@ -213,7 +213,7 @@ final class FileSystemService
      */
     public function formatDate(int $timestamp): string
     {
-        return date('Y-m-d H:i:s', $timestamp);
+        return \date('Y-m-d H:i:s', $timestamp);
     }
 
     /**
@@ -221,7 +221,7 @@ final class FileSystemService
      */
     private function detectFileType(\SplFileInfo $file): string
     {
-        $extension = strtolower($file->getExtension());
+        $extension = \strtolower($file->getExtension());
 
         return match ($extension) {
             'php' => 'php',
@@ -257,20 +257,20 @@ final class FileSystemService
      */
     private function isBinaryFile(string $path): bool
     {
-        $handle = fopen($path, 'r');
+        $handle = \fopen($path, 'r');
         if ($handle === false) {
             return false;
         }
 
-        $chunk = fread($handle, 8192);
-        fclose($handle);
+        $chunk = \fread($handle, 8192);
+        \fclose($handle);
 
         if ($chunk === false) {
             return false;
         }
 
         // Check for null bytes (common in binary files)
-        return str_contains($chunk, "\0");
+        return \str_contains($chunk, "\0");
     }
 
     /**
@@ -278,7 +278,7 @@ final class FileSystemService
      */
     private function getBinaryFileInfo(string $path): string
     {
-        $size = filesize($path);
+        $size = \filesize($path);
         $mimeType = $this->getMimeType($path);
 
         return <<<TEXT
@@ -296,8 +296,8 @@ final class FileSystemService
      */
     private function getMimeType(string $path): string
     {
-        if (function_exists('mime_content_type')) {
-            $mimeType = mime_content_type($path);
+        if (\function_exists('mime_content_type')) {
+            $mimeType = \mime_content_type($path);
             if ($mimeType !== false) {
                 return $mimeType;
             }
@@ -311,19 +311,19 @@ final class FileSystemService
      */
     private function countLines(string $path): int
     {
-        $handle = fopen($path, 'r');
+        $handle = \fopen($path, 'r');
         if ($handle === false) {
             return 0;
         }
 
         $lines = 0;
-        while (!feof($handle)) {
-            if (fgets($handle) !== false) {
+        while (!\feof($handle)) {
+            if (\fgets($handle) !== false) {
                 $lines++;
             }
         }
 
-        fclose($handle);
+        \fclose($handle);
 
         return $lines;
     }

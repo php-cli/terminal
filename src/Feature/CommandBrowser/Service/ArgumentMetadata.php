@@ -7,13 +7,13 @@ namespace Butschster\Commander\Feature\CommandBrowser\Service;
 /**
  * Argument metadata structure
  */
-final class ArgumentMetadata
+final readonly class ArgumentMetadata
 {
     public function __construct(
-        public readonly string $name,
-        public readonly string $description,
-        public readonly bool $required,
-        public readonly bool $isArray,
-        public readonly mixed $default,
+        public string $name,
+        public string $description,
+        public bool $required,
+        public bool $isArray,
+        public mixed $default,
     ) {}
 }

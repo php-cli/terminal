@@ -7,7 +7,7 @@ namespace Butschster\Commander\Feature\CommandBrowser\Service;
 /**
  * Command metadata structure
  */
-final class CommandMetadata
+final readonly class CommandMetadata
 {
     /**
      * @param string $name Command name
@@ -17,11 +17,10 @@ final class CommandMetadata
      * @param array<OptionMetadata> $options Command options
      */
     public function __construct(
-        public readonly string $name,
-        public readonly string $description,
-        public readonly string $help,
-        public readonly array $arguments,
-        public readonly array $options,
+        public string $name,
+        public string $description,
+        public string $help,
+        public array $arguments,
+        public array $options,
     ) {}
 }
-

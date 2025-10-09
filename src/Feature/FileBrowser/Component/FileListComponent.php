@@ -92,7 +92,7 @@ final class FileListComponent extends AbstractComponent
         if (empty($this->items)) {
             // Show empty state
             $emptyText = '(Empty directory)';
-            $emptyX = $x + (int) (($width - mb_strlen($emptyText)) / 2);
+            $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
             $emptyY = $y + (int) ($height / 2);
 
             $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::NORMAL_TEXT);
@@ -104,9 +104,9 @@ final class FileListComponent extends AbstractComponent
 
         // Calculate visible range
         $startIndex = $this->scrollOffset;
-        $endIndex = min(
+        $endIndex = \min(
             $this->scrollOffset + $this->visibleRows,
-            count($this->items),
+            \count($this->items),
         );
 
         // Render items
@@ -118,9 +118,76 @@ final class FileListComponent extends AbstractComponent
         }
 
         // Draw scrollbar if needed
-        if (count($this->items) > $this->visibleRows) {
+        if (\count($this->items) > $this->visibleRows) {
             $this->drawScrollbar($renderer, $x + $width - 1, $y + 2, $this->visibleRows);
         }
+    }
+
+    #[\Override]
+    public function handleInput(string $key): bool
+    {
+        $oldIndex = $this->selectedIndex;
+
+        switch ($key) {
+            case 'UP':
+                if ($this->selectedIndex > 0) {
+                    $this->selectedIndex--;
+                    $this->adjustScroll();
+                }
+                break;
+
+            case 'DOWN':
+                if ($this->selectedIndex < \count($this->items) - 1) {
+                    $this->selectedIndex++;
+                    $this->adjustScroll();
+                }
+                break;
+
+            case 'PAGE_UP':
+                $this->selectedIndex = \max(0, $this->selectedIndex - $this->visibleRows);
+                $this->adjustScroll();
+                break;
+
+            case 'PAGE_DOWN':
+                $this->selectedIndex = \min(
+                    \count($this->items) - 1,
+                    $this->selectedIndex + $this->visibleRows,
+                );
+                $this->adjustScroll();
+                break;
+
+            case 'HOME':
+                $this->selectedIndex = 0;
+                $this->adjustScroll();
+                break;
+
+            case 'END':
+                $this->selectedIndex = \count($this->items) - 1;
+                $this->adjustScroll();
+                break;
+
+            case 'ENTER':
+                if ($this->onSelect !== null && !empty($this->items)) {
+                    ($this->onSelect)($this->items[$this->selectedIndex]);
+                }
+                return true;
+
+            default:
+                return false;
+        }
+
+        // Trigger change callback if selection changed
+        if ($oldIndex !== $this->selectedIndex && $this->onChange !== null && !empty($this->items)) {
+            ($this->onChange)($this->items[$this->selectedIndex]);
+        }
+
+        return true;
+    }
+
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return ['width' => 60, 'height' => 10];
     }
 
     /**
@@ -134,9 +201,9 @@ final class FileListComponent extends AbstractComponent
         $nameWidth = $width - $sizeWidth - $dateWidth;
 
         // Build header parts with proper padding
-        $namePart = str_pad('Name', $nameWidth, ' ');
-        $sizePart = str_pad('Size', $sizeWidth - 2, ' ', STR_PAD_LEFT) . '  '; // 2 spaces after
-        $datePart = str_pad('Modified', $dateWidth, ' ', STR_PAD_LEFT);
+        $namePart = \str_pad('Name', $nameWidth, ' ');
+        $sizePart = \str_pad('Size', $sizeWidth - 2, ' ', STR_PAD_LEFT) . '  '; // 2 spaces after
+        $datePart = \str_pad('Modified', $dateWidth, ' ', STR_PAD_LEFT);
 
         $header = $namePart . $sizePart . $datePart;
 
@@ -148,7 +215,7 @@ final class FileListComponent extends AbstractComponent
         );
 
         // Separator line
-        $separator = str_repeat('─', $width);
+        $separator = \str_repeat('─', $width);
         $renderer->writeAt($x, $y + 1, $separator, ColorScheme::INACTIVE_BORDER);
     }
 
@@ -174,24 +241,24 @@ final class FileListComponent extends AbstractComponent
         $icon = $this->getAsciiIcon($item);
         $name = $item['name'];
         $size = $item['isDir'] ? '<DIR>' : $this->fileSystem->formatSize($item['size']);
-        $date = date('Y-m-d H:i:s', $item['modified']);
+        $date = \date('Y-m-d H:i:s', $item['modified']);
 
         // Icon is 1 char + 1 space = 2 chars total
         $iconPart = $icon . ' ';
         $maxNameLength = $nameWidth - 2;
 
         // Truncate name if too long
-        if (mb_strlen($name) > $maxNameLength) {
-            $name = mb_substr($name, 0, $maxNameLength - 3) . '...';
+        if (\mb_strlen($name) > $maxNameLength) {
+            $name = \mb_substr($name, 0, $maxNameLength - 3) . '...';
         }
 
         // Calculate padding to fill nameWidth exactly
-        $padding = $nameWidth - 2 - mb_strlen($name);
-        $namePart = $iconPart . $name . str_repeat(' ', $padding);
+        $padding = $nameWidth - 2 - \mb_strlen($name);
+        $namePart = $iconPart . $name . \str_repeat(' ', $padding);
 
         // Build size and date parts with spacing between columns
-        $sizePart = str_pad($size, $sizeWidth - 2, ' ', STR_PAD_LEFT) . '  '; // 2 spaces after
-        $datePart = str_pad($date, $dateWidth, ' ', STR_PAD_LEFT);
+        $sizePart = \str_pad($size, $sizeWidth - 2, ' ', STR_PAD_LEFT) . '  '; // 2 spaces after
+        $datePart = \str_pad($date, $dateWidth, ' ', STR_PAD_LEFT);
 
         $itemText = $namePart . $sizePart . $datePart;
 
@@ -237,66 +304,6 @@ final class FileListComponent extends AbstractComponent
         return ColorScheme::NORMAL_TEXT;
     }
 
-    public function handleInput(string $key): bool
-    {
-        $oldIndex = $this->selectedIndex;
-
-        switch ($key) {
-            case 'UP':
-                if ($this->selectedIndex > 0) {
-                    $this->selectedIndex--;
-                    $this->adjustScroll();
-                }
-                break;
-
-            case 'DOWN':
-                if ($this->selectedIndex < count($this->items) - 1) {
-                    $this->selectedIndex++;
-                    $this->adjustScroll();
-                }
-                break;
-
-            case 'PAGE_UP':
-                $this->selectedIndex = max(0, $this->selectedIndex - $this->visibleRows);
-                $this->adjustScroll();
-                break;
-
-            case 'PAGE_DOWN':
-                $this->selectedIndex = min(
-                    count($this->items) - 1,
-                    $this->selectedIndex + $this->visibleRows,
-                );
-                $this->adjustScroll();
-                break;
-
-            case 'HOME':
-                $this->selectedIndex = 0;
-                $this->adjustScroll();
-                break;
-
-            case 'END':
-                $this->selectedIndex = count($this->items) - 1;
-                $this->adjustScroll();
-                break;
-
-            case 'ENTER':
-                if ($this->onSelect !== null && !empty($this->items)) {
-                    ($this->onSelect)($this->items[$this->selectedIndex]);
-                }
-                return true;
-
-            default:
-                return false;
-        }
-
-        // Trigger change callback if selection changed
-        if ($oldIndex !== $this->selectedIndex && $this->onChange !== null && !empty($this->items)) {
-            ($this->onChange)($this->items[$this->selectedIndex]);
-        }
-
-        return true;
-    }
-
     /**
      * Adjust scroll offset to keep selected item visible
      */
@@ -314,20 +321,15 @@ final class FileListComponent extends AbstractComponent
      */
     private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
     {
-        $totalItems = count($this->items);
+        $totalItems = \count($this->items);
 
         // Calculate thumb size and position
-        $thumbHeight = max(1, (int) ($height * $this->visibleRows / $totalItems));
+        $thumbHeight = \max(1, (int) ($height * $this->visibleRows / $totalItems));
         $thumbPosition = (int) ($height * $this->scrollOffset / $totalItems);
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
             $renderer->writeAt($x, $y + $i, $char, ColorScheme::SCROLLBAR);
         }
-    }
-
-    public function getMinSize(): array
-    {
-        return ['width' => 60, 'height' => 10];
     }
 }

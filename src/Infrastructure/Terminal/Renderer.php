@@ -25,6 +25,7 @@ final class Renderer
 
     /** Current cursor position (for optimization) */
     private int $cursorX = 0;
+
     private int $cursorY = 0;
 
     /** Current color code (for optimization) */
@@ -45,20 +46,6 @@ final class Renderer
     }
 
     /**
-     * Initialize both buffers with empty cells
-     */
-    private function initBuffers(): void
-    {
-        $emptyCell = ['char' => ' ', 'color' => ColorScheme::NORMAL_TEXT];
-
-        for ($y = 0; $y < $this->height; $y++) {
-            $this->backBuffer[$y] = array_fill(0, $this->width, $emptyCell);
-            // Initialize front buffer with DIFFERENT color to force initial redraw
-            $this->frontBuffer[$y] = array_fill(0, $this->width, ['char' => ' ', 'color' => '']);
-        }
-    }
-
-    /**
      * Start a new frame (clear back buffer)
      */
     public function beginFrame(): void
@@ -69,7 +56,7 @@ final class Renderer
         $emptyCell = ['char' => ' ', 'color' => ColorScheme::NORMAL_TEXT];
 
         for ($y = 0; $y < $this->height; $y++) {
-            $this->backBuffer[$y] = array_fill(0, $this->width, $emptyCell);
+            $this->backBuffer[$y] = \array_fill(0, $this->width, $emptyCell);
         }
     }
 
@@ -87,7 +74,7 @@ final class Renderer
             return;
         }
 
-        $textLength = mb_strlen($text);
+        $textLength = \mb_strlen($text);
 
         for ($i = 0; $i < $textLength; $i++) {
             $posX = $x + $i;
@@ -96,7 +83,7 @@ final class Renderer
                 continue;
             }
 
-            $char = mb_substr($text, $i, 1);
+            $char = \mb_substr($text, $i, 1);
             $this->backBuffer[$y][$posX] = [
                 'char' => $char,
                 'color' => $colorCode,
@@ -120,7 +107,7 @@ final class Renderer
         $this->writeAt($x + $width - 1, $y + $height - 1, '┘', $colorCode);
 
         // Horizontal edges
-        $horizontal = str_repeat('─', $width - 2);
+        $horizontal = \str_repeat('─', $width - 2);
         $this->writeAt($x + 1, $y, $horizontal, $colorCode);
         $this->writeAt($x + 1, $y + $height - 1, $horizontal, $colorCode);
 
@@ -143,7 +130,7 @@ final class Renderer
                 continue;
             }
 
-            $line = str_repeat($char, $width);
+            $line = \str_repeat($char, $width);
             $this->writeAt($x, $posY, $line, $colorCode);
         }
     }
@@ -192,17 +179,8 @@ final class Renderer
         // Flush all changes at once
         if ($output !== '') {
             echo $output;
-            flush();
+            \flush();
         }
-    }
-
-    /**
-     * Generate ANSI cursor movement sequence
-     */
-    private function moveCursor(int $x, int $y): string
-    {
-        // ANSI escape: ESC[{row};{col}H (1-indexed)
-        return "\033[" . ($y + 1) . ';' . ($x + 1) . 'H';
     }
 
     /**
@@ -242,5 +220,28 @@ final class Renderer
             $this->initBuffers();
             $this->terminal->clearScreen();
         }
+    }
+
+    /**
+     * Initialize both buffers with empty cells
+     */
+    private function initBuffers(): void
+    {
+        $emptyCell = ['char' => ' ', 'color' => ColorScheme::NORMAL_TEXT];
+
+        for ($y = 0; $y < $this->height; $y++) {
+            $this->backBuffer[$y] = \array_fill(0, $this->width, $emptyCell);
+            // Initialize front buffer with DIFFERENT color to force initial redraw
+            $this->frontBuffer[$y] = \array_fill(0, $this->width, ['char' => ' ', 'color' => '']);
+        }
+    }
+
+    /**
+     * Generate ANSI cursor movement sequence
+     */
+    private function moveCursor(int $x, int $y): string
+    {
+        // ANSI escape: ESC[{row};{col}H (1-indexed)
+        return "\033[" . ($y + 1) . ';' . ($x + 1) . 'H';
     }
 }

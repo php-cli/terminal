@@ -13,9 +13,6 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  */
 final class ListComponent extends AbstractComponent
 {
-    /** @var array<string> */
-    private array $items = [];
-
     private int $selectedIndex = 0;
     private int $scrollOffset = 0;
     private int $visibleRows = 0;
@@ -29,9 +26,8 @@ final class ListComponent extends AbstractComponent
     /**
      * @param array<string> $items
      */
-    public function __construct(array $items = [])
+    public function __construct(private array $items = [])
     {
-        $this->items = $items;
     }
 
     /**
@@ -95,7 +91,7 @@ final class ListComponent extends AbstractComponent
         if (empty($this->items)) {
             // Show empty state
             $emptyText = '(No items)';
-            $emptyX = $x + (int) (($width - mb_strlen($emptyText)) / 2);
+            $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
             $emptyY = $y + (int) ($height / 2);
 
             $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::NORMAL_TEXT);
@@ -103,9 +99,9 @@ final class ListComponent extends AbstractComponent
         }
 
         // Calculate visible range
-        $endIndex = min(
+        $endIndex = \min(
             $this->scrollOffset + $this->visibleRows,
-            count($this->items),
+            \count($this->items),
         );
 
         // Render items
@@ -114,8 +110,8 @@ final class ListComponent extends AbstractComponent
             $item = $this->items[$i];
 
             // Truncate or pad item to fit width
-            $displayText = mb_substr($item, 0, $width);
-            $displayText = str_pad($displayText, $width);
+            $displayText = \mb_substr($item, 0, $width);
+            $displayText = \str_pad($displayText, $width);
 
             // Highlight selected item
             if ($i === $this->selectedIndex && $this->isFocused()) {
@@ -136,11 +132,12 @@ final class ListComponent extends AbstractComponent
         }
 
         // Draw scrollbar if needed
-        if (count($this->items) > $this->visibleRows) {
+        if (\count($this->items) > $this->visibleRows) {
             $this->drawScrollbar($renderer, $x + $width - 1, $y, $height);
         }
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         $oldIndex = $this->selectedIndex;
@@ -154,20 +151,20 @@ final class ListComponent extends AbstractComponent
                 break;
 
             case 'DOWN':
-                if ($this->selectedIndex < count($this->items) - 1) {
+                if ($this->selectedIndex < \count($this->items) - 1) {
                     $this->selectedIndex++;
                     $this->adjustScroll();
                 }
                 break;
 
             case 'PAGE_UP':
-                $this->selectedIndex = max(0, $this->selectedIndex - $this->visibleRows);
+                $this->selectedIndex = \max(0, $this->selectedIndex - $this->visibleRows);
                 $this->adjustScroll();
                 break;
 
             case 'PAGE_DOWN':
-                $this->selectedIndex = min(
-                    count($this->items) - 1,
+                $this->selectedIndex = \min(
+                    \count($this->items) - 1,
                     $this->selectedIndex + $this->visibleRows,
                 );
                 $this->adjustScroll();
@@ -179,7 +176,7 @@ final class ListComponent extends AbstractComponent
                 break;
 
             case 'END':
-                $this->selectedIndex = count($this->items) - 1;
+                $this->selectedIndex = \count($this->items) - 1;
                 $this->adjustScroll();
                 break;
 
@@ -204,6 +201,12 @@ final class ListComponent extends AbstractComponent
         return true;
     }
 
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return ['width' => 20, 'height' => 5];
+    }
+
     /**
      * Adjust scroll offset to keep selected item visible
      */
@@ -223,20 +226,15 @@ final class ListComponent extends AbstractComponent
      */
     private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
     {
-        $totalItems = count($this->items);
+        $totalItems = \count($this->items);
 
         // Calculate thumb size and position
-        $thumbHeight = max(1, (int) ($height * $this->visibleRows / $totalItems));
+        $thumbHeight = \max(1, (int) ($height * $this->visibleRows / $totalItems));
         $thumbPosition = (int) ($height * $this->scrollOffset / $totalItems);
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
             $renderer->writeAt($x, $y + $i, $char, ColorScheme::SCROLLBAR);
         }
-    }
-
-    public function getMinSize(): array
-    {
-        return ['width' => 20, 'height' => 5];
     }
 }

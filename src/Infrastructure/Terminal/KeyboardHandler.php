@@ -12,11 +12,6 @@ namespace Butschster\Commander\Infrastructure\Terminal;
  */
 final class KeyboardHandler
 {
-    /** @var resource */
-    private $stdin;
-
-    private bool $nonBlockingEnabled = false;
-
     /** Key code mappings */
     private const array KEY_MAPPINGS = [
         // Arrow keys
@@ -66,6 +61,11 @@ final class KeyboardHandler
         "\032" => 'CTRL_Z',
     ];
 
+    /** @var resource */
+    private $stdin;
+
+    private bool $nonBlockingEnabled = false;
+
     public function __construct()
     {
         $this->stdin = STDIN;
@@ -80,7 +80,7 @@ final class KeyboardHandler
             return;
         }
 
-        stream_set_blocking($this->stdin, false);
+        \stream_set_blocking($this->stdin, false);
         $this->nonBlockingEnabled = true;
     }
 
@@ -93,7 +93,7 @@ final class KeyboardHandler
             return;
         }
 
-        stream_set_blocking($this->stdin, true);
+        \stream_set_blocking($this->stdin, true);
         $this->nonBlockingEnabled = false;
     }
 
@@ -108,7 +108,7 @@ final class KeyboardHandler
             $this->enableNonBlocking();
         }
 
-        $char = fread($this->stdin, 1);
+        $char = \fread($this->stdin, 1);
 
         if ($char === false || $char === '') {
             return null;
@@ -128,88 +128,6 @@ final class KeyboardHandler
 
         // Return the character as-is for regular keys
         return $char;
-    }
-
-    /**
-     * Read complete escape sequence
-     */
-    private function readEscapeSequence(): string
-    {
-        $sequence = "\033";
-        $maxLength = 10; // Max escape sequence length
-        $timeout = 100000; // 100ms timeout in microseconds
-
-        for ($i = 0; $i < $maxLength; $i++) {
-            // Check if data is available
-            $read = [$this->stdin];
-            $write = null;
-            $except = null;
-
-            $ready = stream_select($read, $write, $except, 0, $timeout);
-
-            if ($ready === false || $ready === 0) {
-                break;
-            }
-
-            $char = fread($this->stdin, 1);
-
-            if ($char === false || $char === '') {
-                break;
-            }
-
-            $sequence .= $char;
-
-            // Check if we have a complete known sequence after each character
-            foreach (self::KEY_MAPPINGS as $knownSequence => $keyName) {
-                if ($sequence === $knownSequence) {
-                    return $keyName;
-                }
-            }
-
-            // Special handling for ESC O sequences (F1-F4 in xterm mode)
-            // ESC O needs one more character: ESC O P, ESC O Q, etc.
-            if (strlen($sequence) === 2 && $char === 'O') {
-                // Continue reading one more character
-                continue;
-            }
-
-            // For ESC [ sequences, continue until we hit a letter or ~
-            if (strlen($sequence) >= 2 && $sequence[1] === '[') {
-                // Continue if we have digits or semicolons (CSI parameters)
-                if (ctype_digit($char) || $char === ';') {
-                    continue;
-                }
-                // Stop if we hit ~ or a letter (end of CSI sequence)
-                if ($char === '~' || ctype_alpha($char)) {
-                    break;
-                }
-            }
-
-            // For ESC O sequences, after getting O, read one more letter and stop
-            if (strlen($sequence) === 3 && $sequence[1] === 'O' && ctype_alpha($char)) {
-                break;
-            }
-
-            // If we have ESC followed by a single letter (not O or [), we're done
-            if (strlen($sequence) === 2 && ctype_alpha($char) && $char !== 'O' && $char !== '[') {
-                break;
-            }
-        }
-
-        // Final check for known sequences
-        foreach (self::KEY_MAPPINGS as $knownSequence => $keyName) {
-            if ($sequence === $knownSequence) {
-                return $keyName;
-            }
-        }
-
-        // If we got ESC + characters but no match, return for debugging
-        if (strlen($sequence) > 1) {
-            return 'UNKNOWN_' . bin2hex(substr($sequence, 1));
-        }
-
-        // Return ESCAPE if just ESC key
-        return 'ESCAPE';
     }
 
     /**
@@ -234,7 +152,7 @@ final class KeyboardHandler
             $seconds = (int) ($timeoutMs / 1000);
             $microseconds = ($timeoutMs % 1000) * 1000;
 
-            $ready = stream_select($read, $write, $except, $seconds, $microseconds);
+            $ready = \stream_select($read, $write, $except, $seconds, $microseconds);
 
             if ($ready === false || $ready === 0) {
                 if ($wasNonBlocking) {
@@ -262,7 +180,7 @@ final class KeyboardHandler
         $write = null;
         $except = null;
 
-        return stream_select($read, $write, $except, 0, 0) > 0;
+        return \stream_select($read, $write, $except, 0, 0) > 0;
     }
 
     /**
@@ -273,5 +191,87 @@ final class KeyboardHandler
         while ($this->getKey() !== null) {
             // Read and discard all pending input
         }
+    }
+
+    /**
+     * Read complete escape sequence
+     */
+    private function readEscapeSequence(): string
+    {
+        $sequence = "\033";
+        $maxLength = 10; // Max escape sequence length
+        $timeout = 100000; // 100ms timeout in microseconds
+
+        for ($i = 0; $i < $maxLength; $i++) {
+            // Check if data is available
+            $read = [$this->stdin];
+            $write = null;
+            $except = null;
+
+            $ready = \stream_select($read, $write, $except, 0, $timeout);
+
+            if ($ready === false || $ready === 0) {
+                break;
+            }
+
+            $char = \fread($this->stdin, 1);
+
+            if ($char === false || $char === '') {
+                break;
+            }
+
+            $sequence .= $char;
+
+            // Check if we have a complete known sequence after each character
+            foreach (self::KEY_MAPPINGS as $knownSequence => $keyName) {
+                if ($sequence === $knownSequence) {
+                    return $keyName;
+                }
+            }
+
+            // Special handling for ESC O sequences (F1-F4 in xterm mode)
+            // ESC O needs one more character: ESC O P, ESC O Q, etc.
+            if (\strlen($sequence) === 2 && $char === 'O') {
+                // Continue reading one more character
+                continue;
+            }
+
+            // For ESC [ sequences, continue until we hit a letter or ~
+            if (\strlen($sequence) >= 2 && $sequence[1] === '[') {
+                // Continue if we have digits or semicolons (CSI parameters)
+                if (\ctype_digit($char) || $char === ';') {
+                    continue;
+                }
+                // Stop if we hit ~ or a letter (end of CSI sequence)
+                if ($char === '~' || \ctype_alpha($char)) {
+                    break;
+                }
+            }
+
+            // For ESC O sequences, after getting O, read one more letter and stop
+            if (\strlen($sequence) === 3 && $sequence[1] === 'O' && \ctype_alpha($char)) {
+                break;
+            }
+
+            // If we have ESC followed by a single letter (not O or [), we're done
+            if (\strlen($sequence) === 2 && \ctype_alpha($char) && $char !== 'O' && $char !== '[') {
+                break;
+            }
+        }
+
+        // Final check for known sequences
+        foreach (self::KEY_MAPPINGS as $knownSequence => $keyName) {
+            if ($sequence === $knownSequence) {
+                return $keyName;
+            }
+        }
+
+        // If we got ESC + characters but no match, return for debugging
+        if (\strlen($sequence) > 1) {
+            return 'UNKNOWN_' . \bin2hex(\substr($sequence, 1));
+        }
+
+        // Return ESCAPE if just ESC key
+        return 'ESCAPE';
     }
 }

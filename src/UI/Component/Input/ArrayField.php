@@ -23,6 +23,7 @@ final class ArrayField extends TextField
         parent::__construct($name, $label, $required, '', $fullDescription);
     }
 
+    #[\Override]
     public function getValue(): mixed
     {
         $valueStr = (string) $this->value;
@@ -31,6 +32,6 @@ final class ArrayField extends TextField
             return [];
         }
 
-        return array_map(trim(...), explode(',', $valueStr));
+        return \array_map(trim(...), \explode(',', $valueStr));
     }
 }

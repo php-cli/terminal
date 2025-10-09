@@ -24,18 +24,18 @@ final class TerminalManager
     {
         // Try to get size using stty
         $output = [];
-        exec('stty size 2>/dev/null', $output, $returnCode);
+        \exec('stty size 2>/dev/null', $output, $returnCode);
 
         if ($returnCode === 0 && !empty($output[0])) {
-            [$height, $width] = sscanf($output[0], '%d %d');
+            [$height, $width] = \sscanf($output[0], '%d %d');
             if ($height && $width) {
                 return ['width' => (int) $width, 'height' => (int) $height];
             }
         }
 
         // Fallback: try tput
-        $width = (int) exec('tput cols 2>/dev/null') ?: 80;
-        $height = (int) exec('tput lines 2>/dev/null') ?: 24;
+        $width = (int) \exec('tput cols 2>/dev/null') ?: 80;
+        $height = (int) \exec('tput lines 2>/dev/null') ?: 24;
 
         return ['width' => $width, 'height' => $height];
     }
@@ -50,10 +50,10 @@ final class TerminalManager
         }
 
         // Save original settings
-        $this->originalTerminalSettings = shell_exec('stty -g 2>/dev/null');
+        $this->originalTerminalSettings = \shell_exec('stty -g 2>/dev/null');
 
         // Enable raw mode: -icanon (no line buffering), -echo (no echo), -isig (no signals)
-        shell_exec('stty -icanon -echo -isig 2>/dev/null');
+        \shell_exec('stty -icanon -echo -isig 2>/dev/null');
 
         $this->rawModeEnabled = true;
     }
@@ -68,7 +68,7 @@ final class TerminalManager
         }
 
         if ($this->originalTerminalSettings !== null) {
-            shell_exec("stty {$this->originalTerminalSettings} 2>/dev/null");
+            \shell_exec("stty {$this->originalTerminalSettings} 2>/dev/null");
         }
 
         $this->rawModeEnabled = false;
@@ -80,7 +80,7 @@ final class TerminalManager
     public function clearScreen(): void
     {
         echo "\033[2J\033[H";
-        flush();
+        \flush();
     }
 
     /**
@@ -89,7 +89,7 @@ final class TerminalManager
     public function hideCursor(): void
     {
         echo "\033[?25l";
-        flush();
+        \flush();
     }
 
     /**
@@ -98,7 +98,7 @@ final class TerminalManager
     public function showCursor(): void
     {
         echo "\033[?25h";
-        flush();
+        \flush();
     }
 
     /**
@@ -108,7 +108,7 @@ final class TerminalManager
     public function enterAlternateScreen(): void
     {
         echo "\033[?1049h";
-        flush();
+        \flush();
     }
 
     /**
@@ -118,7 +118,7 @@ final class TerminalManager
     public function exitAlternateScreen(): void
     {
         echo "\033[?1049l";
-        flush();
+        \flush();
     }
 
     /**
@@ -127,7 +127,7 @@ final class TerminalManager
     public function moveCursor(int $x, int $y): void
     {
         echo "\033[{$y};{$x}H";
-        flush();
+        \flush();
     }
 
     /**
@@ -136,7 +136,7 @@ final class TerminalManager
     public function resetAttributes(): void
     {
         echo ColorScheme::RESET;
-        flush();
+        \flush();
     }
 
     /**

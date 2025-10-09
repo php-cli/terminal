@@ -12,10 +12,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * Executes Symfony Console commands and captures output
  */
-final class CommandExecutor
+final readonly class CommandExecutor
 {
     public function __construct(
-        private readonly ?Application $application = null,
+        private ?Application $application = null,
     ) {}
 
     /**
@@ -40,7 +40,7 @@ final class CommandExecutor
 
             // Prepare input
             $input = new ArrayInput(
-                array_merge(
+                \array_merge(
                     ['command' => $commandName],
                     $parameters,
                 ),
@@ -91,7 +91,7 @@ final class CommandExecutor
 
             // Prepare input
             $input = new ArrayInput(
-                array_merge(
+                \array_merge(
                     ['command' => $commandName],
                     $parameters,
                 ),
@@ -142,7 +142,7 @@ final class CommandExecutor
         try {
             $this->application->find($commandName);
             return true;
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             return false;
         }
     }
@@ -184,7 +184,7 @@ final class CommandExecutor
         // TODO: Implement timeout using pcntl_alarm or similar
         $result = $this->execute($commandName, $parameters);
 
-        return array_merge($result, ['timedOut' => false]);
+        return \array_merge($result, ['timedOut' => false]);
     }
 
     /**
@@ -238,4 +238,3 @@ final class CommandExecutor
         return $parameters;
     }
 }
-

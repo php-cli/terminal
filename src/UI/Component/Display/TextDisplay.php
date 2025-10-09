@@ -18,7 +18,6 @@ final class TextDisplay extends AbstractComponent
 
     private int $scrollOffset = 0;
     private int $visibleLines = 0;
-
     private bool $autoScroll = true;
 
     /**
@@ -36,7 +35,7 @@ final class TextDisplay extends AbstractComponent
      */
     public function setText(string $text): void
     {
-        $this->lines = explode("\n", $text);
+        $this->lines = \explode("\n", $text);
 
         // Auto-scroll to bottom if enabled
         if ($this->autoScroll) {
@@ -49,14 +48,14 @@ final class TextDisplay extends AbstractComponent
      */
     public function appendText(string $text): void
     {
-        $newLines = explode("\n", $text);
+        $newLines = \explode("\n", $text);
 
         if (!empty($this->lines) && !empty($newLines)) {
             // Append first new line to last existing line
-            $this->lines[count($this->lines) - 1] .= array_shift($newLines);
+            $this->lines[\count($this->lines) - 1] .= \array_shift($newLines);
         }
 
-        $this->lines = array_merge($this->lines, $newLines);
+        $this->lines = \array_merge($this->lines, $newLines);
 
         // Auto-scroll to bottom if enabled
         if ($this->autoScroll) {
@@ -87,7 +86,7 @@ final class TextDisplay extends AbstractComponent
     public function scrollToBottom(): void
     {
         if ($this->visibleLines > 0) {
-            $this->scrollOffset = max(0, count($this->lines) - $this->visibleLines);
+            $this->scrollOffset = \max(0, \count($this->lines) - $this->visibleLines);
         }
     }
 
@@ -101,9 +100,9 @@ final class TextDisplay extends AbstractComponent
         }
 
         // Calculate visible range
-        $endIndex = min(
+        $endIndex = \min(
             $this->scrollOffset + $this->visibleLines,
-            count($this->lines),
+            \count($this->lines),
         );
 
         // Render lines
@@ -131,34 +130,12 @@ final class TextDisplay extends AbstractComponent
         }
 
         // Draw scrollbar if needed
-        if (count($this->lines) > $this->visibleLines) {
+        if (\count($this->lines) > $this->visibleLines) {
             $this->drawScrollbar($renderer, $x + $width - 1, $y, $height);
         }
     }
 
-    /**
-     * Wrap a line to fit within width
-     *
-     * @return array<string>
-     */
-    private function wrapLine(string $line, int $width): array
-    {
-        if (mb_strlen($line) <= $width) {
-            return [str_pad($line, $width)];
-        }
-
-        $wrapped = [];
-        $remaining = $line;
-
-        while (mb_strlen($remaining) > 0) {
-            $chunk = mb_substr($remaining, 0, $width);
-            $wrapped[] = str_pad($chunk, $width);
-            $remaining = mb_substr($remaining, $width);
-        }
-
-        return $wrapped;
-    }
-
+    #[\Override]
     public function handleInput(string $key): bool
     {
         if (!$this->isFocused()) {
@@ -174,19 +151,19 @@ final class TextDisplay extends AbstractComponent
                 return true;
 
             case 'DOWN':
-                if ($this->scrollOffset < count($this->lines) - $this->visibleLines) {
+                if ($this->scrollOffset < \count($this->lines) - $this->visibleLines) {
                     $this->scrollOffset++;
                 }
                 return true;
 
             case 'PAGE_UP':
-                $this->scrollOffset = max(0, $this->scrollOffset - $this->visibleLines);
+                $this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines);
                 $this->autoScroll = false;
                 return true;
 
             case 'PAGE_DOWN':
-                $this->scrollOffset = min(
-                    count($this->lines) - $this->visibleLines,
+                $this->scrollOffset = \min(
+                    \count($this->lines) - $this->visibleLines,
                     $this->scrollOffset + $this->visibleLines,
                 );
                 return true;
@@ -205,29 +182,53 @@ final class TextDisplay extends AbstractComponent
         return false;
     }
 
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return ['width' => 20, 'height' => 5];
+    }
+
+    /**
+     * Wrap a line to fit within width
+     *
+     * @return array<string>
+     */
+    private function wrapLine(string $line, int $width): array
+    {
+        if (\mb_strlen($line) <= $width) {
+            return [\str_pad($line, $width)];
+        }
+
+        $wrapped = [];
+        $remaining = $line;
+
+        while (\mb_strlen($remaining) > 0) {
+            $chunk = \mb_substr($remaining, 0, $width);
+            $wrapped[] = \str_pad($chunk, $width);
+            $remaining = \mb_substr($remaining, $width);
+        }
+
+        return $wrapped;
+    }
+
     /**
      * Draw scrollbar indicator
      */
     private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
     {
-        $totalLines = count($this->lines);
+        $totalLines = \count($this->lines);
 
         if ($totalLines <= $this->visibleLines) {
             return;
         }
 
         // Calculate thumb size and position
-        $thumbHeight = max(1, (int) ($height * $this->visibleLines / $totalLines));
+        $thumbHeight = \max(1, (int) ($height * $this->visibleLines / $totalLines));
         $thumbPosition = (int) ($height * $this->scrollOffset / $totalLines);
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
             $renderer->writeAt($x, $y + $i, $char, ColorScheme::SCROLLBAR);
         }
-    }
-
-    public function getMinSize(): array
-    {
-        return ['width' => 20, 'height' => 5];
     }
 }

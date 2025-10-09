@@ -17,7 +17,6 @@ abstract class AbstractComponent implements ComponentInterface
     protected array $children = [];
 
     protected ?ComponentInterface $parent = null;
-
     protected int $x = 0;
     protected int $y = 0;
     protected int $width = 0;
@@ -65,9 +64,9 @@ abstract class AbstractComponent implements ComponentInterface
      */
     public function removeChild(ComponentInterface $component): void
     {
-        $this->children = array_filter(
+        $this->children = \array_filter(
             $this->children,
-            fn(ComponentInterface $child) => $child !== $component,
+            static fn(ComponentInterface $child) => $child !== $component,
         );
 
         if ($component instanceof self) {
@@ -91,17 +90,6 @@ abstract class AbstractComponent implements ComponentInterface
     public function getParent(): ?ComponentInterface
     {
         return $this->parent;
-    }
-
-    /**
-     * Store component bounds for later use
-     */
-    protected function setBounds(int $x, int $y, int $width, int $height): void
-    {
-        $this->x = $x;
-        $this->y = $y;
-        $this->width = $width;
-        $this->height = $height;
     }
 
     /**
@@ -136,6 +124,17 @@ abstract class AbstractComponent implements ComponentInterface
         }
 
         return false;
+    }
+
+    /**
+     * Store component bounds for later use
+     */
+    protected function setBounds(int $x, int $y, int $width, int $height): void
+    {
+        $this->x = $x;
+        $this->y = $y;
+        $this->width = $width;
+        $this->height = $height;
     }
 
     /**

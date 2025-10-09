@@ -109,7 +109,7 @@ final class FormComponent extends AbstractComponent
 
         if (empty($this->fields)) {
             $emptyText = '(No fields)';
-            $emptyX = $x + (int) (($width - mb_strlen($emptyText)) / 2);
+            $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
             $emptyY = $y + (int) ($height / 2);
 
             $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::NORMAL_TEXT);
@@ -118,7 +118,7 @@ final class FormComponent extends AbstractComponent
 
         // Calculate visible range
         $visibleFields = $height - 2; // Reserve space for submit button
-        $endIndex = min($this->scrollOffset + $visibleFields, count($this->fields));
+        $endIndex = \min($this->scrollOffset + $visibleFields, \count($this->fields));
 
         // Render fields
         $currentY = $y;
@@ -141,19 +141,7 @@ final class FormComponent extends AbstractComponent
         }
     }
 
-    private function renderButtons(Renderer $renderer, int $x, int $y, int $width): void
-    {
-        $buttonsText = '[F2] Execute   [ESC] Cancel';
-        $buttonsX = $x + (int) (($width - mb_strlen($buttonsText)) / 2);
-
-        $renderer->writeAt(
-            $buttonsX,
-            $y,
-            $buttonsText,
-            ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW),
-        );
-    }
-
+    #[\Override]
     public function handleInput(string $key): bool
     {
         if (empty($this->fields)) {
@@ -170,7 +158,7 @@ final class FormComponent extends AbstractComponent
 
             case 'DOWN':
             case 'TAB':
-                if ($this->focusedFieldIndex < count($this->fields) - 1) {
+                if ($this->focusedFieldIndex < \count($this->fields) - 1) {
                     $this->focusedFieldIndex++;
                     $this->adjustScroll();
                 }
@@ -201,6 +189,25 @@ final class FormComponent extends AbstractComponent
         }
     }
 
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return ['width' => 40, 'height' => 10];
+    }
+
+    private function renderButtons(Renderer $renderer, int $x, int $y, int $width): void
+    {
+        $buttonsText = '[F2] Execute   [ESC] Cancel';
+        $buttonsX = $x + (int) (($width - \mb_strlen($buttonsText)) / 2);
+
+        $renderer->writeAt(
+            $buttonsX,
+            $y,
+            $buttonsText,
+            ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW),
+        );
+    }
+
     private function adjustScroll(): void
     {
         $visibleFields = $this->height - 2;
@@ -210,10 +217,5 @@ final class FormComponent extends AbstractComponent
         } elseif ($this->focusedFieldIndex >= $this->scrollOffset + $visibleFields) {
             $this->scrollOffset = $this->focusedFieldIndex - $visibleFields + 1;
         }
-    }
-
-    public function getMinSize(): array
-    {
-        return ['width' => 40, 'height' => 10];
     }
 }

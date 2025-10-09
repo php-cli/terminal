@@ -37,7 +37,7 @@ final class CheckboxField extends FormField
             $renderer->writeAt(
                 $x,
                 $currentY,
-                mb_substr($descText, 0, $width),
+                \mb_substr($descText, 0, $width),
                 $color,
             );
             $currentY++;
@@ -47,7 +47,7 @@ final class CheckboxField extends FormField
             $renderer->writeAt(
                 $x,
                 $currentY,
-                mb_substr($nameText, 0, $width),
+                \mb_substr($nameText, 0, $width),
                 ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY),
             );
             $currentY++;

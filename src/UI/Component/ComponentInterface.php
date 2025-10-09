@@ -21,7 +21,7 @@ interface ComponentInterface
      * @param int $height Component height
      */
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void;
-    
+
     /**
      * Handle keyboard input
      *
@@ -29,24 +29,24 @@ interface ComponentInterface
      * @return bool True if the key was handled, false to propagate to parent
      */
     public function handleInput(string $key): bool;
-    
+
     /**
      * Set focus state
      *
      * @param bool $focused Whether this component has focus
      */
     public function setFocused(bool $focused): void;
-    
+
     /**
      * Check if component is focused
      */
     public function isFocused(): bool;
-    
+
     /**
      * Update component state (called every frame)
      */
     public function update(): void;
-    
+
     /**
      * Get component's desired minimum size
      *

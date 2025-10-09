@@ -8,3 +8,4 @@ protoc-gen-php-grpc*
 .phpunit.cache/
 .context
 mcp-*.log
+runtime

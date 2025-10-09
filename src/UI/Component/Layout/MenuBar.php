@@ -51,14 +51,15 @@ final class MenuBar extends AbstractComponent
 
             // Render key (highlighted)
             $renderer->writeAt($currentX, $y, $keyStr, ColorScheme::MENU_HOTKEY);
-            $currentX += mb_strlen($keyStr);
+            $currentX += \mb_strlen($keyStr);
 
             // Render label
             $renderer->writeAt($currentX, $y, $labelStr, ColorScheme::MENU_TEXT);
-            $currentX += mb_strlen($labelStr) + 2; // Add spacing
+            $currentX += \mb_strlen($labelStr) + 2; // Add spacing
         }
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // MenuBar typically doesn't handle input directly
@@ -66,6 +67,7 @@ final class MenuBar extends AbstractComponent
         return false;
     }
 
+    #[\Override]
     public function getMinSize(): array
     {
         return ['width' => 10, 'height' => 1];

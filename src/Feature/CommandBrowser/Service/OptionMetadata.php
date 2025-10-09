@@ -7,16 +7,15 @@ namespace Butschster\Commander\Feature\CommandBrowser\Service;
 /**
  * Option metadata structure
  */
-final class OptionMetadata
+final readonly class OptionMetadata
 {
     public function __construct(
-        public readonly string $name,
-        public readonly ?string $shortcut,
-        public readonly string $description,
-        public readonly bool $acceptValue,
-        public readonly bool $isValueRequired,
-        public readonly bool $isArray,
-        public readonly mixed $default,
+        public string $name,
+        public ?string $shortcut,
+        public string $description,
+        public bool $acceptValue,
+        public bool $isValueRequired,
+        public bool $isArray,
+        public mixed $default,
     ) {}
 }
-

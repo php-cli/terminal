@@ -46,9 +46,9 @@ final class StatusBar extends AbstractComponent
             // Ensure key and description are strings
             $keyStr = (string) $key;
             $descStr = (string) $description;
-            
+
             // Calculate item width: "F1" + "Help" + space
-            $itemWidth = mb_strlen($keyStr) + mb_strlen($descStr) + 1; // 1 for space between key and description
+            $itemWidth = \mb_strlen($keyStr) + \mb_strlen($descStr) + 1; // 1 for space between key and description
 
             // Check if we have room for this item
             if ($currentX + $itemWidth >= $x + $width - 1) {
@@ -57,20 +57,22 @@ final class StatusBar extends AbstractComponent
 
             // Render key number/name (bold white)
             $renderer->writeAt($currentX, $y, $keyStr, ColorScheme::STATUS_KEY);
-            $currentX += mb_strlen($keyStr);
+            $currentX += \mb_strlen($keyStr);
 
             // Render description (black text on cyan)
             $renderer->writeAt($currentX, $y, $descStr, ColorScheme::STATUS_TEXT);
-            $currentX += mb_strlen($descStr) + $itemSpacing;
+            $currentX += \mb_strlen($descStr) + $itemSpacing;
         }
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // StatusBar typically doesn't handle input directly
         return false;
     }
 
+    #[\Override]
     public function getMinSize(): array
     {
         return ['width' => 10, 'height' => 1];

@@ -63,7 +63,7 @@ final class Panel extends AbstractComponent
                 $width - 2,
                 $height - 2,
                 ' ',
-                ColorScheme::NORMAL_TEXT
+                ColorScheme::NORMAL_TEXT,
             );
         }
 
@@ -100,6 +100,7 @@ final class Panel extends AbstractComponent
         }
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // Delegate to content
@@ -110,6 +111,7 @@ final class Panel extends AbstractComponent
         return false;
     }
 
+    #[\Override]
     public function setFocused(bool $focused): void
     {
         parent::setFocused($focused);
@@ -120,6 +122,7 @@ final class Panel extends AbstractComponent
         }
     }
 
+    #[\Override]
     public function getMinSize(): array
     {
         if ($this->content === null) {

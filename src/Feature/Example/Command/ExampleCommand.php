@@ -17,6 +17,7 @@ final class ExampleCommand extends Command
 {
     protected static $defaultDescription = 'Greet someone with customizable options';
 
+    #[\Override]
     public static function getDefaultName(): string
     {
         return 'example:greet';
@@ -85,7 +86,7 @@ final class ExampleCommand extends Command
         }
 
         if ($uppercase) {
-            $greeting = strtoupper($greeting);
+            $greeting = \strtoupper($greeting);
         }
 
         // Output repeated greeting

@@ -22,13 +22,10 @@ final class Application
     private bool $running = false;
     private int $targetFps = 30;
     private float $frameTime;
-
-    private TerminalManager $terminal;
-    private Renderer $renderer;
-    private KeyboardHandler $keyboard;
-    private ScreenManager $screenManager;
-
-    private ?SymfonyApplication $symfonyApp = null;
+    private readonly TerminalManager $terminal;
+    private readonly Renderer $renderer;
+    private readonly KeyboardHandler $keyboard;
+    private readonly ScreenManager $screenManager;
 
     /** @var array<string, callable> Global function key shortcuts */
     private array $globalShortcuts = [];
@@ -36,9 +33,8 @@ final class Application
     /** @var MenuBar|null Global menu bar */
     private ?MenuBar $globalMenuBar = null;
 
-    public function __construct(?SymfonyApplication $symfonyApp = null)
+    public function __construct(private readonly ?SymfonyApplication $symfonyApp = null)
     {
-        $this->symfonyApp = $symfonyApp;
         $this->frameTime = 1.0 / $this->targetFps;
 
         // Initialize services
@@ -56,7 +52,7 @@ final class Application
      */
     public function setTargetFps(int $fps): void
     {
-        $this->targetFps = max(1, min(60, $fps));
+        $this->targetFps = \max(1, \min(60, $fps));
         $this->frameTime = 1.0 / $this->targetFps;
     }
 
@@ -129,14 +125,38 @@ final class Application
     }
 
     /**
+     * Get renderer (for debugging/testing)
+     */
+    public function getRenderer(): Renderer
+    {
+        return $this->renderer;
+    }
+
+    /**
+     * Get terminal manager (for debugging/testing)
+     */
+    public function getTerminal(): TerminalManager
+    {
+        return $this->terminal;
+    }
+
+    /**
+     * Get keyboard handler (for debugging/testing)
+     */
+    public function getKeyboard(): KeyboardHandler
+    {
+        return $this->keyboard;
+    }
+
+    /**
      * Main event loop
      */
     private function mainLoop(): void
     {
-        $lastFrameTime = microtime(true);
+        $lastFrameTime = \microtime(true);
 
         while ($this->running && $this->screenManager->hasScreens()) {
-            $frameStart = microtime(true);
+            $frameStart = \microtime(true);
 
             // Handle input
             $this->handleInput();
@@ -148,12 +168,12 @@ final class Application
             $this->renderFrame();
 
             // Frame timing
-            $frameEnd = microtime(true);
+            $frameEnd = \microtime(true);
             $frameDuration = $frameEnd - $frameStart;
 
             // Sleep to maintain target FPS
             if ($frameDuration < $this->frameTime) {
-                usleep((int) (($this->frameTime - $frameDuration) * 1000000));
+                \usleep((int) (($this->frameTime - $frameDuration) * 1000000));
             }
 
             $lastFrameTime = $frameEnd;
@@ -186,9 +206,9 @@ final class Application
             if (!$handled && $key === 'ESCAPE') {
                 if ($this->screenManager->getDepth() > 1) {
                     $this->screenManager->popScreen();
-                } else {
-                    // $this->stop();
                 }
+                // $this->stop();
+
             }
         }
     }
@@ -225,22 +245,22 @@ final class Application
      */
     private function setupSignalHandlers(): void
     {
-        if (!function_exists('pcntl_signal')) {
+        if (!\function_exists('pcntl_signal')) {
             return;
         }
 
         // Handle SIGINT (Ctrl+C)
-        pcntl_signal(SIGINT, function () {
+        \pcntl_signal(SIGINT, function (): void {
             $this->stop();
         });
 
         // Handle SIGTERM
-        pcntl_signal(SIGTERM, function () {
+        \pcntl_signal(SIGTERM, function (): void {
             $this->stop();
         });
 
         // Handle SIGWINCH (terminal resize)
-        pcntl_signal(SIGWINCH, function () {
+        \pcntl_signal(SIGWINCH, function (): void {
             $this->renderer->handleResize();
         });
     }
@@ -252,29 +272,5 @@ final class Application
     {
         $this->keyboard->disableNonBlocking();
         $this->terminal->cleanup();
-    }
-
-    /**
-     * Get renderer (for debugging/testing)
-     */
-    public function getRenderer(): Renderer
-    {
-        return $this->renderer;
-    }
-
-    /**
-     * Get terminal manager (for debugging/testing)
-     */
-    public function getTerminal(): TerminalManager
-    {
-        return $this->terminal;
-    }
-
-    /**
-     * Get keyboard handler (for debugging/testing)
-     */
-    public function getKeyboard(): KeyboardHandler
-    {
-        return $this->keyboard;
     }
 }

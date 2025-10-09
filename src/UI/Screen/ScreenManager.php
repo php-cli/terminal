@@ -42,7 +42,7 @@ final class ScreenManager
             return null;
         }
 
-        $screen = array_pop($this->stack);
+        $screen = \array_pop($this->stack);
         $screen->onDeactivate();
 
         // Activate the new current screen
@@ -70,7 +70,7 @@ final class ScreenManager
      */
     public function getCurrentScreen(): ?ScreenInterface
     {
-        return empty($this->stack) ? null : end($this->stack);
+        return empty($this->stack) ? null : \end($this->stack);
     }
 
     /**
@@ -88,7 +88,7 @@ final class ScreenManager
      */
     public function getDepth(): int
     {
-        return count($this->stack);
+        return \count($this->stack);
     }
 
     /**

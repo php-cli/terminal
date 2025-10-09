@@ -17,7 +17,7 @@ interface ScreenInterface
      * @param Renderer $renderer The renderer to draw to
      */
     public function render(Renderer $renderer): void;
-    
+
     /**
      * Handle keyboard input
      *
@@ -25,22 +25,22 @@ interface ScreenInterface
      * @return bool True if the key was handled
      */
     public function handleInput(string $key): bool;
-    
+
     /**
      * Called when screen becomes active
      */
     public function onActivate(): void;
-    
+
     /**
      * Called when screen is deactivated
      */
     public function onDeactivate(): void;
-    
+
     /**
      * Update screen state (called every frame)
      */
     public function update(): void;
-    
+
     /**
      * Get screen title
      */

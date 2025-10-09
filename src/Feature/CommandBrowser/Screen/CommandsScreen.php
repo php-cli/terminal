@@ -14,6 +14,9 @@ use Butschster\Commander\UI\Component\Input\FormComponent;
 use Butschster\Commander\UI\Component\Layout\Modal;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
+use Butschster\Commander\UI\Component\Container\GridLayout;
+use Butschster\Commander\UI\Component\Container\StackLayout;
+use Butschster\Commander\UI\Component\Container\Direction;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
@@ -25,111 +28,23 @@ use Butschster\Commander\UI\Theme\ColorScheme;
 final class CommandsScreen implements ScreenInterface
 {
     private StatusBar $statusBar;
-
+    private StackLayout $rootLayout;
     private Panel $leftPanel;
     private Panel $rightPanel;
-
     private ListComponent $commandList;
     private ?FormComponent $commandForm = null;
     private ?TextDisplay $outputDisplay = null;
-
-    private CommandDiscovery $commandDiscovery;
-    private CommandExecutor $commandExecutor;
-
     private int $focusedPanelIndex = 0;
     private bool $isExecuting = false;
     private bool $showingForm = true;
-
     private ?CommandMetadata $selectedCommand = null;
     private ?Modal $activeModal = null;
 
     public function __construct(
-        CommandDiscovery $commandDiscovery,
-        CommandExecutor $commandExecutor,
+        private readonly CommandDiscovery $commandDiscovery,
+        private readonly CommandExecutor $commandExecutor,
     ) {
-        $this->commandDiscovery = $commandDiscovery;
-        $this->commandExecutor = $commandExecutor;
-
         $this->initializeComponents();
-    }
-
-    private function initializeComponents(): void
-    {
-        // Bottom status bar - will be updated dynamically based on context
-        $this->statusBar = new StatusBar([]);
-        $this->updateStatusBar();
-
-        // Left panel - Command list
-        $commands = $this->commandDiscovery->getAllCommands();
-        $this->commandList = new ListComponent($commands);
-        $this->commandList->setFocused(true);
-
-        // Handle command selection change
-        $this->commandList->onChange(function (?string $commandName, int $index) {
-            if ($commandName !== null) {
-                $this->showCommandForm($commandName);
-            }
-        });
-
-        // Handle command execution (Enter key on list)
-        $this->commandList->onSelect(function (string $commandName, int $index) {
-            $this->showCommandForm($commandName);
-            // Switch to form panel
-            $this->focusedPanelIndex = 1;
-            $this->commandList->setFocused(false);
-            if ($this->commandForm !== null) {
-                $this->commandForm->setFocused(true);
-            }
-            $this->updateStatusBar();
-        });
-
-        $this->leftPanel = new Panel('Commands (' . count($commands) . ')', $this->commandList);
-
-        // Right panel - Form or output
-        $this->outputDisplay = new TextDisplay();
-        $this->rightPanel = new Panel('Output', $this->outputDisplay);
-
-        // Show form for first command
-        if (!empty($commands)) {
-            $this->showCommandForm($commands[0]);
-        }
-    }
-
-    /**
-     * Update status bar based on current screen state
-     */
-    private function updateStatusBar(): void
-    {
-        $hints = [];
-
-        if ($this->focusedPanelIndex === 0) {
-            // Left panel (command list) is focused
-            $hints = [
-                '↑↓' => ' Navigate',
-                'Enter' => ' Select',
-                'Tab' => ' Switch',
-                'F4' => ' Execute',
-            ];
-        } elseif ($this->showingForm && $this->commandForm !== null) {
-            // Right panel with form is focused
-            $hints = [
-                '↑↓' => ' Fields',
-                'Tab' => ' Switch',
-                'F4' => ' Execute',
-                'ESC' => ' Cancel',
-            ];
-        } else {
-            // Right panel with output is focused
-            $hints = [
-                '↑↓' => ' Scroll',
-                'PgUp/Dn' => ' Page',
-                'Tab' => ' Switch',
-                'F4' => ' Run Again',
-                'ESC' => ' Back',
-            ];
-        }
-
-        $this->statusBar->setHints($hints);
     }
 
     public function render(Renderer $renderer): void
@@ -138,29 +53,25 @@ final class CommandsScreen implements ScreenInterface
         $width = $size['width'];
         $height = $size['height'];
 
-        // Render status bar (bottom)
-        $this->statusBar->render($renderer, 0, $height - 1, $width, 1);
-
-        // Calculate panel dimensions (30% left, 70% right)
-        // Account for global menu bar (top) and screen status bar (bottom)
-        $panelHeight = $height - 2;
-        $leftWidth = (int) ($width * 0.3);
-        $rightWidth = $width - $leftWidth;
-
         // Update focus state
         $this->leftPanel->setFocused($this->focusedPanelIndex === 0);
         $this->rightPanel->setFocused($this->focusedPanelIndex === 1);
 
-        // Render left panel (command list)
-        $this->leftPanel->render($renderer, 0, 1, $leftWidth, $panelHeight);
-
-        // Render right panel (form or output)
-        $this->rightPanel->render($renderer, $leftWidth, 1, $rightWidth, $panelHeight);
+        // NEW: Single render call! Layout system handles all positioning
+        $this->rootLayout->render(
+            $renderer,
+            0,
+            1,  // x, y (account for global menu bar at top)
+            $width,
+            $height - 1,  // Account for global menu bar
+        );
 
         // Render executing indicator if running command
         if ($this->isExecuting) {
             $indicator = ' [EXECUTING...] ';
-            $indicatorX = $leftWidth + (int) (($rightWidth - mb_strlen($indicator)) / 2);
+            $leftWidth = (int) ($width * 0.3);
+            $rightWidth = $width - $leftWidth;
+            $indicatorX = $leftWidth + (int) (($rightWidth - \mb_strlen($indicator)) / 2);
             $renderer->writeAt(
                 $indicatorX,
                 1,
@@ -250,9 +161,118 @@ final class CommandsScreen implements ScreenInterface
         // Delegate to focused panel
         if ($this->focusedPanelIndex === 0) {
             return $this->leftPanel->handleInput($key);
-        } else {
-            return $this->rightPanel->handleInput($key);
         }
+        return $this->rightPanel->handleInput($key);
+
+    }
+
+    public function onActivate(): void
+    {
+        // Nothing to do
+    }
+
+    public function onDeactivate(): void
+    {
+        // Nothing to do
+    }
+
+    public function update(): void
+    {
+        // Nothing to update
+    }
+
+    public function getTitle(): string
+    {
+        return 'Command Browser';
+    }
+
+    private function initializeComponents(): void
+    {
+        // Bottom status bar - will be updated dynamically based on context
+        $this->statusBar = new StatusBar([]);
+        $this->updateStatusBar();
+
+        // Left panel - Command list
+        $commands = $this->commandDiscovery->getAllCommands();
+        $this->commandList = new ListComponent($commands);
+        $this->commandList->setFocused(true);
+
+        // Handle command selection change
+        $this->commandList->onChange(function (?string $commandName, int $index): void {
+            if ($commandName !== null) {
+                $this->showCommandForm($commandName);
+            }
+        });
+
+        // Handle command execution (Enter key on list)
+        $this->commandList->onSelect(function (string $commandName, int $index): void {
+            $this->showCommandForm($commandName);
+            // Switch to form panel
+            $this->focusedPanelIndex = 1;
+            $this->commandList->setFocused(false);
+            if ($this->commandForm !== null) {
+                $this->commandForm->setFocused(true);
+            }
+            $this->updateStatusBar();
+        });
+
+        $this->leftPanel = new Panel('Commands (' . \count($commands) . ')', $this->commandList);
+
+        // Right panel - Form or output
+        $this->outputDisplay = new TextDisplay();
+        $this->rightPanel = new Panel('Output', $this->outputDisplay);
+
+        // Show form for first command
+        if (!empty($commands)) {
+            $this->showCommandForm($commands[0]);
+        }
+
+        // NEW: Build layout structure using composition
+        $mainArea = new GridLayout(columns: ['30%', '70%']);
+        $mainArea->setColumn(0, $this->leftPanel);
+        $mainArea->setColumn(1, $this->rightPanel);
+
+        // Root layout: vertical stack (content + status bar)
+        $this->rootLayout = new StackLayout(Direction::VERTICAL);
+        $this->rootLayout->addChild($mainArea);  // Takes remaining space
+        $this->rootLayout->addChild($this->statusBar, size: 1);
+    }
+
+    /**
+     * Update status bar based on current screen state
+     */
+    private function updateStatusBar(): void
+    {
+        $hints = [];
+
+        if ($this->focusedPanelIndex === 0) {
+            // Left panel (command list) is focused
+            $hints = [
+                '↑↓' => ' Navigate',
+                'Enter' => ' Select',
+                'Tab' => ' Switch',
+                'F4' => ' Execute',
+            ];
+        } elseif ($this->showingForm && $this->commandForm !== null) {
+            // Right panel with form is focused
+            $hints = [
+                '↑↓' => ' Fields',
+                'Tab' => ' Switch',
+                'F4' => ' Execute',
+                'ESC' => ' Cancel',
+            ];
+        } else {
+            // Right panel with output is focused
+            $hints = [
+                '↑↓' => ' Scroll',
+                'PgUp/Dn' => ' Page',
+                'Tab' => ' Switch',
+                'F4' => ' Run Again',
+                'ESC' => ' Back',
+            ];
+        }
+
+        $this->statusBar->setHints($hints);
     }
 
     /**
@@ -261,7 +281,7 @@ final class CommandsScreen implements ScreenInterface
     private function showSuccessModal(string $message): void
     {
         $this->activeModal = Modal::info('Success', $message);
-        $this->activeModal->onClose(function () {
+        $this->activeModal->onClose(function (): void {
             $this->activeModal = null;
         });
     }
@@ -308,7 +328,7 @@ final class CommandsScreen implements ScreenInterface
 
         $this->activeModal = Modal::info('Help', $helpText);
         $this->activeModal->setSize(70, 30);
-        $this->activeModal->onClose(function () {
+        $this->activeModal->onClose(function (): void {
             $this->activeModal = null;
         });
     }
@@ -319,7 +339,7 @@ final class CommandsScreen implements ScreenInterface
     private function showErrorModal(string $message): void
     {
         $this->activeModal = Modal::error('Error', $message);
-        $this->activeModal->onClose(function () {
+        $this->activeModal->onClose(function (): void {
             $this->activeModal = null;
         });
     }
@@ -335,7 +355,7 @@ final class CommandsScreen implements ScreenInterface
         }
 
         $this->activeModal = Modal::error('Validation Errors', $message);
-        $this->activeModal->onClose(function () {
+        $this->activeModal->onClose(function (): void {
             $this->activeModal = null;
         });
     }
@@ -348,7 +368,7 @@ final class CommandsScreen implements ScreenInterface
         $fullMessage = $message;
 
         if ($exception !== null) {
-            $fullMessage .= "\n\n" . get_class($exception) . ":\n" . $exception->getMessage();
+            $fullMessage .= "\n\n" . $exception::class . ":\n" . $exception->getMessage();
 
             if ($exception->getFile()) {
                 $fullMessage .= "\n\nFile: {$exception->getFile()}:{$exception->getLine()}";
@@ -357,7 +377,7 @@ final class CommandsScreen implements ScreenInterface
 
         $this->activeModal = Modal::error('Execution Error', $fullMessage);
         $this->activeModal->setSize(80, 20); // Larger modal for exception details
-        $this->activeModal->onClose(function () {
+        $this->activeModal->onClose(function (): void {
             $this->activeModal = null;
         });
     }
@@ -464,11 +484,11 @@ final class CommandsScreen implements ScreenInterface
         }
 
         // Set form callbacks
-        $form->onSubmit(function (array $values) {
+        $form->onSubmit(function (array $values): void {
             $this->executeCurrentCommand();
         });
 
-        $form->onCancel(function () {
+        $form->onCancel(function (): void {
             // Switch back to command list
             $this->focusedPanelIndex = 0;
             $this->commandList->setFocused(true);
@@ -524,7 +544,7 @@ final class CommandsScreen implements ScreenInterface
                 "You are about to execute '{$this->selectedCommand->name}'.\n\n" .
                 "This command may perform destructive operations.\n\n" .
                 "Are you sure you want to continue?",
-                function () {
+                function (): void {
                     $this->performCommandExecution();
                 },
             );
@@ -554,10 +574,10 @@ final class CommandsScreen implements ScreenInterface
             'db:wipe',
         ];
 
-        $lowerCommand = strtolower($commandName);
+        $lowerCommand = \strtolower($commandName);
 
         foreach ($dangerousPatterns as $pattern) {
-            if (str_contains($lowerCommand, $pattern)) {
+            if (\str_contains($lowerCommand, $pattern)) {
                 return true;
             }
         }
@@ -571,7 +591,7 @@ final class CommandsScreen implements ScreenInterface
     private function showConfirmationModal(string $title, string $message, callable $onConfirm): void
     {
         $this->activeModal = Modal::confirm($title, $message);
-        $this->activeModal->onClose(function ($confirmed) use ($onConfirm) {
+        $this->activeModal->onClose(function ($confirmed) use ($onConfirm): void {
             $this->activeModal = null;
 
             if ($confirmed) {
@@ -600,15 +620,15 @@ final class CommandsScreen implements ScreenInterface
         if (!empty($parameters)) {
             $paramStr = [];
             foreach ($parameters as $key => $value) {
-                if (is_bool($value)) {
+                if (\is_bool($value)) {
                     $paramStr[] = $key;
-                } elseif (is_array($value)) {
-                    $paramStr[] = "$key=" . implode(',', $value);
+                } elseif (\is_array($value)) {
+                    $paramStr[] = "$key=" . \implode(',', $value);
                 } else {
                     $paramStr[] = "$key=\"$value\"";
                 }
             }
-            $commandWithParams .= ' ' . implode(' ', $paramStr);
+            $commandWithParams .= ' ' . \implode(' ', $paramStr);
         }
 
         $this->rightPanel->setTitle("Output: {$this->selectedCommand->name}");
@@ -626,7 +646,7 @@ final class CommandsScreen implements ScreenInterface
             }
 
             // Show exit code
-            $this->outputDisplay->appendText("\n" . str_repeat('─', 50) . "\n");
+            $this->outputDisplay->appendText("\n" . \str_repeat('─', 50) . "\n");
 
             if ($result['exitCode'] === 0) {
                 $this->outputDisplay->appendText("✅ Success (exit code: 0)\n");
@@ -647,7 +667,7 @@ final class CommandsScreen implements ScreenInterface
 
             $this->outputDisplay->appendText("\nPress F2 to run again, Tab to select another command.");
         } catch (\Throwable $e) {
-            $this->outputDisplay->appendText("\n❌ EXCEPTION\n" . str_repeat('─', 50) . "\n");
+            $this->outputDisplay->appendText("\n❌ EXCEPTION\n" . \str_repeat('─', 50) . "\n");
             $this->outputDisplay->appendText($e->getMessage() . "\n");
             $this->outputDisplay->appendText("\nPress F2 to run again, Tab to select another command.");
 
@@ -659,25 +679,4 @@ final class CommandsScreen implements ScreenInterface
             $this->updateStatusBar();
         }
     }
-
-    public function onActivate(): void
-    {
-        // Nothing to do
-    }
-
-    public function onDeactivate(): void
-    {
-        // Nothing to do
-    }
-
-    public function update(): void
-    {
-        // Nothing to update
-    }
-
-    public function getTitle(): string
-    {
-        return 'Command Browser';
-    }
 }
-
