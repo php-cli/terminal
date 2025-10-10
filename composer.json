@@ -35,10 +35,27 @@
     "buggregator/trap": "^1.13"
   },
   "scripts": {
+    "cs-check": "vendor/bin/php-cs-fixer fix --dry-run",
     "cs-fix": "vendor/bin/php-cs-fixer fix",
     "psalm": "vendor/bin/psalm --config=psalm.xml ./src",
+    "psalm:ci": "vendor/bin/psalm --config=psalm.xml ./src --output-format=github --shepherd --show-info=false --stats --threads=4 --no-cache",
     "refactor": "rector process --config=rector.php",
-    "test": "vendor/bin/phpunit"
+    "refactor:ci": "rector process --config=rector.php --dry-run --ansi",
+    "test": "vendor/bin/phpunit",
+    "test:cc": [
+      "@putenv XDEBUG_MODE=coverage",
+      "phpunit --coverage-clover=.build/phpunit/logs/clover.xml --color=always"
+    ],
+    "cs:fix": [
+      "@cs-fix",
+      "@refactor"
+    ],
+    "lint": [
+      "@cs-check",
+      "@refactor:ci",
+      "@psalm",
+      "@test"
+    ]
   },
   "config": {
     "sort-packages": true

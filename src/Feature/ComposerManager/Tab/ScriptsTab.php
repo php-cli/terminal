@@ -36,6 +36,7 @@ final class ScriptsTab extends AbstractTab
     private int $focusedPanelIndex = 0;
     private bool $isExecuting = false;
     private ?Modal $activeModal = null;
+    private bool $hasError = false;
 
     public function __construct(
         private readonly ComposerService $composerService,
@@ -62,6 +63,11 @@ final class ScriptsTab extends AbstractTab
     {
         $this->setBounds($x, $y, $width, $height);
         $this->layout->render($renderer, $x, $y, $width, $height);
+
+        // Overlay: Error indicator on right panel
+        if ($this->hasError) {
+            $this->renderErrorIndicator($renderer, $x, $y, $width, $height);
+        }
 
         // Overlay: Executing indicator
         if ($this->isExecuting) {
@@ -318,6 +324,7 @@ final class ScriptsTab extends AbstractTab
     private function performScriptExecution(string $scriptName): void
     {
         $this->isExecuting = true;
+        $this->hasError = false;
 
         // Switch focus to right panel to show output
         $this->focusedPanelIndex = 1;
@@ -342,20 +349,18 @@ final class ScriptsTab extends AbstractTab
 
             if ($result['exitCode'] === 0) {
                 $this->detailsDisplay->appendText("✅ Success (exit code: 0)\n");
+                $this->hasError = false;
             } else {
                 $this->detailsDisplay->appendText("❌ Failed (exit code: {$result['exitCode']})\n");
-
-                if (!empty($result['error'])) {
-                    $errorMessage = "Script failed with exit code {$result['exitCode']}.\n\n{$result['error']}";
-                    $this->showErrorModal($errorMessage);
-                }
+                $this->hasError = true;
             }
 
             $this->detailsDisplay->appendText("\nPress Enter to run again, Tab to select another script.");
         } catch (\Throwable $e) {
             $this->detailsDisplay->appendText("\n❌ EXCEPTION\n" . \str_repeat('─', 50) . "\n");
             $this->detailsDisplay->appendText($e->getMessage() . "\n");
-            $this->showErrorModal('An exception occurred while executing the script: ' . $e->getMessage());
+            $this->detailsDisplay->appendText("\nPress Enter to run again, Tab to select another script.");
+            $this->hasError = true;
         } finally {
             $this->isExecuting = false;
         }
@@ -373,6 +378,21 @@ final class ScriptsTab extends AbstractTab
             $y + 1,
             $indicator,
             ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
+        );
+    }
+
+    private function renderErrorIndicator(Renderer $renderer, int $x, int $y, int $width, int $height): void
+    {
+        $message = ' FAILED ';
+        $leftWidth = (int) ($width * 0.4);
+        $rightWidth = $width - $leftWidth;
+        $messageX = $x + $leftWidth + (int) (($rightWidth - \mb_strlen($message)) / 2);
+
+        $renderer->writeAt(
+            $messageX,
+            $y + 1,
+            $message,
+            ColorScheme::combine(ColorScheme::BG_RED, ColorScheme::FG_WHITE, ColorScheme::BOLD),
         );
     }
 
