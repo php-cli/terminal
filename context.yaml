@@ -14,4 +14,36 @@ documents:
       - type: file
         sourcePaths:
           - src
+
+  - description: File Browser
+    outputPath: file.md
+    sources:
+      - type: tree
+        sourcePaths:
+          - src
+      - type: file
+        sourcePaths:
           - console
+          - src/Feature/FileBrowser
+
+  - description: Command Browser
+    outputPath: command.md
+    sources:
+      - type: tree
+        sourcePaths:
+          - src
+      - type: file
+        sourcePaths:
+          - console
+          - src/Feature/CommandBrowser
+
+  - description: Composer manager
+    outputPath: composer.md
+    sources:
+      - type: tree
+        sourcePaths:
+          - src
+      - type: file
+        sourcePaths:
+          - console
+          - src/Feature/ComposerManager

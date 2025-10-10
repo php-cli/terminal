@@ -9,6 +9,8 @@ use Butschster\Commander\Application;
 use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
+use Butschster\Commander\Feature\ComposerManager\Screen\ComposerManagerScreen;
+use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
 use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
 use Butschster\Commander\UI\Component\Layout\MenuBar;
@@ -38,6 +40,7 @@ try {
             'F1' => ' Help',
             'F2' => ' Exec',
             'F3' => ' Files',
+            'F5' => ' Composer',
             'F10' => ' Quit',
     ]);
     $app->setGlobalMenuBar($globalMenu);
@@ -64,6 +67,19 @@ try {
         if (!($screenManager->getCurrentScreen() instanceof FileBrowserScreen)) {
             $fileBrowserScreen = new FileBrowserScreen($fileSystem, $screenManager, getcwd());
             $screenManager->pushScreen($fileBrowserScreen);
+        }
+    });
+
+    // F5: Switch to Composer Manager
+    $app->registerGlobalShortcut('F5', function ($screenManager) {
+        // Pop to root and push composer manager
+        $screenManager->popUntil(fn($screen) => $screen instanceof ComposerManagerScreen);
+
+        // If not on composer manager screen, push it
+        if (!($screenManager->getCurrentScreen() instanceof ComposerManagerScreen)) {
+            $composerScreen = new ComposerManagerScreen(new ComposerService(__DIR__));
+            $composerScreen->setScreenManager($screenManager);
+            $screenManager->pushScreen($composerScreen);
         }
     });
 
