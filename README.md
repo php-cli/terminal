@@ -1,764 +1,621 @@
-# MC-Style PHP Console Application
+# Commander - MC-Style PHP Console Application
 
-## Project Overview
+<p align="center">
+  <strong>Component-based Midnight Commander-style terminal application framework.</strong><br>
+  Create fullscreen, keyboard-driven interfaces with double-buffered rendering.
+</p>
 
-This is a production-ready, component-based Midnight Commander-style terminal application built on Symfony Console. It
-provides a fullscreen, keyboard-driven interface with double-buffered rendering to eliminate flickering.
-
----
-
-## 📁 Project Structure
-
-```
-src/
-├── Application.php                      # Main application entry point
-├── Feature/                             # Feature modules
-│   ├── CommandBrowser/                  # Command browser feature
-│   │   ├── Screen/
-│   │   │   └── CommandsScreen.php      # Main screen: browse & execute commands
-│   │   └── Service/
-│   │       ├── CommandDiscovery.php    # Discovers Symfony commands
-│   │       ├── CommandExecutor.php     # Executes commands & captures output
-│   │       └── CommandMetadata.php     # Command metadata structures
-│   ├── FileBrowser/                     # File browser feature (example)
-│   │   ├── Screen/
-│   │   │   └── FileBrowserScreen.php
-│   │   ├── Component/
-│   │   │   ├── FileListComponent.php   # Custom file list component
-│   │   │   └── FilePreviewComponent.php
-│   │   └── Service/
-│   │       └── FileSystemService.php
-│   └── Example/
-│       └── Command/
-│           └── ExampleCommand.php       # Sample Symfony command
-├── Infrastructure/                      # Core infrastructure
-│   └── Terminal/
-│       ├── KeyboardHandler.php         # Keyboard input processing
-│       ├── Renderer.php                # Double-buffered rendering
-│       └── TerminalManager.php         # Terminal control (size, raw mode)
-└── UI/                                  # UI framework
-    ├── Component/                       # Reusable components
-    │   ├── ComponentInterface.php      # Component contract
-    │   ├── AbstractComponent.php       # Base component implementation
-    │   ├── Display/                    # Display-only components
-    │   │   ├── ListComponent.php       # Scrollable list
-    │   │   └── TextDisplay.php         # Scrollable text viewer
-    │   ├── Input/                      # Input components
-    │   │   ├── FormComponent.php       # Form container
-    │   │   ├── FormField.php           # Base field class
-    │   │   ├── TextField.php           # Text input field
-    │   │   ├── CheckboxField.php       # Checkbox field
-    │   │   └── ArrayField.php          # Comma-separated array field
-    │   └── Layout/                     # Layout components
-    │       ├── MenuBar.php             # Top menu bar
-    │       ├── StatusBar.php           # Bottom status bar
-    │       ├── Panel.php               # Panel with border
-    │       └── Modal.php               # Modal dialog
-    ├── Screen/                          # Screen management
-    │   ├── ScreenInterface.php         # Screen contract
-    │   └── ScreenManager.php           # Screen navigation stack
-    └── Theme/
-        └── ColorScheme.php             # MC color definitions
-```
+<p align="center">
+  <img src="docs/screenshot.png" alt="Commander Screenshot" width="800">
+</p>
 
 ---
 
-## 🎯 Core Concepts
+## 🚀 Why Commander?
 
-### 1. **Application Flow**
+Build terminal UIs like you build web apps - with reusable components, clean architecture, and modern PHP.
 
-```
-Application::run()
-    ↓
-Initialize Terminal (raw mode, alt screen, hide cursor)
-    ↓
-Push Initial Screen to ScreenManager
-    ↓
-Main Event Loop:
-    ├─ Handle Keyboard Input
-    ├─ Update Screen State
-    ├─ Render Frame (double-buffered)
-    └─ Maintain Target FPS (30 default)
-    ↓
-Cleanup Terminal (restore normal mode)
+```php
+// Simple as creating a PHP file
+$app = new Application($symfonyApp);
+$app->run(new CommandsScreen($commandDiscovery, $commandExecutor));
 ```
 
-### 2. **Component Hierarchy**
-
-```
-Screen (ScreenInterface)
-  ├─ MenuBar (global, optional)
-  ├─ StatusBar (global, optional)
-  └─ Components (ComponentInterface)
-      ├─ Panel (with border & title)
-      │   └─ Content Component
-      │       ├─ ListComponent
-      │       ├─ FormComponent
-      │       ├─ TextDisplay
-      │       └─ Custom Components
-      └─ Modal (overlay)
-```
-
-### 3. **Rendering Pipeline**
-
-```
-Renderer::beginFrame()
-    ↓
-Clear back buffer (fill with blue background)
-    ↓
-Components write to back buffer via Renderer::writeAt()
-    ↓
-Renderer::endFrame()
-    ↓
-Diff back buffer vs front buffer
-    ↓
-Generate minimal ANSI sequences for changed cells only
-    ↓
-Flush to terminal (single write operation)
-    ↓
-Update front buffer
-```
+**No complex setup. No learning curve. Just beautiful terminal UIs.**
 
 ---
 
-## 🚀 How to Create a New Screen
+## ✨ Features
 
-### Step 1: Create Screen Class
+- 🎨 **Multiple Color Themes** - Midnight Commander, Dark, and Light themes
+- ⚡ **Double-Buffered Rendering** - Flicker-free display with minimal ANSI sequences
+- 🧩 **Component-Based Architecture** - Reusable UI components (Tables, Forms, Lists, Panels)
+- ⌨️ **Full Keyboard Navigation** - Function keys, arrow keys, and shortcuts
+- 📦 **Built-in Features** - Command Browser, File Browser, Composer Manager
+- 🔌 **Extensible** - Easy to create custom screens and components
+
+---
+
+## 📋 Requirements
+
+- PHP 8.3 or higher
+- Symfony Console 7.3+
+- Terminal with ANSI color support (most modern terminals)
+
+---
+
+## 🚀 Quick Start
+
+### 1. Installation
+
+Install via Composer:
+
+```bash
+composer require cli/terminal
+```
+
+### 2. Create Launch Script
+
+Create a simple PHP file (e.g., `console` or `ui`) that launches the Commander interface:
+
+```php
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Butschster\Commander\Application;
+use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
+use Butschster\Commander\UI\Component\Layout\MenuBar;
+use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\MidnightTheme;
+use Symfony\Component\Console\Application as SymfonyApplication;
+
+// 1. Create Symfony Console Application
+$symfonyApp = new SymfonyApplication('My App', '1.0.0');
+
+// You can add your Symfony commands here:
+// $symfonyApp->add(new YourCustomCommand());
+
+// 2. Choose and apply theme
+ColorScheme::applyTheme(new MidnightTheme());
+// Available: MidnightTheme, DarkTheme, LightTheme
+
+// 3. Create Commander application
+$app = new Application($symfonyApp);
+$app->setTargetFps(30);
+
+// 4. Setup global menu bar (optional)
+$globalMenu = new MenuBar([
+    'F1' => ' Help',
+    'F2' => ' Commands',
+    'F10' => ' Quit',
+]);
+$app->setGlobalMenuBar($globalMenu);
+
+// 5. Register global shortcuts (optional)
+$app->registerGlobalShortcut('F10', function () use ($app) {
+    $app->stop(); // Quit application
+});
+
+// 6. Create services and initial screen
+$commandDiscovery = new CommandDiscovery($symfonyApp);
+$commandExecutor = new CommandExecutor($symfonyApp);
+$initialScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
+
+// 7. Run the application
+$app->run($initialScreen);
+```
+
+### 3. Make It Executable and Launch
+
+```bash
+chmod +x console
+./console
+```
+
+**That's it!** You now have a fullscreen terminal UI with:
+
+- ✨ Midnight Commander-style interface
+- 📋 Command browser with search and execution
+- ⌨️ Keyboard navigation (↑↓, Enter, F10 to quit)
+- ⚡ Smooth, flicker-free rendering
+
+---
+
+### Alternative: Symfony Console Command (Optional)
+
+If you're working within a Symfony/Laravel/Spiral application, you can create a Console command instead:
+
+<details>
+<summary>Click to see Symfony Console Command example</summary>
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Butschster\Commander\Feature\MyFeature\Screen;
+namespace App\Console;
 
-use Butschster\Commander\Infrastructure\Terminal\Renderer;
-use Butschster\Commander\UI\Component\Layout\MenuBar;
-use Butschster\Commander\UI\Component\Layout\Panel;
-use Butschster\Commander\UI\Component\Layout\StatusBar;
-use Butschster\Commander\UI\Component\Display\ListComponent;
+use Butschster\Commander\Application;
+use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
+use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\MidnightTheme;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+
+#[AsCommand(name: 'app:ui', description: 'Launch Commander UI')]
+final class UICommand extends Command
+{
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $symfonyApp = $this->getApplication();
+        ColorScheme::applyTheme(new MidnightTheme());
+
+        $app = new Application($symfonyApp);
+        $commandDiscovery = new CommandDiscovery($symfonyApp);
+        $commandExecutor = new CommandExecutor($symfonyApp);
+        $screen = new CommandsScreen($commandDiscovery, $commandExecutor);
+
+        $app->run($screen);
+
+        return Command::SUCCESS;
+    }
+}
+```
+
+Then run: `php bin/console app:ui`
+
+</details>
+
+---
+
+## 🎨 Available Themes
+
+Commander comes with three built-in themes:
+
+### Midnight Commander (Default)
+
+Classic blue theme with cyan highlights - just like the original Midnight Commander.
+
+```php
+use Butschster\Commander\UI\Theme\MidnightTheme;
+ColorScheme::applyTheme(new MidnightTheme());
+```
+
+### Dark Theme
+
+Modern dark theme with black background and green/cyan accents.
+
+```php
+use Butschster\Commander\UI\Theme\DarkTheme;
+ColorScheme::applyTheme(new DarkTheme());
+```
+
+### Light Theme
+
+Light theme with white background - perfect for well-lit environments.
+
+```php
+use Butschster\Commander\UI\Theme\LightTheme;
+ColorScheme::applyTheme(new LightTheme());
+```
+
+**💡 Tip:** Call `ColorScheme::applyTheme()` before creating your Application instance.
+
+---
+
+## 📦 Built-in Screens
+
+Commander includes several ready-to-use screens that you can integrate into your application:
+
+### 1. Command Browser Screen
+
+Browse and execute all registered Symfony Console commands.
+
+```php
+use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
+
+$commandDiscovery = new CommandDiscovery($symfonyApp);
+$commandExecutor = new CommandExecutor($symfonyApp);
+$screen = new CommandsScreen($commandDiscovery, $commandExecutor);
+```
+
+**Features:**
+
+- ✅ Lists all available Symfony commands
+- 🔍 Search/filter commands by name or namespace
+- 📝 Shows command descriptions and arguments
+- ⚡ Execute commands directly from UI
+- 📊 Displays command output in real-time
+
+**Keyboard Shortcuts:**
+
+- `↑↓` - Navigate commands
+- `Enter` - Execute selected command
+- `Ctrl+R` - Refresh command list
+- `/` - Search commands
+- `Escape` - Cancel/go back
+
+### 2. File Browser Screen
+
+Navigate and browse the filesystem with a two-panel layout.
+
+```php
+use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
+use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
+
+$fileSystem = new FileSystemService();
+$screen = new FileBrowserScreen(
+    $fileSystem, 
+    $screenManager, 
+    '/path/to/start/directory'
+);
+```
+
+**Features:**
+
+- 📁 Two-panel layout (list + preview)
+- 📄 File/directory navigation
+- 👁️ File preview with syntax highlighting
+- 📊 Shows file sizes and modification times
+- 🔄 Sort by name, size, or date
+
+**Keyboard Shortcuts:**
+
+- `↑↓` - Navigate files
+- `Enter` - Open directory / view file
+- `Backspace` - Go to parent directory
+- `Tab` - Switch between panels
+- `F5` - Copy file
+- `F6` - Move file
+- `F8` - Delete file
+
+### 3. Composer Manager Screen
+
+Manage Composer packages with tabbed interface.
+
+```php
+use Butschster\Commander\Feature\ComposerManager\Screen\ComposerManagerScreen;
+use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
+
+$composerService = new ComposerService('/path/to/project');
+$screen = new ComposerManagerScreen($composerService);
+$screen->setScreenManager($screenManager);
+```
+
+**Features:**
+
+- 📦 View installed packages
+- 🔄 Check for outdated packages
+- 🔒 Security audit
+- ⬆️ Update packages
+- ➕ Install new packages
+- ❌ Remove packages
+
+**Tabs:**
+
+1. **Installed** - All installed packages with version info
+2. **Outdated** - Packages that have newer versions available
+3. **Security** - Packages with known security vulnerabilities
+
+**Keyboard Shortcuts:**
+
+- `Ctrl+←/→` - Switch between tabs
+- `↑↓` - Navigate packages
+- `Enter` - View package details
+- `U` - Update selected package
+- `D` - Remove selected package
+- `Tab` - Switch between list and details panel
+
+---
+
+## 🔧 Customizing Screens
+
+All screens support customization of keyboard shortcuts and behavior:
+
+### Example: Custom Global Shortcuts
+
+```php
+$app = new Application($symfonyApp);
+$screenManager = $app->getScreenManager();
+
+// F2: Switch to Command Browser
+$app->registerGlobalShortcut('F2', function ($sm) use ($commandDiscovery, $commandExecutor) {
+    $screen = new CommandsScreen($commandDiscovery, $commandExecutor);
+    $sm->pushScreen($screen);
+});
+
+// F3: Switch to File Browser
+$app->registerGlobalShortcut('F3', function ($sm) use ($fileSystem) {
+    $screen = new FileBrowserScreen($fileSystem, $sm, getcwd());
+    $sm->pushScreen($screen);
+});
+
+// F5: Switch to Composer Manager
+$app->registerGlobalShortcut('F5', function ($sm) use ($composerService) {
+    $screen = new ComposerManagerScreen($composerService);
+    $screen->setScreenManager($sm);
+    $sm->pushScreen($screen);
+});
+
+// F10: Quit
+$app->registerGlobalShortcut('F10', function () use ($app) {
+    $app->stop();
+});
+```
+
+### Example: Custom Menu Bar
+
+```php
+$globalMenu = new MenuBar([
+    'F1' => ' Help',
+    'F2' => ' Commands', 
+    'F3' => ' Files',
+    'F5' => ' Composer',
+    'F9' => ' Settings',
+    'F10' => ' Quit',
+]);
+$app->setGlobalMenuBar($globalMenu);
+```
+
+### Example: Combining Multiple Screens
+
+```php
+// Start with command browser
+$welcomeScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
+
+// User can navigate to other screens via shortcuts
+$app->registerGlobalShortcut('F3', function ($sm) {
+    // Pop all screens and push file browser
+    $sm->popUntil(fn($screen) => $screen instanceof FileBrowserScreen);
+    
+    if (!($sm->getCurrentScreen() instanceof FileBrowserScreen)) {
+        $screen = new FileBrowserScreen($fileSystem, $sm, getcwd());
+        $sm->pushScreen($screen);
+    }
+});
+
+$app->run($welcomeScreen);
+```
+
+---
+
+## 📚 Creating Custom Screens
+
+Want to create your own screen? Check out these guides:
+
+- 📖 [Creating Custom Screens](docs/creating-screens.md)
+- 🎨 [Component System](docs/components.md)
+- ⌨️ [Keyboard Handling](docs/keyboard-handling.md)
+- 🎭 [Styling with Themes](docs/themes.md)
+
+**Quick Example:**
+
+```php
 use Butschster\Commander\UI\Screen\ScreenInterface;
+use Butschster\Commander\Infrastructure\Terminal\Renderer;
 
 final class MyCustomScreen implements ScreenInterface
 {
-    private MenuBar $menuBar;
-    private StatusBar $statusBar;
-    private Panel $mainPanel;
-    private ListComponent $list;
-    
-    public function __construct()
-    {
-        $this->initializeComponents();
-    }
-    
-    private function initializeComponents(): void
-    {
-        // Top menu
-        $this->menuBar = new MenuBar([
-            'F1' => 'Help',
-            'F10' => 'Quit',
-        ]);
-        
-        // Bottom status bar
-        $this->statusBar = new StatusBar([
-            'F1' => 'Help',
-            'F10' => 'Quit',
-            '↑↓' => 'Navigate',
-            'Enter' => 'Select',
-        ]);
-        
-        // Main content
-        $this->list = new ListComponent(['Item 1', 'Item 2', 'Item 3']);
-        $this->list->setFocused(true);
-        
-        // Set up callbacks
-        $this->list->onSelect(function (string $item, int $index) {
-            // Handle item selection
-        });
-        
-        // Wrap in panel
-        $this->mainPanel = new Panel('My List', $this->list);
-        $this->mainPanel->setFocused(true);
-    }
-    
     public function render(Renderer $renderer): void
     {
         $size = $renderer->getSize();
-        $width = $size['width'];
-        $height = $size['height'];
-        
-        // Render menu bar at top
-        $this->menuBar->render($renderer, 0, 0, $width, 1);
-        
-        // Render status bar at bottom
-        $this->statusBar->render($renderer, 0, $height - 1, $width, 1);
-        
-        // Render main panel in between
-        $panelHeight = $height - 2;
-        $this->mainPanel->render($renderer, 0, 1, $width, $panelHeight);
+        // Render your content...
     }
     
     public function handleInput(string $key): bool
     {
-        // Global shortcuts
-        if ($key === 'F10') {
-            return false; // Let application handle quit
-        }
-        
-        // Delegate to main panel
-        return $this->mainPanel->handleInput($key);
-    }
-    
-    public function onActivate(): void
-    {
-        // Called when screen becomes active
-    }
-    
-    public function onDeactivate(): void
-    {
-        // Called when screen is hidden
-    }
-    
-    public function update(): void
-    {
-        // Called every frame (optional state updates)
+        // Handle keyboard input...
+        return true;
     }
     
     public function getTitle(): string
     {
         return 'My Custom Screen';
     }
+    
+    // ... implement other required methods
 }
 ```
 
-### Step 2: Register and Push Screen
+---
+
+## 🧩 Available Components
+
+Commander provides rich set of UI components:
+
+### Display Components
+
+- `ListComponent` - Scrollable list with selection
+- `TableComponent` - Multi-column table with sorting
+- `TextDisplay` - Scrollable text viewer with word wrap
+
+### Input Components
+
+- `FormComponent` - Form container with validation
+- `TextField` - Text input field
+- `CheckboxField` - Checkbox/toggle
+- `ArrayField` - Comma-separated array input
+
+### Layout Components
+
+- `Panel` - Container with border and title
+- `Modal` - Overlay dialog (info/error/warning/confirm)
+- `MenuBar` - Top menu bar
+- `StatusBar` - Bottom status bar with shortcuts
+- `TabContainer` - Tabbed interface
+- `GridLayout` - Column-based layout
+
+---
+
+## 🎯 Real-World Example
+
+Here's a complete example showing all features together (see the included `console` file):
 
 ```php
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/vendor/autoload.php';
+
 use Butschster\Commander\Application;
-use Butschster\Commander\Feature\MyFeature\Screen\MyCustomScreen;
+use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
+use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
+use Butschster\Commander\Feature\ComposerManager\Screen\ComposerManagerScreen;
+use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
+use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
+use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
+use Butschster\Commander\UI\Component\Layout\MenuBar;
+use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\MidnightTheme;
+use Symfony\Component\Console\Application as SymfonyApplication;
 
+// Create Symfony Console Application
+$symfonyApp = new SymfonyApplication('My Console Application', '1.0.0');
+
+// Apply theme
+ColorScheme::applyTheme(new MidnightTheme());
+
+// Create and configure Commander application
 $app = new Application($symfonyApp);
+$app->setTargetFps(30);
+$screenManager = $app->getScreenManager();
 
-// Create and push your screen
-$myScreen = new MyCustomScreen();
-$app->getScreenManager()->pushScreen($myScreen);
+// Create services
+$commandDiscovery = new CommandDiscovery($symfonyApp);
+$commandExecutor = new CommandExecutor($symfonyApp);
+$fileSystem = new FileSystemService();
 
-// Run application
-$app->run($myScreen);
-```
-
----
-
-## ⌨️ Keyboard Handling
-
-### Available Key Codes
-
-The `KeyboardHandler` maps raw terminal input to logical key codes:
-
-**Navigation Keys:**
-
-- `UP`, `DOWN`, `LEFT`, `RIGHT` - Arrow keys
-- `PAGE_UP`, `PAGE_DOWN` - Page scrolling
-- `HOME`, `END` - Jump to start/end
-
-**Action Keys:**
-
-- `ENTER` - Confirm/select
-- `TAB` - Switch focus/next field
-- `ESCAPE` - Cancel/go back
-- `BACKSPACE`, `DELETE` - Text editing
-
-**Function Keys:**
-
-- `F1` through `F12` - Function keys
-
-**Control Keys:**
-
-- `CTRL_C` - Interrupt (handled globally)
-- `CTRL_D`, `CTRL_Z` - Additional control keys
-
-**Regular Keys:**
-
-- All printable characters (a-z, 0-9, symbols)
-
-### Handling Input in Components
-
-```php
-public function handleInput(string $key): bool
-{
-    switch ($key) {
-        case 'UP':
-            // Move selection up
-            return true;
-            
-        case 'DOWN':
-            // Move selection down
-            return true;
-            
-        case 'ENTER':
-            // Confirm action
-            if ($this->onSelect !== null) {
-                ($this->onSelect)();
-            }
-            return true;
-            
-        case 'ESCAPE':
-            // Cancel or go back
-            return true;
-            
-        default:
-            // Handle regular character input
-            if (mb_strlen($key) === 1) {
-                // It's a printable character
-                $this->value .= $key;
-                return true;
-            }
-            return false; // Unhandled
-    }
-}
-```
-
-### Input Event Bubbling
-
-Input flows from top to bottom:
-
-1. **Screen** receives input first
-2. If not handled, routes to **focused component**
-3. Component can handle or return `false` to bubble up
-4. Parent components can intercept unhandled input
-
-```php
-// In Screen
-public function handleInput(string $key): bool
-{
-    // Handle global shortcuts first
-    if ($key === 'F10') {
-        $this->screenManager->popScreen();
-        return true;
-    }
-    
-    // Delegate to focused component
-    return $this->mainPanel->handleInput($key);
-}
-```
-
----
-
-## 🎨 Using Components
-
-### ListComponent (Scrollable List)
-
-```php
-use Butschster\Commander\UI\Component\Display\ListComponent;
-
-$list = new ListComponent([
-    'Option 1',
-    'Option 2',
-    'Option 3',
+// Setup global menu bar
+$globalMenu = new MenuBar([
+    'F1' => ' Help',
+    'F2' => ' Commands',
+    'F3' => ' Files',
+    'F5' => ' Composer',
+    'F10' => ' Quit',
 ]);
+$app->setGlobalMenuBar($globalMenu);
 
-$list->setFocused(true);
-
-// Set callbacks
-$list->onChange(function (?string $item, int $index) {
-    // Called when selection changes (arrow keys)
-    echo "Selected: $item at index $index\n";
-});
-
-$list->onSelect(function (string $item, int $index) {
-    // Called when item is confirmed (Enter key)
-    echo "Confirmed: $item\n";
-});
-
-// Render
-$list->render($renderer, 0, 0, 40, 20);
-```
-
-**Features:**
-
-- Auto-scrolling when navigating beyond visible area
-- Scrollbar indicator when content doesn't fit
-- Keyboard: `↑↓`, `Page Up/Down`, `Home/End`, `Enter`
-
-### FormComponent (Input Form)
-
-```php
-use Butschster\Commander\UI\Component\Input\FormComponent;
-
-$form = new FormComponent();
-
-// Add text field
-$form->addTextField(
-    name: 'username',
-    label: 'Username',
-    required: true,
-    default: '',
-    description: 'Enter your username'
-);
-
-// Add checkbox
-$form->addCheckboxField(
-    name: 'remember',
-    label: 'Remember me',
-    default: false,
-    description: 'Keep me logged in'
-);
-
-// Add array field (comma-separated)
-$form->addArrayField(
-    name: 'tags',
-    label: 'Tags',
-    required: false,
-    description: 'Comma-separated tags'
-);
-
-// Set callbacks
-$form->onSubmit(function (array $values) {
-    // $values = ['username' => '...', 'remember' => true, 'tags' => [...]]
-    var_dump($values);
-});
-
-$form->onCancel(function () {
-    echo "Form cancelled\n";
-});
-
-// Validate
-$errors = $form->validate();
-if (!empty($errors)) {
-    // Show errors
-}
-
-// Render
-$form->render($renderer, 0, 0, 60, 20);
-```
-
-**Navigation:**
-
-- `↑↓` / `Tab` - Move between fields
-- `←→` - Move cursor in text fields
-- `Space` / `Enter` - Toggle checkboxes
-- `F2` / `Enter` on last field - Submit form
-- `Escape` - Cancel form
-
-### TextDisplay (Scrollable Text Viewer)
-
-```php
-use Butschster\Commander\UI\Component\Display\TextDisplay;
-
-$display = new TextDisplay();
-
-// Set content
-$display->setText("Line 1\nLine 2\nLine 3");
-
-// Append content
-$display->appendText("\nLine 4");
-
-// Clear content
-$display->clear();
-
-// Auto-scroll to bottom
-$display->setAutoScroll(true);
-
-// Render
-$display->render($renderer, 0, 0, 60, 20);
-```
-
-**Features:**
-
-- Auto-scrolling (optional)
-- Word wrapping for long lines
-- Scrollbar when content exceeds height
-- Keyboard: `↑↓`, `Page Up/Down`, `Home/End`
-
-### Panel (Container with Border)
-
-```php
-use Butschster\Commander\UI\Component\Layout\Panel;
-use Butschster\Commander\UI\Component\Display\ListComponent;
-
-$list = new ListComponent(['Item 1', 'Item 2']);
-$panel = new Panel('My Panel Title', $list);
-
-// Change title
-$panel->setTitle('Updated Title');
-
-// Change content
-$panel->setContent($anotherComponent);
-
-// Focus (highlights border)
-$panel->setFocused(true);
-
-// Render
-$panel->render($renderer, 0, 0, 40, 20);
-```
-
-**Features:**
-
-- Automatic border drawing (box-drawing characters)
-- Title rendering in border
-- Focus state (bright border when focused)
-- Propagates focus to content component
-
-### Modal (Overlay Dialog)
-
-```php
-use Butschster\Commander\UI\Component\Layout\Modal;
-
-// Info modal
-$modal = Modal::info('Information', 'This is an info message.');
-
-// Error modal
-$modal = Modal::error('Error', 'Something went wrong!');
-
-// Warning modal
-$modal = Modal::warning('Warning', 'Are you sure?');
-
-// Confirmation modal
-$modal = Modal::confirm('Confirm', 'Do you want to proceed?');
-$modal->onClose(function ($confirmed) {
-    if ($confirmed) {
-        echo "User confirmed\n";
-    } else {
-        echo "User cancelled\n";
+// Register global shortcuts for screen switching
+$app->registerGlobalShortcut('F2', function ($sm) use ($commandDiscovery, $commandExecutor) {
+    // Switch to command browser
+    $sm->popUntil(fn($screen) => $screen instanceof CommandsScreen);
+    if (!($sm->getCurrentScreen() instanceof CommandsScreen)) {
+        $sm->pushScreen(new CommandsScreen($commandDiscovery, $commandExecutor));
     }
 });
 
-// Custom modal with buttons
-$modal = new Modal('Custom', 'Choose an option', Modal::TYPE_INFO);
-$modal->setButtons([
-    'Option 1' => function () { echo "Option 1 selected\n"; },
-    'Option 2' => function () { echo "Option 2 selected\n"; },
-    'Cancel' => function () { echo "Cancelled\n"; },
-]);
-
-// Set size
-$modal->setSize(60, 15);
-
-// Render (must be rendered AFTER screen content)
-$modal->render($renderer, 0, 0, $screenWidth, $screenHeight);
-```
-
-**Features:**
-
-- Darkened overlay background
-- Shadow effect for depth
-- Centered positioning
-- Icon based on type (✓, ✗, ⚠, ℹ)
-- Word-wrapped content
-- Keyboard: `←→` / `Tab` - Navigate buttons, `Enter` - Confirm, `Escape` - Cancel
-
----
-
-## 🎨 Color Scheme (ColorScheme.php)
-
-### Predefined Color Combinations
-
-```php
-use Butschster\Commander\UI\Theme\ColorScheme;
-
-// Normal text (blue background, white text)
-ColorScheme::NORMAL_TEXT
-
-// Selected item (cyan background, black text)
-ColorScheme::SELECTED_TEXT
-
-// Menu bar (cyan background, black text)
-ColorScheme::MENU_TEXT
-ColorScheme::MENU_HOTKEY // Yellow hotkeys
-
-// Status bar (cyan background, black text)
-ColorScheme::STATUS_TEXT
-ColorScheme::STATUS_KEY  // Bold white keys
-
-// Borders
-ColorScheme::ACTIVE_BORDER    // Bright white (focused)
-ColorScheme::INACTIVE_BORDER  // Gray (unfocused)
-
-// Input fields
-ColorScheme::INPUT_TEXT       // Black background, yellow text
-
-// Errors/Warnings
-ColorScheme::ERROR_TEXT
-ColorScheme::WARNING_TEXT
-```
-
-### Custom Color Combinations
-
-```php
-use Butschster\Commander\UI\Theme\ColorScheme;
-
-// Combine multiple codes
-$color = ColorScheme::combine(
-    ColorScheme::BG_BLUE,
-    ColorScheme::FG_YELLOW,
-    ColorScheme::BOLD
-);
-
-// Use in rendering
-$renderer->writeAt(10, 5, 'Bold Yellow on Blue', $color);
-```
-
-### Available ANSI Codes
-
-**Foreground:**
-`FG_BLACK`, `FG_RED`, `FG_GREEN`, `FG_YELLOW`, `FG_BLUE`, `FG_MAGENTA`, `FG_CYAN`, `FG_WHITE`, `FG_GRAY`,
-`FG_BRIGHT_WHITE`
-
-**Background:**
-`BG_BLACK`, `BG_RED`, `BG_GREEN`, `BG_YELLOW`, `BG_BLUE`, `BG_MAGENTA`, `BG_CYAN`, `BG_WHITE`
-
-**Styles:**
-`BOLD`, `DIM`, `ITALIC`, `UNDERLINE`, `BLINK`, `REVERSE`
-
----
-
-## 🔧 Screen Navigation
-
-### ScreenManager API
-
-```php
-use Butschster\Commander\UI\Screen\ScreenManager;
-
-$screenManager = new ScreenManager();
-
-// Push new screen (navigate forward)
-$screenManager->pushScreen($newScreen);
-
-// Pop current screen (go back)
-$poppedScreen = $screenManager->popScreen();
-
-// Replace current screen (no back navigation)
-$screenManager->replaceScreen($replacementScreen);
-
-// Get current screen
-$current = $screenManager->getCurrentScreen();
-
-// Get stack depth
-$depth = $screenManager->getDepth(); // Number of screens in stack
-
-// Check if screens exist
-if ($screenManager->hasScreens()) {
-    // ...
-}
-
-// Clear all screens
-$screenManager->clear();
-
-// Pop until condition met
-$screenManager->popUntil(function (ScreenInterface $screen) {
-    return $screen instanceof WelcomeScreen;
+$app->registerGlobalShortcut('F3', function ($sm) use ($fileSystem) {
+    // Switch to file browser
+    $sm->popUntil(fn($screen) => $screen instanceof FileBrowserScreen);
+    if (!($sm->getCurrentScreen() instanceof FileBrowserScreen)) {
+        $sm->pushScreen(new FileBrowserScreen($fileSystem, $sm, getcwd()));
+    }
 });
-```
 
-### Navigation Patterns
-
-**Modal Flow (with back navigation):**
-
-```php
-// User navigates: Screen A → Screen B → Screen C
-$screenManager->pushScreen($screenB); // Can go back to A
-$screenManager->pushScreen($screenC); // Can go back to B
-
-// User presses Escape or Back
-$screenManager->popScreen(); // Returns to B
-$screenManager->popScreen(); // Returns to A
-```
-
-**Replace Flow (no back navigation):**
-
-```php
-// User navigates: Screen A → Screen B (no back to A)
-$screenManager->replaceScreen($screenB);
-
-// Escape will exit application, not go back
-```
-
----
-
-## 📊 Example: Two-Panel Screen
-
-```php
-final class TwoPanelScreen implements ScreenInterface
-{
-    private Panel $leftPanel;
-    private Panel $rightPanel;
-    private int $focusedPanelIndex = 0;
-    
-    public function __construct()
-    {
-        $leftList = new ListComponent(['Item 1', 'Item 2']);
-        $this->leftPanel = new Panel('Left', $leftList);
-        $this->leftPanel->setFocused(true);
-        
-        $rightText = new TextDisplay('Details appear here');
-        $this->rightPanel = new Panel('Right', $rightText);
+$app->registerGlobalShortcut('F5', function ($sm) {
+    // Switch to composer manager
+    $sm->popUntil(fn($screen) => $screen instanceof ComposerManagerScreen);
+    if (!($sm->getCurrentScreen() instanceof ComposerManagerScreen)) {
+        $composerService = new ComposerService(getcwd());
+        $screen = new ComposerManagerScreen($composerService);
+        $screen->setScreenManager($sm);
+        $sm->pushScreen($screen);
     }
-    
-    public function render(Renderer $renderer): void
-    {
-        $size = $renderer->getSize();
-        $width = $size['width'];
-        $height = $size['height'];
-        
-        // 40% left, 60% right split
-        $leftWidth = (int) ($width * 0.4);
-        $rightWidth = $width - $leftWidth;
-        
-        $this->leftPanel->render($renderer, 0, 0, $leftWidth, $height);
-        $this->rightPanel->render($renderer, $leftWidth, 0, $rightWidth, $height);
-    }
-    
-    public function handleInput(string $key): bool
-    {
-        if ($key === 'TAB') {
-            // Switch focus between panels
-            $this->focusedPanelIndex = ($this->focusedPanelIndex + 1) % 2;
-            $this->leftPanel->setFocused($this->focusedPanelIndex === 0);
-            $this->rightPanel->setFocused($this->focusedPanelIndex === 1);
-            return true;
-        }
-        
-        // Delegate to focused panel
-        if ($this->focusedPanelIndex === 0) {
-            return $this->leftPanel->handleInput($key);
-        } else {
-            return $this->rightPanel->handleInput($key);
-        }
-    }
-    
-    // ... other methods
-}
+});
+
+$app->registerGlobalShortcut('F10', function () use ($app) {
+    $app->stop();
+});
+
+// Start with command browser screen
+$welcomeScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
+$app->run($welcomeScreen);
 ```
 
----
+**This example demonstrates:**
 
-## 🔍 Finding What You Need
-
-| Need                        | Look In                                                 |
-|-----------------------------|---------------------------------------------------------|
-| **Create new screen**       | Implement `ScreenInterface`, see `CommandsScreen.php`   |
-| **Create custom component** | Extend `AbstractComponent`, see `FileListComponent.php` |
-| **Handle keyboard input**   | Check `KeyboardHandler.php` for key codes               |
-| **Change colors**           | Modify `ColorScheme.php` constants                      |
-| **Add menu items**          | Pass array to `MenuBar` constructor                     |
-| **Show modal dialog**       | Use `Modal::info/error/warning/confirm()`               |
-| **Execute Symfony command** | Use `CommandExecutor::execute()`                        |
-| **List files**              | Use `FileSystemService::listDirectory()`                |
-| **Debug rendering**         | Check `Renderer::endFrame()` for cell updates           |
+- ✅ All three built-in screens (Commands, Files, Composer)
+- ✅ Global menu bar with function key shortcuts
+- ✅ Screen switching via F2, F3, F5
+- ✅ Proper screen stack management
+- ✅ Service initialization
+- ✅ Theme application
 
 ---
 
-## 🚨 Common Pitfalls
+## 🎓 Architecture Overview
 
-1. **Forgetting to call `setBounds()`** in `render()` - Always store component position
-2. **Not handling `setFocused()` propagation** - Unfocus children when parent loses focus
-3. **Infinite loops in event handlers** - Ensure callbacks eventually return
-4. **Hardcoding ANSI codes** - Always use `ColorScheme` constants
-5. **Blocking operations in `render()`** - Keep rendering fast (<16ms for 60 FPS)
-6. **Not checking focus state** - Only focused components should handle input
-7. **Forgetting `handleResize()`** - Terminal size can change at runtime
+### Project Structure
+
+```
+src/
+├── Application.php                      # Main application entry point
+├── Feature/                             # Feature modules
+│   ├── CommandBrowser/                  # Command browser feature
+│   ├── FileBrowser/                     # File browser feature
+│   └── ComposerManager/                 # Composer manager feature
+├── Infrastructure/                      # Core infrastructure
+│   └── Terminal/
+│       ├── KeyboardHandler.php         # Keyboard input processing
+│       ├── Renderer.php                # Double-buffered rendering
+│       └── TerminalManager.php         # Terminal control
+└── UI/                                  # UI framework
+    ├── Component/                       # Reusable components
+    ├── Screen/                          # Screen management
+    └── Theme/                           # Color themes
+```
+
+### Key Concepts
+
+1. **Screens** - Full-screen views (like pages in a web app)
+2. **Components** - Reusable UI elements (tables, forms, panels)
+3. **Double Buffering** - Prevents flickering by rendering off-screen first
+4. **Event System** - Components communicate via callbacks
+5. **Theme System** - Customizable color schemes
 
 ---
 
-This guide covers the essential patterns for building screens and components. Refer to existing implementations (
-`CommandsScreen`, `FileBrowserScreen`) for complete working examples.
+## 🌟 Use Cases
+
+Commander is perfect for:
+
+- **DevOps Tools** - Server management, deployment dashboards
+- **CLI Dashboards** - System monitoring, log viewers
+- **Development Tools** - Code generators, project scaffolders
+- **Admin Panels** - Database managers, configuration editors
+- **Interactive Wizards** - Multi-step installation processes
+- **File Managers** - Custom file browsers with preview
+- **Package Managers** - Dependency management UIs
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📄 License
+
+MIT License. See [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+Inspired by [Midnight Commander](https://midnight-commander.org/) - the legendary file manager.

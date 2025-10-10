@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Tab System provides a reusable, component-based approach to creating tabbed interfaces in the terminal UI. It allows you to organize content into multiple tabs with keyboard-driven navigation (Ctrl+Left/Right arrows), similar to modern IDE or browser tabs.
+The Tab System provides a reusable, component-based approach to creating tabbed interfaces in the terminal UI. It allows
+you to organize content into multiple tabs with keyboard-driven navigation (Ctrl+Left/Right arrows), similar to modern
+IDE or browser tabs.
 
 ## Architecture
 
@@ -195,6 +197,7 @@ final class MyScreen implements ScreenInterface
 ### Required Methods
 
 #### `getTitle(): string`
+
 Returns the title displayed in the tab header.
 
 ```php
@@ -205,6 +208,7 @@ public function getTitle(): string
 ```
 
 #### `getShortcuts(): array`
+
 Returns tab-specific keyboard shortcuts for the status bar.
 
 ```php
@@ -221,6 +225,7 @@ public function getShortcuts(): array
 **Note:** TabContainer automatically adds `Ctrl+←/→ => 'Switch Tab'` to the shortcuts.
 
 #### `onActivate(): void`
+
 Called when the tab becomes active (visible to user).
 
 ```php
@@ -235,6 +240,7 @@ protected function onTabActivated(): void
 ```
 
 #### `onDeactivate(): void`
+
 Called when the tab is hidden (another tab becomes active).
 
 ```php
@@ -249,6 +255,7 @@ protected function onTabDeactivated(): void
 ```
 
 #### `update(): void`
+
 Called every frame for the active tab.
 
 ```php
@@ -260,6 +267,7 @@ public function update(): void
 ```
 
 #### `render(...): void`
+
 Renders the tab content.
 
 ```php
@@ -273,6 +281,7 @@ public function render(Renderer $renderer, int $x, int $y, int $width, int $heig
 ```
 
 #### `handleInput(string $key): bool`
+
 Handles keyboard input for the tab.
 
 ```php
@@ -305,6 +314,7 @@ public function __construct(array $tabs = [])
 ### Methods
 
 #### `addTab(TabInterface $tab): void`
+
 Add a tab dynamically.
 
 ```php
@@ -312,6 +322,7 @@ $tabContainer->addTab(new MyNewTab());
 ```
 
 #### `getActiveTab(): ?TabInterface`
+
 Get the currently active tab.
 
 ```php
@@ -322,6 +333,7 @@ if ($activeTab instanceof MyTab) {
 ```
 
 #### `getActiveTabIndex(): int`
+
 Get the index of the active tab (0-based).
 
 ```php
@@ -329,6 +341,7 @@ $index = $tabContainer->getActiveTabIndex();
 ```
 
 #### `switchToTab(int $index): void`
+
 Switch to a specific tab by index.
 
 ```php
@@ -336,6 +349,7 @@ $tabContainer->switchToTab(0);  // Switch to first tab
 ```
 
 #### `nextTab(): void`
+
 Switch to the next tab (wraps around).
 
 ```php
@@ -343,6 +357,7 @@ $tabContainer->nextTab();
 ```
 
 #### `previousTab(): void`
+
 Switch to the previous tab (wraps around).
 
 ```php
@@ -350,6 +365,7 @@ $tabContainer->previousTab();
 ```
 
 #### `setStatusBar(?StatusBar $statusBar, int $height = 1): void`
+
 Set an optional status bar.
 
 ```php
@@ -659,6 +675,7 @@ public function getShortcuts(): array
 ### Tab Headers
 
 Active tab:
+
 ```
 [ Active Tab ]  Inactive Tab   Another Tab
 ```
@@ -936,6 +953,7 @@ final class NewScreen implements ScreenInterface
 ```
 
 **Benefits:**
+
 - Less boilerplate (50-70% code reduction)
 - Better separation of concerns
 - Reusable tab logic
@@ -954,6 +972,7 @@ See `ComposerManagerScreen` for a complete real-world implementation:
 - **SecurityAuditTab** - Shows security vulnerabilities (lazy loaded)
 
 Each tab:
+
 - Has its own two-panel layout (list + details)
 - Handles its own data loading
 - Defines its own keyboard shortcuts
@@ -971,9 +990,10 @@ The Tab System provides:
 ✅ **Keyboard Navigation** - Ctrl+Left/Right to switch tabs  
 ✅ **Dynamic Status Bar** - Updates based on active tab  
 ✅ **Focus Management** - Automatic focus propagation  
-✅ **Visual Consistency** - Automatic tab header rendering  
+✅ **Visual Consistency** - Automatic tab header rendering
 
 Use tabs whenever you have:
+
 - Multiple views of related data
 - Features that should be grouped but kept separate
 - Complex screens that benefit from organization
