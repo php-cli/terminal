@@ -230,7 +230,6 @@ final class Renderer
         if ($size['width'] !== $this->width || $size['height'] !== $this->height) {
             $this->width = $size['width'];
             $this->height = $size['height'];
-            $this->totalCells = $this->width * $this->height;
 
             $this->initBuffers();
             $this->terminal->clearScreen();

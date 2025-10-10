@@ -92,13 +92,3 @@ final readonly class SizeUnit
         return $this->type === SizeType::FRACTION;
     }
 }
-
-/**
- * Size unit type enumeration
- */
-enum SizeType
-{
-    case FIXED;      // Absolute size in cells
-    case PERCENTAGE; // Percentage of available space
-    case FRACTION;   // Fractional unit (shares remaining space)
-}
