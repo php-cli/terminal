@@ -130,15 +130,15 @@ final class InstalledPackagesTab extends AbstractTab
                 },
                 colorizer: function ($value, $row, $selected) {
                     if ($selected && $this->leftPanel->isFocused()) {
-                        return ColorScheme::SELECTED_TEXT;
+                        return ColorScheme::$SELECTED_TEXT;
                     }
                     if ($row['abandoned']) {
-                        return ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_RED);
+                        return ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_RED, ColorScheme::BOLD);
                     }
                     if ($row['isDirect']) {
-                        return ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_BRIGHT_WHITE);
+                        return ColorScheme::$HIGHLIGHT_TEXT;
                     }
-                    return ColorScheme::NORMAL_TEXT;
+                    return ColorScheme::$NORMAL_TEXT;
                 },
             ),
             new TableColumn('version', 'Version', '15%', TableColumn::ALIGN_LEFT),
@@ -161,8 +161,8 @@ final class InstalledPackagesTab extends AbstractTab
                 colorizer: function ($value, $row, $selected) {
                     if (!$value) {
                         return $selected && $this->leftPanel->isFocused()
-                            ? ColorScheme::SELECTED_TEXT
-                            : ColorScheme::NORMAL_TEXT;
+                            ? ColorScheme::$SELECTED_TEXT
+                            : ColorScheme::$NORMAL_TEXT;
                     }
 
                     return match ($row['updateType'] ?? null) {
@@ -178,8 +178,8 @@ final class InstalledPackagesTab extends AbstractTab
                             ColorScheme::BOLD,
                         ),
                         default => $selected && $this->leftPanel->isFocused()
-                            ? ColorScheme::SELECTED_TEXT
-                            : ColorScheme::NORMAL_TEXT,
+                            ? ColorScheme::$SELECTED_TEXT
+                            : ColorScheme::$NORMAL_TEXT,
                     };
                 },
             ),
@@ -191,12 +191,12 @@ final class InstalledPackagesTab extends AbstractTab
                 formatter: static fn($value) => $value ? '[ABANDONED]' : '',
                 colorizer: function ($value, $row, $selected) {
                     if ($selected && $this->leftPanel->isFocused()) {
-                        return ColorScheme::SELECTED_TEXT;
+                        return ColorScheme::$SELECTED_TEXT;
                     }
                     if ($value) {
-                        return ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_RED, ColorScheme::BOLD);
+                        return ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_RED, ColorScheme::BOLD);
                     }
-                    return ColorScheme::NORMAL_TEXT;
+                    return ColorScheme::$NORMAL_TEXT;
                 },
             ),
         ], showHeader: true);

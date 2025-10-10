@@ -183,16 +183,16 @@ final class FileListComponent extends AbstractComponent
     private function getNameColor(array $row, bool $selected): string
     {
         if ($selected && $this->isFocused()) {
-            return ColorScheme::SELECTED_TEXT;
+            return ColorScheme::$SELECTED_TEXT;
         }
 
         if ($row['isDir']) {
-            // Directories: bold bright white on blue
-            return ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_BRIGHT_WHITE);
+            // Directories: use theme-specific highlight color
+            return ColorScheme::$HIGHLIGHT_TEXT;
         }
 
-        // Files: normal white on blue
-        return ColorScheme::NORMAL_TEXT;
+        // Files: normal text color
+        return ColorScheme::$NORMAL_TEXT;
     }
 
     /**

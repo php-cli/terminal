@@ -135,13 +135,13 @@ final class OutdatedPackagesTab extends AbstractTab
                 },
                 colorizer: function ($value, $row, $selected) {
                     if ($selected && $this->leftPanel->isFocused()) {
-                        return ColorScheme::SELECTED_TEXT;
+                        return ColorScheme::$SELECTED_TEXT;
                     }
                     return match ($value) {
-                        'major' => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_RED),
-                        'minor' => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW),
-                        'patch' => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GREEN),
-                        default => ColorScheme::NORMAL_TEXT,
+                        'major' => ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_RED, ColorScheme::BOLD),
+                        'minor' => ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
+                        'patch' => ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_GREEN, ColorScheme::BOLD),
+                        default => ColorScheme::$NORMAL_TEXT,
                     };
                 },
             ),

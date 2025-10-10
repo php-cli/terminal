@@ -36,7 +36,7 @@ final class StatusBar extends AbstractComponent
         $this->setBounds($x, $y, $width, $height);
 
         // Fill background
-        $renderer->fillRect($x, $y, $width, 1, ' ', ColorScheme::STATUS_TEXT);
+        $renderer->fillRect($x, $y, $width, 1, ' ', ColorScheme::$STATUS_TEXT);
 
         // Render hints
         $currentX = $x + 1; // Add left padding
@@ -56,11 +56,11 @@ final class StatusBar extends AbstractComponent
             }
 
             // Render key number/name (bold white)
-            $renderer->writeAt($currentX, $y, $keyStr, ColorScheme::STATUS_KEY);
+            $renderer->writeAt($currentX, $y, $keyStr, ColorScheme::$STATUS_KEY);
             $currentX += \mb_strlen($keyStr);
 
             // Render description (black text on cyan)
-            $renderer->writeAt($currentX, $y, $descStr, ColorScheme::STATUS_TEXT);
+            $renderer->writeAt($currentX, $y, $descStr, ColorScheme::$STATUS_TEXT);
             $currentX += \mb_strlen($descStr) + $itemSpacing;
         }
     }

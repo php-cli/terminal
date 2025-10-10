@@ -184,7 +184,7 @@ final class FileViewerScreen implements ScreenInterface
                 $x,
                 $y + 1,
                 $line2,
-                ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY),
+                ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_GRAY),
             );
         }
     }

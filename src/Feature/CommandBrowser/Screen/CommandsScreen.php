@@ -231,7 +231,7 @@ final class CommandsScreen implements ScreenInterface
             $indicatorX,
             1,
             $indicator,
-            ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
+            ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
         );
     }
 
@@ -549,8 +549,17 @@ final class CommandsScreen implements ScreenInterface
     private function isDangerousCommand(string $commandName): bool
     {
         $dangerousPatterns = [
-            'delete', 'remove', 'drop', 'truncate', 'clear', 'purge', 'destroy',
-            'cache:clear', 'migrate:reset', 'migrate:fresh', 'db:wipe',
+            'delete',
+            'remove',
+            'drop',
+            'truncate',
+            'clear',
+            'purge',
+            'destroy',
+            'cache:clear',
+            'migrate:reset',
+            'migrate:fresh',
+            'db:wipe',
         ];
 
         $lowerCommand = \strtolower($commandName);
@@ -648,34 +657,34 @@ final class CommandsScreen implements ScreenInterface
     {
         $helpText = <<<'HELP'
             Command Browser - Keyboard Shortcuts
-
+            
             Navigation:
               ↑/↓         Navigate through command list
               Tab         Switch between panels
               Enter       Select command and edit parameters
               Escape      Go back to command list
-
+            
             Execution:
               Ctrl+E      Execute selected command
-
+            
             List Navigation:
               Page Up     Scroll up one page
               Page Down   Scroll down one page
               Home        Jump to first command
               End         Jump to last command
-
+            
             Form Navigation:
               ↑/↓         Navigate between fields
               Tab         Move to next field
               ←/→         Move cursor in text fields
               Backspace   Delete character before cursor
               Delete      Delete character at cursor
-
+            
             Output View:
               ↑/↓         Scroll output
               Page Up/Down Scroll output by page
               Home/End    Jump to start/end of output
-
+            
             General:
               F1          Show this help
               F2          Commands screen

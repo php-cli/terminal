@@ -178,9 +178,9 @@ final class ScriptsTab extends AbstractTab
                 TableColumn::ALIGN_LEFT,
                 colorizer: function ($value, $row, $selected) {
                     if ($selected && $this->leftPanel->isFocused()) {
-                        return ColorScheme::SELECTED_TEXT;
+                        return ColorScheme::$SELECTED_TEXT;
                     }
-                    return ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_BRIGHT_WHITE);
+                    return ColorScheme::$HIGHLIGHT_TEXT;
                 },
             ),
             new TableColumn(
@@ -197,9 +197,9 @@ final class ScriptsTab extends AbstractTab
                 },
                 colorizer: function ($value, $row, $selected) {
                     if ($selected && $this->leftPanel->isFocused()) {
-                        return ColorScheme::SELECTED_TEXT;
+                        return ColorScheme::$SELECTED_TEXT;
                     }
-                    return ColorScheme::NORMAL_TEXT;
+                    return ColorScheme::$NORMAL_TEXT;
                 },
             ),
         ], showHeader: true);

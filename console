@@ -14,6 +14,9 @@ use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
 use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
 use Butschster\Commander\UI\Component\Layout\MenuBar;
+use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\DarkTheme;
+use Butschster\Commander\UI\Theme\MidnightTheme;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
 // Create Symfony Console Application
@@ -21,6 +24,11 @@ $symfonyApp = new SymfonyApplication('My Console Application', '1.0.0');
 
 // Add more commands here as needed
 // $symfonyApp->add(new AnotherCommand());
+
+
+// Initialize with default theme
+ColorScheme::applyTheme(new MidnightTheme());
+// ColorScheme::applyTheme(new DarkTheme());
 
 // Create and run the MC-style application
 try {

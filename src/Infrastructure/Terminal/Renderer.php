@@ -40,7 +40,6 @@ final class Renderer
         $size = $terminal->getSize();
         $this->width = $size['width'];
         $this->height = $size['height'];
-        $this->totalCells = $this->width * $this->height;
 
         $this->initBuffers();
     }
@@ -53,7 +52,7 @@ final class Renderer
         $this->cellsUpdated = 0;
 
         // Clear back buffer with default background
-        $emptyCell = ['char' => ' ', 'color' => ColorScheme::NORMAL_TEXT];
+        $emptyCell = ['char' => ' ', 'color' => ColorScheme::$NORMAL_TEXT];
 
         for ($y = 0; $y < $this->height; $y++) {
             $this->backBuffer[$y] = \array_fill(0, $this->width, $emptyCell);
@@ -243,7 +242,7 @@ final class Renderer
      */
     private function initBuffers(): void
     {
-        $emptyCell = ['char' => ' ', 'color' => ColorScheme::NORMAL_TEXT];
+        $emptyCell = ['char' => ' ', 'color' => ColorScheme::$NORMAL_TEXT];
 
         for ($y = 0; $y < $this->height; $y++) {
             $this->backBuffer[$y] = \array_fill(0, $this->width, $emptyCell);

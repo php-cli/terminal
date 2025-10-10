@@ -112,7 +112,7 @@ final class FormComponent extends AbstractComponent
             $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
             $emptyY = $y + (int) ($height / 2);
 
-            $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::NORMAL_TEXT);
+            $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::$NORMAL_TEXT);
             return;
         }
 
@@ -204,7 +204,7 @@ final class FormComponent extends AbstractComponent
             $buttonsX,
             $y,
             $buttonsText,
-            ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW),
+            ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW),
         );
     }
 

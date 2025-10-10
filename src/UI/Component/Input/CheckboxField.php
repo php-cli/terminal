@@ -28,8 +28,8 @@ final class CheckboxField extends FormField
         $checkbox = $this->value ? '[X]' : '[ ]';
 
         $color = $focused
-            ? ColorScheme::SELECTED_TEXT
-            : ColorScheme::NORMAL_TEXT;
+            ? ColorScheme::$SELECTED_TEXT
+            : ColorScheme::$NORMAL_TEXT;
 
         // Render description first (if present)
         if ($this->description !== '') {
@@ -48,7 +48,7 @@ final class CheckboxField extends FormField
                 $x,
                 $currentY,
                 \mb_substr($nameText, 0, $width),
-                ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY),
+                ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_GRAY),
             );
             $currentY++;
         } else {

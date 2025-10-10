@@ -142,11 +142,11 @@ final class PackageDetailsScreen implements ScreenInterface
                 formatter: static fn($value) => $value === 'dev' ? '[DEV]' : '[PROD]',
                 colorizer: static function ($value, $row, $selected) {
                     if ($selected) {
-                        return ColorScheme::SELECTED_TEXT;
+                        return ColorScheme::$SELECTED_TEXT;
                     }
                     return $value === 'dev'
-                        ? ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW)
-                        : ColorScheme::NORMAL_TEXT;
+                        ? ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW, ColorScheme::BOLD)
+                        : ColorScheme::$NORMAL_TEXT;
                 },
             ),
         ], showHeader: true);
@@ -166,11 +166,11 @@ final class PackageDetailsScreen implements ScreenInterface
                 TableColumn::ALIGN_LEFT,
                 colorizer: static function ($value, $row, $selected) {
                     if ($selected) {
-                        return ColorScheme::SELECTED_TEXT;
+                        return ColorScheme::$SELECTED_TEXT;
                     }
                     return $row['isDirect']
-                        ? ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_BRIGHT_WHITE)
-                        : ColorScheme::NORMAL_TEXT;
+                        ? ColorScheme::$HIGHLIGHT_TEXT
+                        : ColorScheme::$NORMAL_TEXT;
                 },
             ),
         ], showHeader: true);

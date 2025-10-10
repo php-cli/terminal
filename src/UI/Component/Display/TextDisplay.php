@@ -126,7 +126,7 @@ final class TextDisplay extends AbstractComponent
                     $x,
                     $rowY,
                     $wrappedLine,
-                    ColorScheme::NORMAL_TEXT,
+                    ColorScheme::$NORMAL_TEXT,
                 );
 
                 $rowY++;
@@ -232,7 +232,7 @@ final class TextDisplay extends AbstractComponent
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::SCROLLBAR);
+            $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
         }
     }
 }

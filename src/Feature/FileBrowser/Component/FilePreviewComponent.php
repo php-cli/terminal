@@ -70,7 +70,7 @@ final class FilePreviewComponent extends AbstractComponent
 
         // Render separator
         $separator = \str_repeat('─', $width);
-        $renderer->writeAt($x, $y + 2, $separator, ColorScheme::INACTIVE_BORDER);
+        $renderer->writeAt($x, $y + 2, $separator, ColorScheme::$INACTIVE_BORDER);
 
         // Render current content (info or file viewer)
         if ($this->currentContent !== null) {
@@ -229,7 +229,7 @@ final class FilePreviewComponent extends AbstractComponent
             $x,
             $y,
             \str_pad($headerText, $width),
-            ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
+            ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
         );
     }
 
@@ -259,7 +259,7 @@ final class FilePreviewComponent extends AbstractComponent
             $x,
             $y,
             \str_pad($metaText, $width),
-            ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY),
+            ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_GRAY),
         );
     }
 
@@ -272,6 +272,6 @@ final class FilePreviewComponent extends AbstractComponent
         $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
         $emptyY = $y + (int) ($height / 2);
 
-        $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::NORMAL_TEXT);
+        $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::$NORMAL_TEXT);
     }
 }

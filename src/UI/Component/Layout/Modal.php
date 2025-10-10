@@ -154,7 +154,7 @@ final class Modal extends AbstractComponent
             $this->modalWidth,
             $this->modalHeight,
             ' ',
-            ColorScheme::NORMAL_TEXT,
+            ColorScheme::$NORMAL_TEXT,
         );
 
         // Draw modal border
@@ -163,7 +163,7 @@ final class Modal extends AbstractComponent
             $modalY,
             $this->modalWidth,
             $this->modalHeight,
-            ColorScheme::ACTIVE_BORDER,
+            ColorScheme::$ACTIVE_BORDER,
         );
 
         // Draw title bar with icon
@@ -174,7 +174,7 @@ final class Modal extends AbstractComponent
 
         // Draw horizontal separator after title
         $separator = \str_repeat('─', $this->modalWidth - 2);
-        $renderer->writeAt($modalX + 1, $modalY + 1, $separator, ColorScheme::INACTIVE_BORDER);
+        $renderer->writeAt($modalX + 1, $modalY + 1, $separator, ColorScheme::$INACTIVE_BORDER);
 
         // Draw content
         $this->drawContent($renderer, $modalX, $modalY);
@@ -374,7 +374,7 @@ final class Modal extends AbstractComponent
                     $contentX,
                     $contentY + $lineIndex,
                     $wrappedLine,
-                    ColorScheme::NORMAL_TEXT,
+                    ColorScheme::$NORMAL_TEXT,
                 );
 
                 $lineIndex++;
@@ -412,7 +412,7 @@ final class Modal extends AbstractComponent
             $buttonText = "[  {$label}  ]";
 
             $buttonColor = $isSelected
-                ? ColorScheme::SELECTED_TEXT
+                ? ColorScheme::$SELECTED_TEXT
                 : ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_CYAN);
 
             $renderer->writeAt($currentX, $buttonsY, $buttonText, $buttonColor);

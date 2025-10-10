@@ -35,7 +35,7 @@ final class MenuBar extends AbstractComponent
         $this->setBounds($x, $y, $width, $height);
 
         // Fill background
-        $renderer->fillRect($x, $y, $width, 1, ' ', ColorScheme::MENU_TEXT);
+        $renderer->fillRect($x, $y, $width, 1, ' ', ColorScheme::$MENU_TEXT);
 
         // Render menu items
         $currentX = $x + 1;
@@ -50,11 +50,11 @@ final class MenuBar extends AbstractComponent
             $labelStr = (string) $label;
 
             // Render key (highlighted)
-            $renderer->writeAt($currentX, $y, $keyStr, ColorScheme::MENU_HOTKEY);
+            $renderer->writeAt($currentX, $y, $keyStr, ColorScheme::$MENU_HOTKEY);
             $currentX += \mb_strlen($keyStr);
 
             // Render label
-            $renderer->writeAt($currentX, $y, $labelStr, ColorScheme::MENU_TEXT);
+            $renderer->writeAt($currentX, $y, $labelStr, ColorScheme::$MENU_TEXT);
             $currentX += \mb_strlen($labelStr) + 2; // Add spacing
         }
     }

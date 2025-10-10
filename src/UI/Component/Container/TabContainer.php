@@ -238,7 +238,7 @@ final class TabContainer extends AbstractComponent
                 $currentX,
                 $y,
                 \str_repeat(' ', $remaining),
-                ColorScheme::NORMAL_TEXT,
+                ColorScheme::$NORMAL_TEXT,
             );
         }
     }

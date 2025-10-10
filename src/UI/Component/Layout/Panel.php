@@ -63,14 +63,14 @@ final class Panel extends AbstractComponent
                 $width - 2,
                 $height - 2,
                 ' ',
-                ColorScheme::NORMAL_TEXT,
+                ColorScheme::$NORMAL_TEXT,
             );
         }
 
         // Determine border color based on focus
         $borderColor = $this->isFocused()
-            ? ColorScheme::ACTIVE_BORDER
-            : ColorScheme::INACTIVE_BORDER;
+            ? ColorScheme::$ACTIVE_BORDER
+            : ColorScheme::$INACTIVE_BORDER;
 
         // Draw border
         $renderer->drawBox($x, $y, $width, $height, $borderColor);

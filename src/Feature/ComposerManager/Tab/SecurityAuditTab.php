@@ -131,12 +131,12 @@ final class SecurityAuditTab extends AbstractTab
                 },
                 colorizer: function ($value, $row, $selected) {
                     if ($selected && $this->leftPanel->isFocused()) {
-                        return ColorScheme::SELECTED_TEXT;
+                        return ColorScheme::$SELECTED_TEXT;
                     }
                     return match ($value) {
-                        'critical', 'high' => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_RED),
-                        'medium' => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW),
-                        default => ColorScheme::NORMAL_TEXT,
+                        'critical', 'high' => ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_RED, ColorScheme::BOLD),
+                        'medium' => ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
+                        default => ColorScheme::$NORMAL_TEXT,
                     };
                 },
             ),

@@ -41,18 +41,18 @@ class TextField extends FormField
                 $x,
                 $currentY,
                 \mb_substr($descText, 0, $width),
-                ColorScheme::NORMAL_TEXT,
+                ColorScheme::$NORMAL_TEXT,
             );
             $currentY++;
         }
 
-        // Render field name (muted)
+        // Render field name (muted) - use normal background with gray text
         $nameText = '  ' . $this->label;
         $renderer->writeAt(
             $x,
             $currentY,
             \mb_substr($nameText, 0, $width),
-            ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY),
+            ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_GRAY),
         );
         $currentY++;
 
@@ -73,7 +73,7 @@ class TextField extends FormField
                 $cursor = \mb_substr($displayValue, $this->cursorPosition, 1);
                 $after = \mb_substr($displayValue, $this->cursorPosition + 1);
 
-                $renderer->writeAt($x + 1, $currentY, $before, ColorScheme::INPUT_TEXT);
+                $renderer->writeAt($x + 1, $currentY, $before, ColorScheme::$INPUT_TEXT);
                 $renderer->writeAt(
                     $x + 1 + \mb_strlen($before),
                     $currentY,
@@ -84,10 +84,10 @@ class TextField extends FormField
                     $x + 1 + \mb_strlen($before) + 1,
                     $currentY,
                     $after,
-                    ColorScheme::INPUT_TEXT,
+                    ColorScheme::$INPUT_TEXT,
                 );
             } else {
-                $renderer->writeAt($x + 1, $currentY, $displayValue, ColorScheme::INPUT_TEXT);
+                $renderer->writeAt($x + 1, $currentY, $displayValue, ColorScheme::$INPUT_TEXT);
                 $renderer->writeAt(
                     $x + 1 + $this->cursorPosition,
                     $currentY,
@@ -96,7 +96,7 @@ class TextField extends FormField
                 );
             }
         } else {
-            $renderer->writeAt($x + 1, $currentY, $displayValue, ColorScheme::INPUT_TEXT);
+            $renderer->writeAt($x + 1, $currentY, $displayValue, ColorScheme::$INPUT_TEXT);
         }
         $currentY++;
 

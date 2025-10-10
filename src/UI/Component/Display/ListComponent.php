@@ -92,7 +92,7 @@ final class ListComponent extends AbstractComponent
             $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
             $emptyY = $y + (int) ($height / 2);
 
-            $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::NORMAL_TEXT);
+            $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::$NORMAL_TEXT);
             return;
         }
 
@@ -121,14 +121,14 @@ final class ListComponent extends AbstractComponent
                     $x,
                     $rowY,
                     $displayText,
-                    ColorScheme::SELECTED_TEXT,
+                    ColorScheme::$SELECTED_TEXT,
                 );
             } else {
                 $renderer->writeAt(
                     $x,
                     $rowY,
                     $displayText,
-                    ColorScheme::NORMAL_TEXT,
+                    ColorScheme::$NORMAL_TEXT,
                 );
             }
         }
@@ -236,7 +236,7 @@ final class ListComponent extends AbstractComponent
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::SCROLLBAR);
+            $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
         }
     }
 }

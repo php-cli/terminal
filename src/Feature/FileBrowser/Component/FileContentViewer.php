@@ -81,7 +81,7 @@ final class FileContentViewer extends AbstractComponent
             // Combine line number and content
             $displayText = $lineNumber . $contentText;
 
-            $renderer->writeAt($x, $rowY, $displayText, ColorScheme::NORMAL_TEXT);
+            $renderer->writeAt($x, $rowY, $displayText, ColorScheme::$NORMAL_TEXT);
         }
 
         // Draw scrollbar if needed
@@ -156,7 +156,7 @@ final class FileContentViewer extends AbstractComponent
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::SCROLLBAR);
+            $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
         }
     }
 }

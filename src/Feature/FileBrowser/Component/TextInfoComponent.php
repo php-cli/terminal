@@ -54,7 +54,7 @@ final class TextInfoComponent extends AbstractComponent
             $displayText = \mb_substr($line, 0, $width);
             $displayText = \str_pad($displayText, $width);
 
-            $renderer->writeAt($x, $y + $i, $displayText, ColorScheme::NORMAL_TEXT);
+            $renderer->writeAt($x, $y + $i, $displayText, ColorScheme::$NORMAL_TEXT);
         }
     }
 
