@@ -20,6 +20,12 @@ final class KeyboardHandler
         "\033[C" => 'RIGHT',
         "\033[D" => 'LEFT',
 
+        // Ctrl + Arrow keys
+        "\033[1;5A" => 'CTRL_UP',
+        "\033[1;5B" => 'CTRL_DOWN',
+        "\033[1;5C" => 'CTRL_RIGHT',
+        "\033[1;5D" => 'CTRL_LEFT',
+
         // Function keys
         // F1-F4 can have different sequences depending on terminal
         "\033OP" => 'F1',    // xterm

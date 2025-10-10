@@ -3,6 +3,7 @@
 ## Overview
 
 The `TableComponent` is a generic, reusable table component for displaying tabular data with:
+
 - **Configurable columns** with flexible width specifications (fixed, percentage, flex)
 - **Column alignment** (left, right, center)
 - **Custom formatters** per column for data transformation
@@ -50,21 +51,25 @@ $table->render($renderer, 0, 0, 80, 20);
 ## Column Width Specifications
 
 ### 1. Fixed Width (int)
+
 ```php
 new TableColumn('id', 'ID', 10) // Exactly 10 characters
 ```
 
 ### 2. Percentage Width (string)
+
 ```php
 new TableColumn('name', 'Name', '30%') // 30% of table width
 ```
 
 ### 3. Flex Width (string)
+
 ```php
 new TableColumn('description', 'Description', '*') // Takes remaining space
 ```
 
 Multiple flex columns split remaining space equally:
+
 ```php
 $table = new TableComponent([
     new TableColumn('id', 'ID', 10),          // 10 chars
@@ -105,8 +110,8 @@ new TableColumn(
 )
 
 private function formatSize(int $bytes): string {
-    if ($bytes < 1024) return "{$bytes} B";
-    if ($bytes < 1048576) return round($bytes / 1024, 2) . " KB";
+    if ($bytes < 1024) {return "{$bytes} B";}
+    if ($bytes < 1048576) {return round($bytes / 1024, 2) . " KB";}
     return round($bytes / 1048576, 2) . " MB";
 }
 ```
@@ -334,9 +339,9 @@ $table = new TableComponent([
     new TableColumn('cpu', 'CPU %', 10, TableColumn::ALIGN_RIGHT,
         formatter: fn($value) => number_format($value, 1) . '%',
         colorizer: function($value, $row, $selected) {
-            if ($selected) return ColorScheme::SELECTED_TEXT;
-            if ($value > 80) return ColorScheme::ERROR_TEXT;
-            if ($value > 50) return ColorScheme::WARNING_TEXT;
+            if ($selected) {return ColorScheme::SELECTED_TEXT;}
+            if ($value > 80) {return ColorScheme::ERROR_TEXT;}
+            if ($value > 50) {return ColorScheme::WARNING_TEXT;}
             return ColorScheme::NORMAL_TEXT;
         }
     ),
@@ -345,7 +350,7 @@ $table = new TableComponent([
     ),
     new TableColumn('status', 'Status', 12, TableColumn::ALIGN_CENTER,
         colorizer: function($value, $row, $selected) {
-            if ($selected) return ColorScheme::SELECTED_TEXT;
+            if ($selected) {return ColorScheme::SELECTED_TEXT;}
             return match($value) {
                 'Running' => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GREEN),
                 'Stopped' => ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_RED),
@@ -385,7 +390,7 @@ $table = new TableComponent([
     new TableColumn('args', 'Args', 8, TableColumn::ALIGN_CENTER,
         formatter: fn($value) => count($value),
         colorizer: function($value, $row, $selected) {
-            if ($selected) return ColorScheme::SELECTED_TEXT;
+            if ($selected) {return ColorScheme::SELECTED_TEXT;}
             return count($value) > 0 
                 ? ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW)
                 : ColorScheme::NORMAL_TEXT;
@@ -438,6 +443,7 @@ $table->setShowHeader(false);
 ## Scrollbar
 
 A scrollbar automatically appears on the right edge when:
+
 - Total rows > visible rows
 - Shows thumb position and size proportional to content
 
@@ -465,22 +471,24 @@ $rows = array_map(function($item) {
 
 ## Comparison with ListComponent
 
-| Feature | ListComponent | TableComponent |
-|---------|---------------|----------------|
+| Feature        | ListComponent   | TableComponent                |
+|----------------|-----------------|-------------------------------|
 | Data Structure | `array<string>` | `array<array<string, mixed>>` |
-| Columns | Single column | Multiple columns |
-| Width Control | Full width | Per-column width specs |
-| Formatting | Simple text | Custom formatters per column |
-| Coloring | Row-based | Per-column colorizers |
-| Header | No header | Optional header row |
-| Use Case | Simple lists | Tabular data |
+| Columns        | Single column   | Multiple columns              |
+| Width Control  | Full width      | Per-column width specs        |
+| Formatting     | Simple text     | Custom formatters per column  |
+| Coloring       | Row-based       | Per-column colorizers         |
+| Header         | No header       | Optional header row           |
+| Use Case       | Simple lists    | Tabular data                  |
 
 **When to use ListComponent:**
+
 - Simple string lists
 - Single-column display
 - Minimal formatting needs
 
 **When to use TableComponent:**
+
 - Multi-column data
 - Need column alignment
 - Per-column formatting/coloring
@@ -522,6 +530,7 @@ $table->setRows([
 ## Common Patterns
 
 ### Pattern 1: Icon + Text Column
+
 ```php
 new TableColumn(
     key: 'name',
@@ -532,6 +541,7 @@ new TableColumn(
 ```
 
 ### Pattern 2: Conditional Coloring
+
 ```php
 new TableColumn(
     key: 'status',
@@ -544,6 +554,7 @@ new TableColumn(
 ```
 
 ### Pattern 3: Percentage Bar
+
 ```php
 new TableColumn(
     key: 'progress',
@@ -557,6 +568,7 @@ new TableColumn(
 ```
 
 ### Pattern 4: Truncated Long Text
+
 ```php
 new TableColumn(
     key: 'description',
@@ -572,18 +584,23 @@ new TableColumn(
 ## Troubleshooting
 
 ### Issue: Columns Don't Align Properly
+
 **Solution:** Ensure total width specifications don't exceed 100% or available space.
 
 ### Issue: Text Truncated Unexpectedly
+
 **Solution:** Check column width. Use flex (`*`) for variable-length content.
 
 ### Issue: Custom Colors Not Showing
+
 **Solution:** Ensure colorizer returns proper ANSI codes. Check focus state.
 
 ### Issue: Selection Not Visible
+
 **Solution:** Ensure component has focus via `setFocused(true)`.
 
 ### Issue: Header Missing
+
 **Solution:** Check `showHeader` parameter in constructor or call `setShowHeader(true)`.
 
 ---
@@ -591,6 +608,7 @@ new TableColumn(
 ## Future Enhancements
 
 Potential future features:
+
 - Column sorting (click header to sort)
 - Column resizing (drag column borders)
 - Multi-select mode (Ctrl+Click)
@@ -604,7 +622,9 @@ Potential future features:
 
 ## Summary
 
-The `TableComponent` provides a powerful, flexible foundation for displaying structured data in terminal UIs. Its combination of:
+The `TableComponent` provides a powerful, flexible foundation for displaying structured data in terminal UIs. Its
+combination of:
+
 - Flexible column widths
 - Custom formatters and colorizers
 - Built-in keyboard navigation
@@ -612,4 +632,5 @@ The `TableComponent` provides a powerful, flexible foundation for displaying str
 
 ...makes it suitable for a wide range of use cases from file browsers to process monitors to command lists.
 
-**Key Takeaway:** Extract table logic into reusable components = cleaner code, easier maintenance, and consistent UX across your application.
+**Key Takeaway:** Extract table logic into reusable components = cleaner code, easier maintenance, and consistent UX
+across your application.
