@@ -9,6 +9,7 @@ use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Container\AbstractTab;
 use Butschster\Commander\UI\Component\Container\GridLayout;
 use Butschster\Commander\UI\Component\Decorator\Padding;
+use Butschster\Commander\UI\Component\Display\Alert;
 use Butschster\Commander\UI\Component\Display\TableColumn;
 use Butschster\Commander\UI\Component\Display\TableComponent;
 use Butschster\Commander\UI\Component\Display\TextDisplay;
@@ -36,7 +37,7 @@ final class ScriptsTab extends AbstractTab
     private int $focusedPanelIndex = 0;
     private bool $isExecuting = false;
     private ?Modal $activeModal = null;
-    private bool $hasError = false;
+    private ?Alert $statusAlert = null;
 
     public function __construct(
         private readonly ComposerService $composerService,
@@ -64,14 +65,12 @@ final class ScriptsTab extends AbstractTab
         $this->setBounds($x, $y, $width, $height);
         $this->layout->render($renderer, $x, $y, $width, $height);
 
-        // Overlay: Error indicator on right panel
-        if ($this->hasError) {
-            $this->renderErrorIndicator($renderer, $x, $y, $width, $height);
-        }
-
-        // Overlay: Executing indicator
-        if ($this->isExecuting) {
-            $this->renderExecutingIndicator($renderer, $x, $y, $width);
+        // Overlay: Status alert at top of viewport (error, success, or executing)
+        if ($this->statusAlert !== null) {
+            $leftWidth = (int) ($width * 0.4);
+            $rightWidth = $width - $leftWidth;
+            // Render at top of viewport (y position), positioned on right side
+            $this->statusAlert->render($renderer, $x + $leftWidth, $y, $rightWidth, 1);
         }
 
         // Overlay: Modal dialog
@@ -121,6 +120,17 @@ final class ScriptsTab extends AbstractTab
         }
 
         return $this->rightPanel->handleInput($key);
+    }
+
+    #[\Override]
+    public function update(): void
+    {
+        parent::update();
+
+        // Auto-hide alert if expired
+        if ($this->statusAlert !== null && $this->statusAlert->isExpired()) {
+            $this->statusAlert = null;
+        }
     }
 
     #[\Override]
@@ -279,52 +289,15 @@ final class ScriptsTab extends AbstractTab
             return;
         }
 
-        // Show confirmation for potentially destructive scripts
-        if ($this->isDangerousScript($scriptName)) {
-            $this->showConfirmationModal(
-                'Confirm Execution',
-                "You are about to run the script '$scriptName'.\n\n" .
-                "This script may perform destructive operations.\n\n" .
-                "Are you sure you want to continue?",
-                fn() => $this->performScriptExecution($scriptName),
-            );
-            return;
-        }
-
         $this->performScriptExecution($scriptName);
-    }
-
-    private function isDangerousScript(string $scriptName): bool
-    {
-        $dangerousPatterns = [
-            'delete',
-            'remove',
-            'drop',
-            'truncate',
-            'clear',
-            'purge',
-            'destroy',
-            'reset',
-            'fresh',
-            'wipe',
-            'clean',
-        ];
-
-        $lowerScript = \strtolower($scriptName);
-
-        foreach ($dangerousPatterns as $pattern) {
-            if (\str_contains($lowerScript, $pattern)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private function performScriptExecution(string $scriptName): void
     {
         $this->isExecuting = true;
-        $this->hasError = false;
+
+        // Show executing alert
+        $this->showAlert(Alert::info('EXECUTING...'));
 
         // Switch focus to right panel to show output
         $this->focusedPanelIndex = 1;
@@ -335,24 +308,32 @@ final class ScriptsTab extends AbstractTab
         $this->rightPanel->setTitle("Running: $scriptName");
 
         try {
+            $hasOutput = false;
+
             // Execute script
-            $result = $this->composerService->runScript($scriptName, function (string $line): void {
+            $result = $this->composerService->runScript($scriptName, function (string $line) use (&$hasOutput): void {
                 // Strip ANSI escape codes and normalize line endings
                 $cleaned = $this->cleanOutput($line);
                 if ($cleaned !== '') {
                     $this->detailsDisplay->appendText($cleaned);
+                    $hasOutput = true;
                 }
             });
+
+            // If no output was produced, show a message
+            if (!$hasOutput) {
+                $this->detailsDisplay->appendText("(No output from script)\n");
+            }
 
             // Display result
             $this->detailsDisplay->appendText("\n" . \str_repeat('─', 50) . "\n");
 
             if ($result['exitCode'] === 0) {
                 $this->detailsDisplay->appendText("✅ Success (exit code: 0)\n");
-                $this->hasError = false;
+                $this->showAlert(Alert::success('SUCCESS'));
             } else {
                 $this->detailsDisplay->appendText("❌ Failed (exit code: {$result['exitCode']})\n");
-                $this->hasError = true;
+                $this->showAlert(Alert::error('FAILED'));
             }
 
             $this->detailsDisplay->appendText("\nPress Enter to run again, Tab to select another script.");
@@ -360,40 +341,10 @@ final class ScriptsTab extends AbstractTab
             $this->detailsDisplay->appendText("\n❌ EXCEPTION\n" . \str_repeat('─', 50) . "\n");
             $this->detailsDisplay->appendText($e->getMessage() . "\n");
             $this->detailsDisplay->appendText("\nPress Enter to run again, Tab to select another script.");
-            $this->hasError = true;
+            $this->showAlert(Alert::error('EXCEPTION'));
         } finally {
             $this->isExecuting = false;
         }
-    }
-
-    private function renderExecutingIndicator(Renderer $renderer, int $x, int $y, int $width): void
-    {
-        $indicator = ' [EXECUTING...] ';
-        $leftWidth = (int) ($width * 0.4);
-        $rightWidth = $width - $leftWidth;
-        $indicatorX = $x + $leftWidth + (int) (($rightWidth - \mb_strlen($indicator)) / 2);
-
-        $renderer->writeAt(
-            $indicatorX,
-            $y + 1,
-            $indicator,
-            ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
-        );
-    }
-
-    private function renderErrorIndicator(Renderer $renderer, int $x, int $y, int $width, int $height): void
-    {
-        $message = ' FAILED ';
-        $leftWidth = (int) ($width * 0.4);
-        $rightWidth = $width - $leftWidth;
-        $messageX = $x + $leftWidth + (int) (($rightWidth - \mb_strlen($message)) / 2);
-
-        $renderer->writeAt(
-            $messageX,
-            $y + 1,
-            $message,
-            ColorScheme::combine(ColorScheme::BG_RED, ColorScheme::FG_WHITE, ColorScheme::BOLD),
-        );
     }
 
     private function updateFocus(): void
@@ -407,21 +358,9 @@ final class ScriptsTab extends AbstractTab
         $this->detailsDisplay->setFocused($rightFocused);
     }
 
-    private function showErrorModal(string $message): void
+    private function showAlert(Alert $alert): void
     {
-        $this->activeModal = Modal::error('Error', $message);
-        $this->activeModal->onClose(fn() => $this->activeModal = null);
-    }
-
-    private function showConfirmationModal(string $title, string $message, callable $onConfirm): void
-    {
-        $this->activeModal = Modal::confirm($title, $message);
-        $this->activeModal->onClose(function ($confirmed) use ($onConfirm): void {
-            $this->activeModal = null;
-            if ($confirmed) {
-                $onConfirm();
-            }
-        });
+        $this->statusAlert = $alert;
     }
 
     /**
@@ -429,18 +368,7 @@ final class ScriptsTab extends AbstractTab
      */
     private function cleanOutput(string $output): string
     {
-        // Strip all ANSI escape sequences (CSI, OSC, etc.)
-        // This handles colors, cursor movements, progress bars, etc.
-        $cleaned = \preg_replace([
-            '/\x1b\[[0-9;?]*[a-zA-Z]/',  // CSI sequences (colors, cursor control)
-            '/\x1b\][0-9;]*[^\x07]*\x07/', // OSC sequences
-            '/\x1b[>=]/',                 // Other escape sequences
-            '/\x1b[()][AB012]/',          // Character set selection
-        ], '', $output);
-
         // Normalize line endings (convert \r\n and \r to \n)
-        $cleaned = \str_replace(["\r\n", "\r"], ["\n", "\n"], $cleaned ?? '');
-
-        return $cleaned;
+        return \str_replace(["\r\n", "\r"], ["\n", "\n"], $output);
     }
 }
