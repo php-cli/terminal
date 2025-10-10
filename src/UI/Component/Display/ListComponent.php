@@ -26,9 +26,7 @@ final class ListComponent extends AbstractComponent
     /**
      * @param array<string> $items
      */
-    public function __construct(private array $items = [])
-    {
-    }
+    public function __construct(private array $items = []) {}
 
     /**
      * Set list items

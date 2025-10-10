@@ -24,7 +24,7 @@ final class FileListComponent extends AbstractComponent
     /** @var array<array{name: string, path: string, type: string, size: int, modified: int, isDir: bool}> */
     private array $items = [];
 
-    private TableComponent $table;
+    private readonly TableComponent $table;
 
     /** @var callable|null Callback when item is selected (Enter pressed) */
     private $onSelect = null;
@@ -57,7 +57,7 @@ final class FileListComponent extends AbstractComponent
                 label: 'Modified',
                 width: 25,
                 align: TableColumn::ALIGN_RIGHT,
-                formatter: fn($value) => date('Y-m-d H:i', $value),
+                formatter: static fn($value) => \date('Y-m-d H:i', $value),
             ),
         ], showHeader: true);
 
@@ -134,18 +134,21 @@ final class FileListComponent extends AbstractComponent
         $this->table->render($renderer, $x, $y, $width, $height);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // Delegate input handling to table
         return $this->table->handleInput($key);
     }
 
+    #[\Override]
     public function setFocused(bool $focused): void
     {
         parent::setFocused($focused);
         $this->table->setFocused($focused);
     }
 
+    #[\Override]
     public function getMinSize(): array
     {
         return $this->table->getMinSize();

@@ -46,7 +46,7 @@ final readonly class PackageInfo
             return 'N/A';
         }
 
-        return implode(', ', $this->license);
+        return \implode(', ', $this->license);
     }
 
     /**
@@ -60,10 +60,10 @@ final readonly class PackageInfo
 
         $links = [];
         foreach ($this->support as $type => $url) {
-            $links[] = ucfirst($type) . ': ' . $url;
+            $links[] = \ucfirst((string) $type) . ': ' . $url;
         }
 
-        return implode("\n", $links);
+        return \implode("\n", $links);
     }
 
     /**
@@ -71,7 +71,7 @@ final readonly class PackageInfo
      */
     public function getTotalDependencies(): int
     {
-        return count($this->requires) + count($this->devRequires);
+        return \count($this->requires) + \count($this->devRequires);
     }
 
     /**
@@ -79,9 +79,9 @@ final readonly class PackageInfo
      */
     public function hasAutoload(): bool
     {
-        return !empty($this->autoload['psr4']) 
-            || !empty($this->autoload['psr0']) 
-            || !empty($this->autoload['classmap']) 
+        return !empty($this->autoload['psr4'])
+            || !empty($this->autoload['psr0'])
+            || !empty($this->autoload['classmap'])
             || !empty($this->autoload['files']);
     }
 
@@ -92,15 +92,15 @@ final readonly class PackageInfo
     {
         $namespaces = [];
 
-        foreach (array_keys($this->autoload['psr4'] ?? []) as $namespace) {
-            $namespaces[] = rtrim($namespace, '\\');
+        foreach (\array_keys($this->autoload['psr4'] ?? []) as $namespace) {
+            $namespaces[] = \rtrim((string) $namespace, '\\');
         }
 
-        foreach (array_keys($this->autoload['psr0'] ?? []) as $namespace) {
-            $namespaces[] = rtrim($namespace, '\\');
+        foreach (\array_keys($this->autoload['psr0'] ?? []) as $namespace) {
+            $namespaces[] = \rtrim((string) $namespace, '\\');
         }
 
-        return array_unique($namespaces);
+        return \array_unique($namespaces);
     }
 
     /**

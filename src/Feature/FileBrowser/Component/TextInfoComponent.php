@@ -14,16 +14,10 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  */
 final class TextInfoComponent extends AbstractComponent
 {
-    /** @var array<string> */
-    private array $lines = [];
-
     /**
      * @param array<string> $lines Lines of text to display
      */
-    public function __construct(array $lines = [])
-    {
-        $this->lines = $lines;
-    }
+    public function __construct(private array $lines = []) {}
 
     /**
      * Set text lines
@@ -51,27 +45,29 @@ final class TextInfoComponent extends AbstractComponent
             return;
         }
 
-        $linesToRender = min($height, count($this->lines));
+        $linesToRender = \min($height, \count($this->lines));
 
         for ($i = 0; $i < $linesToRender; $i++) {
             $line = $this->lines[$i];
-            
+
             // Truncate or pad line to fit width
-            $displayText = mb_substr($line, 0, $width);
-            $displayText = str_pad($displayText, $width);
+            $displayText = \mb_substr($line, 0, $width);
+            $displayText = \str_pad($displayText, $width);
 
             $renderer->writeAt($x, $y + $i, $displayText, ColorScheme::NORMAL_TEXT);
         }
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // This component doesn't handle input
         return false;
     }
 
+    #[\Override]
     public function getMinSize(): array
     {
-        return ['width' => 20, 'height' => count($this->lines)];
+        return ['width' => 20, 'height' => \count($this->lines)];
     }
 }

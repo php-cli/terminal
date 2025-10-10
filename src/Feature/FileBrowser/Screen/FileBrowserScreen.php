@@ -73,7 +73,7 @@ final class FileBrowserScreen implements ScreenInterface
                 $this->screenManager->popScreen();
                 return true;
 
-            case 'F4':
+            case 'CTRL_R':
                 // View/open file
                 if ($this->leftPanelFocused) {
                     $selectedItem = $this->fileList->getSelectedItem();
@@ -259,7 +259,7 @@ final class FileBrowserScreen implements ScreenInterface
                 $hints = [
                     '↑↓' => ' Navigate',
                     'Enter' => ' Open Dir',
-                    'F4' => ' View File',
+                    'Ctrl+R' => ' View File',
                     'Tab' => ' Switch',
                     'ESC' => ' Back',
                 ];
@@ -315,11 +315,11 @@ final class FileBrowserScreen implements ScreenInterface
             }
         }
         // For files, just show metadata (already shown in right panel)
-        // File content viewing is handled by F4 key
+        // File content viewing is handled by Ctrl+R key
     }
 
     /**
-     * Open/view file (F4 key)
+     * Open/view file (Ctrl+R key)
      */
     private function handleFileView(array $item): void
     {

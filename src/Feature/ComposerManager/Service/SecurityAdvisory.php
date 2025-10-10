@@ -20,12 +20,12 @@ final readonly class SecurityAdvisory
 
     public function isCritical(): bool
     {
-        return in_array($this->severity, ['critical', 'high'], true);
+        return \in_array($this->severity, ['critical', 'high'], true);
     }
 
     public function getSeverityColor(): string
     {
-        return match($this->severity) {
+        return match ($this->severity) {
             'critical', 'high' => 'red',
             'medium' => 'yellow',
             default => 'white',

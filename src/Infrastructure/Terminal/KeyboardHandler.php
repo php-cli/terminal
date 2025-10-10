@@ -47,17 +47,45 @@ final class KeyboardHandler
         "\033[2~" => 'INSERT',
         "\033[3~" => 'DELETE',
 
-        // Control sequences
-        "\n" => 'ENTER',
-        "\r" => 'ENTER',
+        // IMPORTANT: Enter keys must be checked BEFORE Ctrl combinations
+        // because \n (line feed) is the same as CTRL_J
+        "\n" => 'ENTER',      // Line feed (LF) - Unix/Mac
+        "\r" => 'ENTER',      // Carriage return (CR) - Old Mac
+        "\r\n" => 'ENTER',    // CRLF - Windows
+        
+        // Other special keys
         "\t" => 'TAB',
         "\033" => 'ESCAPE',
         "\177" => 'BACKSPACE',
         "\010" => 'BACKSPACE',
 
-        // Ctrl combinations
+        // Ctrl combinations (Ctrl+letter sends ASCII code 1-26)
+        // Note: Some overlap with special keys above
+        "\001" => 'CTRL_A',
+        "\002" => 'CTRL_B',
         "\003" => 'CTRL_C',
         "\004" => 'CTRL_D',
+        "\005" => 'CTRL_E',
+        "\006" => 'CTRL_F',
+        "\007" => 'CTRL_G',
+        // "\010" => 'CTRL_H', // Commented out - same as backspace
+        // "\011" => 'CTRL_I', // Commented out - same as tab
+        // "\012" => 'CTRL_J', // Commented out - same as line feed (ENTER)
+        "\013" => 'CTRL_K',
+        "\014" => 'CTRL_L',
+        // "\015" => 'CTRL_M', // Commented out - same as carriage return (ENTER)
+        "\016" => 'CTRL_N',
+        "\017" => 'CTRL_O',
+        "\020" => 'CTRL_P',
+        "\021" => 'CTRL_Q',
+        "\022" => 'CTRL_R',
+        "\023" => 'CTRL_S',
+        "\024" => 'CTRL_T',
+        "\025" => 'CTRL_U',
+        "\026" => 'CTRL_V',
+        "\027" => 'CTRL_W',
+        "\030" => 'CTRL_X',
+        "\031" => 'CTRL_Y',
         "\032" => 'CTRL_Z',
     ];
 

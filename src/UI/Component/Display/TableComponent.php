@@ -42,7 +42,6 @@ final class TableComponent extends AbstractComponent
     private int $selectedIndex = 0;
     private int $scrollOffset = 0;
     private int $visibleRows = 0;
-    private bool $showHeader = true;
 
     /** @var array<int, int> Calculated column widths in characters */
     private array $calculatedWidths = [];
@@ -57,12 +56,7 @@ final class TableComponent extends AbstractComponent
      * @param array<TableColumn> $columns Column definitions
      * @param bool $showHeader Whether to show header row
      */
-    public function __construct(
-        private array $columns = [],
-        bool $showHeader = true,
-    ) {
-        $this->showHeader = $showHeader;
-    }
+    public function __construct(private array $columns = [], private bool $showHeader = true) {}
 
     /**
      * Set table columns
@@ -123,7 +117,7 @@ final class TableComponent extends AbstractComponent
      */
     public function setSelectedIndex(int $index): void
     {
-        if ($index >= 0 && $index < count($this->rows)) {
+        if ($index >= 0 && $index < \count($this->rows)) {
             $this->selectedIndex = $index;
             $this->adjustScroll();
 
@@ -158,7 +152,7 @@ final class TableComponent extends AbstractComponent
         $this->setBounds($x, $y, $width, $height);
 
         // Calculate column widths if not done yet or if width changed
-        if (empty($this->calculatedWidths) || array_sum($this->calculatedWidths) !== $width) {
+        if (empty($this->calculatedWidths) || \array_sum($this->calculatedWidths) !== $width) {
             $this->calculateColumnWidths($width);
         }
 
@@ -170,7 +164,7 @@ final class TableComponent extends AbstractComponent
             $currentY += 1;
 
             // Render separator line
-            $separator = str_repeat('─', $width);
+            $separator = \str_repeat('─', $width);
             $renderer->writeAt($x, $currentY, $separator, ColorScheme::INACTIVE_BORDER);
             $currentY += 1;
 
@@ -188,9 +182,9 @@ final class TableComponent extends AbstractComponent
 
         // Calculate visible range
         $startIndex = $this->scrollOffset;
-        $endIndex = min(
+        $endIndex = \min(
             $this->scrollOffset + $this->visibleRows,
-            count($this->rows),
+            \count($this->rows),
         );
 
         // Render rows
@@ -203,11 +197,12 @@ final class TableComponent extends AbstractComponent
         }
 
         // Draw scrollbar if needed
-        if (count($this->rows) > $this->visibleRows) {
+        if (\count($this->rows) > $this->visibleRows) {
             $this->drawScrollbar($renderer, $x + $width - 1, $currentY, $this->visibleRows);
         }
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         if (!$this->isFocused() || empty($this->rows)) {
@@ -225,20 +220,20 @@ final class TableComponent extends AbstractComponent
                 break;
 
             case 'DOWN':
-                if ($this->selectedIndex < count($this->rows) - 1) {
+                if ($this->selectedIndex < \count($this->rows) - 1) {
                     $this->selectedIndex++;
                     $this->adjustScroll();
                 }
                 break;
 
             case 'PAGE_UP':
-                $this->selectedIndex = max(0, $this->selectedIndex - $this->visibleRows);
+                $this->selectedIndex = \max(0, $this->selectedIndex - $this->visibleRows);
                 $this->adjustScroll();
                 break;
 
             case 'PAGE_DOWN':
-                $this->selectedIndex = min(
-                    count($this->rows) - 1,
+                $this->selectedIndex = \min(
+                    \count($this->rows) - 1,
                     $this->selectedIndex + $this->visibleRows,
                 );
                 $this->adjustScroll();
@@ -250,7 +245,7 @@ final class TableComponent extends AbstractComponent
                 break;
 
             case 'END':
-                $this->selectedIndex = count($this->rows) - 1;
+                $this->selectedIndex = \count($this->rows) - 1;
                 $this->adjustScroll();
                 break;
 
@@ -272,14 +267,17 @@ final class TableComponent extends AbstractComponent
         return true;
     }
 
+    #[\Override]
     public function getMinSize(): array
     {
-        $minWidth = array_sum(array_map(
-            fn($col) => is_int($col->getWidth()) ? $col->getWidth() : 10,
-            $this->columns
-        ));
+        $minWidth = \array_sum(
+            \array_map(
+                static fn($col) => \is_int($col->getWidth()) ? $col->getWidth() : 10,
+                $this->columns,
+            ),
+        );
 
-        return ['width' => max($minWidth, 60), 'height' => 10];
+        return ['width' => \max($minWidth, 60), 'height' => 10];
     }
 
     /**
@@ -295,15 +293,15 @@ final class TableComponent extends AbstractComponent
         foreach ($this->columns as $index => $column) {
             $width = $column->getWidth();
 
-            if (is_int($width)) {
+            if (\is_int($width)) {
                 // Fixed width
-                $this->calculatedWidths[$index] = min($width, $remainingWidth);
+                $this->calculatedWidths[$index] = \min($width, $remainingWidth);
                 $remainingWidth -= $this->calculatedWidths[$index];
-            } elseif (str_ends_with($width, '%')) {
+            } elseif (\str_ends_with($width, '%')) {
                 // Percentage width
-                $percentage = (float) rtrim($width, '%');
+                $percentage = (float) \rtrim($width, '%');
                 $calculatedWidth = (int) ($totalWidth * $percentage / 100);
-                $this->calculatedWidths[$index] = min($calculatedWidth, $remainingWidth);
+                $this->calculatedWidths[$index] = \min($calculatedWidth, $remainingWidth);
                 $remainingWidth -= $this->calculatedWidths[$index];
             } elseif ($width === '*') {
                 // Flex column - will be calculated in second pass
@@ -313,7 +311,7 @@ final class TableComponent extends AbstractComponent
 
         // Second pass: distribute remaining width to flex columns
         if (!empty($flexColumns)) {
-            $widthPerFlex = max(1, (int) ($remainingWidth / count($flexColumns)));
+            $widthPerFlex = \max(1, (int) ($remainingWidth / \count($flexColumns)));
 
             foreach ($flexColumns as $index) {
                 $this->calculatedWidths[$index] = $widthPerFlex;
@@ -339,9 +337,9 @@ final class TableComponent extends AbstractComponent
             $currentX += $colWidth;
         }
 
-        $headerLine = implode('', $headerParts);
-        $headerLine = mb_substr($headerLine, 0, $width);
-        $headerLine = str_pad($headerLine, $width);
+        $headerLine = \implode('', $headerParts);
+        $headerLine = \mb_substr($headerLine, 0, $width);
+        $headerLine = \str_pad($headerLine, $width);
 
         $renderer->writeAt(
             $x,
@@ -352,7 +350,7 @@ final class TableComponent extends AbstractComponent
     }
 
     /**
-     * Render a single data row
+     * Render a single data row with per-column coloring
      *
      * @param array<string, mixed> $row
      */
@@ -364,8 +362,12 @@ final class TableComponent extends AbstractComponent
         array $row,
         bool $selected,
     ): void {
-        $rowParts = [];
-        $currentX = 0;
+        $currentX = $x;
+
+        // Default colors
+        $defaultColor = $selected && $this->isFocused()
+            ? ColorScheme::SELECTED_TEXT
+            : ColorScheme::NORMAL_TEXT;
 
         foreach ($this->columns as $index => $column) {
             $colWidth = $this->calculatedWidths[$index] ?? 10;
@@ -378,34 +380,15 @@ final class TableComponent extends AbstractComponent
             // Align text
             $cellText = $this->alignText($formattedValue, $colWidth, $column->getAlign());
 
-            $rowParts[] = $cellText;
+            // Determine cell color - check for custom colorizer
+            $customColor = $column->getColor($value, $row, $selected);
+            $cellColor = $customColor !== null ? $customColor : $defaultColor;
+
+            // Render this cell
+            $renderer->writeAt($currentX, $y, $cellText, $cellColor);
+
             $currentX += $colWidth;
         }
-
-        $rowLine = implode('', $rowParts);
-        $rowLine = mb_substr($rowLine, 0, $width);
-        $rowLine = str_pad($rowLine, $width);
-
-        // Determine color
-        $color = $selected && $this->isFocused()
-            ? ColorScheme::SELECTED_TEXT
-            : ColorScheme::NORMAL_TEXT;
-
-        // Check if any column has custom colorizer
-        if (!$selected || !$this->isFocused()) {
-            foreach ($this->columns as $column) {
-                $key = $column->getKey();
-                $value = $row[$key] ?? '';
-                $customColor = $column->getColor($value, $row, $selected);
-
-                if ($customColor !== null) {
-                    $color = $customColor;
-                    break; // Use first custom color found
-                }
-            }
-        }
-
-        $renderer->writeAt($x, $y, $rowLine, $color);
     }
 
     /**
@@ -414,7 +397,7 @@ final class TableComponent extends AbstractComponent
     private function renderEmptyState(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $emptyText = '(No data)';
-        $emptyX = $x + (int) (($width - mb_strlen($emptyText)) / 2);
+        $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
         $emptyY = $y + (int) ($height / 2);
 
         $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::NORMAL_TEXT);
@@ -425,23 +408,23 @@ final class TableComponent extends AbstractComponent
      */
     private function alignText(string $text, int $width, string $align): string
     {
-        $textLength = mb_strlen($text);
+        $textLength = \mb_strlen($text);
 
         // Truncate if too long
         if ($textLength > $width) {
-            return mb_substr($text, 0, $width - 3) . '...';
+            return \mb_substr($text, 0, $width - 3) . '...';
         }
 
         // Pad according to alignment
         return match ($align) {
-            TableColumn::ALIGN_RIGHT => str_pad($text, $width, ' ', STR_PAD_LEFT),
-            TableColumn::ALIGN_CENTER => str_pad(
-                str_pad($text, $textLength + (int)(($width - $textLength) / 2), ' ', STR_PAD_LEFT),
+            TableColumn::ALIGN_RIGHT => \str_pad($text, $width, ' ', STR_PAD_LEFT),
+            TableColumn::ALIGN_CENTER => \str_pad(
+                \str_pad($text, $textLength + (int) (($width - $textLength) / 2), ' ', STR_PAD_LEFT),
                 $width,
                 ' ',
-                STR_PAD_RIGHT
+                STR_PAD_RIGHT,
             ),
-            default => str_pad($text, $width, ' ', STR_PAD_RIGHT), // ALIGN_LEFT
+            default => \str_pad($text, $width, ' ', STR_PAD_RIGHT), // ALIGN_LEFT
         };
     }
 
@@ -462,10 +445,10 @@ final class TableComponent extends AbstractComponent
      */
     private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
     {
-        $totalItems = count($this->rows);
+        $totalItems = \count($this->rows);
 
         // Calculate thumb size and position
-        $thumbHeight = max(1, (int) ($height * $this->visibleRows / $totalItems));
+        $thumbHeight = \max(1, (int) ($height * $this->visibleRows / $totalItems));
         $thumbPosition = (int) ($height * $this->scrollOffset / $totalItems);
 
         for ($i = 0; $i < $height; $i++) {

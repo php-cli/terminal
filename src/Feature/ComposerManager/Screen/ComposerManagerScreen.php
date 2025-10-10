@@ -16,8 +16,6 @@ use Butschster\Commander\UI\Component\Decorator\Padding;
 use Butschster\Commander\UI\Component\Display\TableColumn;
 use Butschster\Commander\UI\Component\Display\TableComponent;
 use Butschster\Commander\UI\Component\Display\TextDisplay;
-use Butschster\Commander\UI\Component\Input\FormComponent;
-use Butschster\Commander\UI\Component\Layout\Modal;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
@@ -48,9 +46,9 @@ use Butschster\Commander\UI\Theme\ColorScheme;
 final class ComposerManagerScreen implements ScreenInterface
 {
     // Tabs
-    private const TAB_INSTALLED = 0;
-    private const TAB_OUTDATED = 1;
-    private const TAB_SECURITY = 2;
+    private const int TAB_INSTALLED = 0;
+    private const int TAB_OUTDATED = 1;
+    private const int TAB_SECURITY = 2;
 
     // Layout
     private StackLayout $rootLayout;
@@ -69,7 +67,6 @@ final class ComposerManagerScreen implements ScreenInterface
     private int $currentTab = self::TAB_INSTALLED;
     private int $focusedPanelIndex = 0;
     private bool $isLoading = false;
-    private ?Modal $activeModal = null;
     private ?string $selectedPackageName = null;
     private ?ScreenManager $screenManager = null;
 
@@ -89,6 +86,78 @@ final class ComposerManagerScreen implements ScreenInterface
     public function setScreenManager(ScreenManager $screenManager): void
     {
         $this->screenManager = $screenManager;
+    }
+
+    // ScreenInterface implementation
+
+    public function render(Renderer $renderer): void
+    {
+        $size = $renderer->getSize();
+
+        // Render main layout
+        $this->rootLayout->render($renderer, 0, 1, $size['width'], $size['height'] - 1);
+    }
+
+    public function handleInput(string $key): bool
+    {
+        if ($key === 'F5') {
+            $this->switchTab(self::TAB_INSTALLED);
+            return true;
+        }
+
+        if ($key === 'CTRL_O') {
+            $this->switchTab(self::TAB_OUTDATED);
+            return true;
+        }
+
+        if ($key === 'CTRL_U') {
+            $this->switchTab(self::TAB_SECURITY);
+            return true;
+        }
+
+        if ($key === 'CTRL_R') {
+            $this->composerService->clearCache();
+            match ($this->currentTab) {
+                self::TAB_INSTALLED => $this->loadData(),
+                self::TAB_OUTDATED => $this->loadOutdatedPackages(),
+                self::TAB_SECURITY => $this->loadSecurityAudit(),
+            };
+            return true;
+        }
+
+        // Switch panel focus
+        if ($key === 'TAB') {
+            $this->focusedPanelIndex = ($this->focusedPanelIndex + 1) % 2;
+            $this->updateFocus();
+            return true;
+        }
+
+        // Delegate to focused panel
+        if ($this->focusedPanelIndex === 0) {
+            return $this->leftPanel->handleInput($key);
+        }
+
+        return $this->rightPanel->handleInput($key);
+    }
+
+    public function onActivate(): void
+    {
+        $this->updateFocus();
+    }
+
+    public function onDeactivate(): void
+    {
+        // Nothing to do
+    }
+
+    public function update(): void
+    {
+        // Nothing to do
+    }
+
+    public function getTitle(): string
+    {
+        return 'Composer Manager';
     }
 
     private function initializeComponents(): void
@@ -124,8 +193,12 @@ final class ComposerManagerScreen implements ScreenInterface
     private function createInstalledTable(): TableComponent
     {
         $table = new TableComponent([
-            new TableColumn('name', 'Package', '60%', TableColumn::ALIGN_LEFT,
-                formatter: function ($value, $row) {
+            new TableColumn(
+                'name',
+                'Package',
+                '50%',
+                TableColumn::ALIGN_LEFT,
+                formatter: static function ($value, $row) {
                     $prefix = $row['isDirect'] ? '* ' : '  ';
                     return $prefix . $value;
                 },
@@ -142,11 +215,57 @@ final class ComposerManagerScreen implements ScreenInterface
                     return ColorScheme::NORMAL_TEXT;
                 },
             ),
-            new TableColumn('version', 'Version', '20%', TableColumn::ALIGN_LEFT),
-            new TableColumn('abandoned', 'Abandoned', '*', TableColumn::ALIGN_CENTER,
-                formatter: function ($value) {
-                    return $value ? '[ABANDONED]' : '';
+            new TableColumn('version', 'Version', '15%', TableColumn::ALIGN_LEFT),
+            new TableColumn(
+                'outdated',
+                'Outdated',
+                '15%',
+                TableColumn::ALIGN_CENTER,
+                formatter: static function ($value, $row) {
+                    if (!$value) {
+                        return '';
+                    }
+                    // Use different symbols to indicate severity visually
+                    return match ($row['updateType'] ?? null) {
+                        'major' => '→ ' . $value . ' [!!]',  // Double exclamation for major
+                        'minor' => '→ ' . $value . ' [>]',   // Arrow for minor
+                        'patch' => '→ ' . $value . ' [+]',   // Plus for patch
+                        default => '→ ' . $value,
+                    };
                 },
+                colorizer: function ($value, $row, $selected) {
+                    if (!$value) {
+                        // Empty cell - use default color (selection or normal)
+                        return $selected && $this->leftPanel->isFocused()
+                            ? ColorScheme::SELECTED_TEXT
+                            : ColorScheme::NORMAL_TEXT;
+                    }
+
+                    // Apply severity-based color with strong backgrounds, even for selected rows
+                    return match ($row['updateType'] ?? null) {
+                        'major' => ColorScheme::combine(ColorScheme::BG_RED, ColorScheme::FG_WHITE, ColorScheme::BOLD),
+                        'minor' => ColorScheme::combine(
+                            ColorScheme::BG_YELLOW,
+                            ColorScheme::FG_BLACK,
+                            ColorScheme::BOLD,
+                        ),
+                        'patch' => ColorScheme::combine(
+                            ColorScheme::BG_GREEN,
+                            ColorScheme::FG_BLACK,
+                            ColorScheme::BOLD,
+                        ),
+                        default => $selected && $this->leftPanel->isFocused()
+                            ? ColorScheme::SELECTED_TEXT
+                            : ColorScheme::NORMAL_TEXT,
+                    };
+                },
+            ),
+            new TableColumn(
+                'abandoned',
+                'Abandoned',
+                '*',
+                TableColumn::ALIGN_CENTER,
+                formatter: static fn($value) => $value ? '[ABANDONED]' : '',
                 colorizer: function ($value, $row, $selected) {
                     if ($selected && $this->leftPanel->isFocused()) {
                         return ColorScheme::SELECTED_TEXT;
@@ -181,8 +300,11 @@ final class ComposerManagerScreen implements ScreenInterface
             new TableColumn('current', 'Current', '15%', TableColumn::ALIGN_CENTER),
             new TableColumn('latest', 'Latest', '15%', TableColumn::ALIGN_CENTER),
             new TableColumn(
-                'type', 'Update', '10%', TableColumn::ALIGN_CENTER,
-                formatter: fn($value) => match ($value) {
+                'type',
+                'Update',
+                '10%',
+                TableColumn::ALIGN_CENTER,
+                formatter: static fn($value) => match ($value) {
                     'major' => '[!!] Major',
                     'minor' => '[>] Minor',
                     'patch' => '[+] Patch',
@@ -201,18 +323,19 @@ final class ComposerManagerScreen implements ScreenInterface
                 },
             ),
             new TableColumn(
-                'description', 'Description', '*', TableColumn::ALIGN_LEFT,
-                formatter: fn($value) => mb_substr($value, 0, 50) . (mb_strlen($value) > 50 ? '...' : ''),
+                'description',
+                'Description',
+                '*',
+                TableColumn::ALIGN_LEFT,
+                formatter: static fn($value) => \mb_substr((string) $value, 0, 50) . (\mb_strlen(
+                        (string) $value,
+                    ) > 50 ? '...' : ''),
             ),
         ], showHeader: true);
 
         $table->onChange(function (array $row, int $index): void {
             $this->selectedPackageName = $row['name'];
             $this->showOutdatedPackageDetails($row);
-        });
-
-        $table->onSelect(function (array $row, int $index): void {
-            $this->showUpdateConfirmation($row['name']);
         });
 
         return $table;
@@ -222,8 +345,11 @@ final class ComposerManagerScreen implements ScreenInterface
     {
         $table = new TableComponent([
             new TableColumn(
-                'severity', 'Sev', '8%', TableColumn::ALIGN_CENTER,
-                formatter: fn($value) => match ($value) {
+                'severity',
+                'Sev',
+                '8%',
+                TableColumn::ALIGN_CENTER,
+                formatter: static fn($value) => match ($value) {
                     'critical', 'high' => '[!!]',
                     'medium' => '[!]',
                     default => '[ ]',
@@ -241,8 +367,13 @@ final class ComposerManagerScreen implements ScreenInterface
             ),
             new TableColumn('package', 'Package', '30%', TableColumn::ALIGN_LEFT),
             new TableColumn(
-                'title', 'Vulnerability', '*', TableColumn::ALIGN_LEFT,
-                formatter: fn($value) => mb_substr($value, 0, 60) . (mb_strlen($value) > 60 ? '...' : ''),
+                'title',
+                'Vulnerability',
+                '*',
+                TableColumn::ALIGN_LEFT,
+                formatter: static fn($value) => \mb_substr((string) $value, 0, 60) . (\mb_strlen(
+                        (string) $value,
+                    ) > 60 ? '...' : ''),
             ),
             new TableColumn('cve', 'CVE', '15%', TableColumn::ALIGN_CENTER),
         ], showHeader: true);
@@ -261,29 +392,54 @@ final class ComposerManagerScreen implements ScreenInterface
     private function loadData(): void
     {
         // Load installed packages
-        $this->installedPackages = array_map(function (PackageInfo $pkg) {
-            return [
-                'name' => $pkg->name,
-                'version' => $pkg->version,
-                'source' => $pkg->source,
-                'description' => $pkg->description,
-                'homepage' => $pkg->homepage,
-                'keywords' => $pkg->keywords,
-                'isDirect' => $pkg->isDirect,
-                'abandoned' => $pkg->abandoned,
-                'authors' => $pkg->authors,
-                'license' => $pkg->license,
-                'requires' => $pkg->requires,
-                'devRequires' => $pkg->devRequires,
-                'autoload' => $pkg->autoload,
+        $this->installedPackages = \array_map(static fn(PackageInfo $pkg)
+            => [
+            'name' => $pkg->name,
+            'version' => $pkg->version,
+            'source' => $pkg->source,
+            'description' => $pkg->description,
+            'homepage' => $pkg->homepage,
+            'keywords' => $pkg->keywords,
+            'isDirect' => $pkg->isDirect,
+            'abandoned' => $pkg->abandoned,
+            'authors' => $pkg->authors,
+            'license' => $pkg->license,
+            'requires' => $pkg->requires,
+            'devRequires' => $pkg->devRequires,
+            'autoload' => $pkg->autoload,
+            'outdated' => null,
+            'updateType' => null,
+        ], $this->composerService->getInstalledPackages());
+
+        // Load outdated information and merge with installed packages
+        $outdatedPackages = $this->composerService->getOutdatedPackages();
+        $outdatedMap = [];
+        foreach ($outdatedPackages as $outdated) {
+            $outdatedMap[$outdated->name] = [
+                'latestVersion' => $outdated->latestVersion,
+                'updateType' => $outdated->isMajorUpdate() ? 'major' : ($outdated->isMinorUpdate() ? 'minor' : 'patch'),
             ];
-        }, $this->composerService->getInstalledPackages());
+        }
+
+        // Merge outdated info into installed packages
+        foreach ($this->installedPackages as &$package) {
+            if (isset($outdatedMap[$package['name']])) {
+                $package['outdated'] = $outdatedMap[$package['name']]['latestVersion'];
+                $package['updateType'] = $outdatedMap[$package['name']]['updateType'];
+            }
+        }
+        unset($package);
 
         $this->installedTable->setRows($this->installedPackages);
 
         // Update panel title
-        $count = count($this->installedPackages);
-        $this->leftPanel->setTitle("Installed Packages ($count)");
+        $count = \count($this->installedPackages);
+        $outdatedCount = \count($outdatedMap);
+        $title = "Installed Packages ($count)";
+        if ($outdatedCount > 0) {
+            $title .= " - $outdatedCount outdated";
+        }
+        $this->leftPanel->setTitle($title);
 
         // Show first package details
         if (!empty($this->installedPackages)) {
@@ -297,16 +453,15 @@ final class ComposerManagerScreen implements ScreenInterface
         $this->isLoading = true;
         $this->updateStatusBar();
 
-        $this->outdatedPackages = array_map(function (OutdatedPackageInfo $pkg) {
-            return [
-                'name' => $pkg->name,
-                'current' => $pkg->currentVersion,
-                'latest' => $pkg->latestVersion,
-                'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
-                'description' => $pkg->description,
-                'warning' => $pkg->warning,
-            ];
-        }, $this->composerService->getOutdatedPackages());
+        $this->outdatedPackages = \array_map(static fn(OutdatedPackageInfo $pkg)
+            => [
+            'name' => $pkg->name,
+            'current' => $pkg->currentVersion,
+            'latest' => $pkg->latestVersion,
+            'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
+            'description' => $pkg->description,
+            'warning' => $pkg->warning,
+        ], $this->composerService->getOutdatedPackages());
 
         $this->outdatedTable->setRows($this->outdatedPackages);
 
@@ -314,7 +469,7 @@ final class ComposerManagerScreen implements ScreenInterface
         $this->updateStatusBar();
 
         // Update panel title
-        $count = count($this->outdatedPackages);
+        $count = \count($this->outdatedPackages);
         $this->leftPanel->setTitle("Outdated Packages ($count)");
 
         // Show first package if available
@@ -334,16 +489,15 @@ final class ComposerManagerScreen implements ScreenInterface
         $auditResult = $this->composerService->runAudit();
         $this->auditSummary = $auditResult['summary'];
 
-        $this->securityAdvisories = array_map(function (SecurityAdvisory $advisory) {
-            return [
-                'severity' => $advisory->severity,
-                'package' => $advisory->packageName,
-                'title' => $advisory->title,
-                'cve' => $advisory->cve ?: 'N/A',
-                'affectedVersions' => $advisory->affectedVersions,
-                'link' => $advisory->link,
-            ];
-        }, $auditResult['advisories']);
+        $this->securityAdvisories = \array_map(static fn(SecurityAdvisory $advisory)
+            => [
+            'severity' => $advisory->severity,
+            'package' => $advisory->packageName,
+            'title' => $advisory->title,
+            'cve' => $advisory->cve ?: 'N/A',
+            'affectedVersions' => $advisory->affectedVersions,
+            'link' => $advisory->link,
+        ], $auditResult['advisories']);
 
         $this->securityTable->setRows($this->securityAdvisories);
 
@@ -351,7 +505,7 @@ final class ComposerManagerScreen implements ScreenInterface
         $this->updateStatusBar();
 
         // Update panel title
-        $count = count($this->securityAdvisories);
+        $count = \count($this->securityAdvisories);
         $critical = $this->auditSummary['high'] ?? 0;
         $title = "Security Audit ($count)";
         if ($critical > 0) {
@@ -418,53 +572,53 @@ final class ComposerManagerScreen implements ScreenInterface
 
         if (!empty($package['keywords'])) {
             $lines[] = "";
-            $lines[] = "Keywords: " . implode(', ', $package['keywords']);
+            $lines[] = "Keywords: " . \implode(', ', $package['keywords']);
         }
 
         // Show additional rich info
         if (!empty($package['authors'])) {
             $lines[] = "";
             $lines[] = "Authors: ";
-            foreach (array_slice($package['authors'], 0, 3) as $author) {
+            foreach (\array_slice($package['authors'], 0, 3) as $author) {
                 $lines[] = "  • " . ($author['name'] ?? 'Unknown');
             }
-            if (count($package['authors']) > 3) {
-                $lines[] = "  ... and " . (count($package['authors']) - 3) . " more";
+            if (\count($package['authors']) > 3) {
+                $lines[] = "  ... and " . (\count($package['authors']) - 3) . " more";
             }
         }
 
         if (!empty($package['license'])) {
             $lines[] = "";
-            $lines[] = "License: " . implode(', ', $package['license']);
+            $lines[] = "License: " . \implode(', ', $package['license']);
         }
 
         // Show dependencies count
-        $totalDeps = count($package['requires'] ?? []) + count($package['devRequires'] ?? []);
+        $totalDeps = \count($package['requires'] ?? []) + \count($package['devRequires'] ?? []);
         if ($totalDeps > 0) {
             $lines[] = "";
             $lines[] = "Dependencies: {$totalDeps} total";
             if (!empty($package['requires'])) {
-                $lines[] = "  Production: " . count($package['requires']);
+                $lines[] = "  Production: " . \count($package['requires']);
             }
             if (!empty($package['devRequires'])) {
-                $lines[] = "  Development: " . count($package['devRequires']);
+                $lines[] = "  Development: " . \count($package['devRequires']);
             }
         }
 
         // Show autoload info
         if (!empty($package['autoload'])) {
-            $namespaces = array_merge(
-                array_keys($package['autoload']['psr4'] ?? []),
-                array_keys($package['autoload']['psr0'] ?? [])
+            $namespaces = \array_merge(
+                \array_keys($package['autoload']['psr4'] ?? []),
+                \array_keys($package['autoload']['psr0'] ?? []),
             );
             if (!empty($namespaces)) {
                 $lines[] = "";
-                $lines[] = "Namespaces: " . count($namespaces);
-                foreach (array_slice($namespaces, 0, 3) as $ns) {
-                    $lines[] = "  • " . rtrim($ns, '\\');
+                $lines[] = "Namespaces: " . \count($namespaces);
+                foreach (\array_slice($namespaces, 0, 3) as $ns) {
+                    $lines[] = "  • " . \rtrim((string) $ns, '\\');
                 }
-                if (count($namespaces) > 3) {
-                    $lines[] = "  ... and " . (count($namespaces) - 3) . " more";
+                if (\count($namespaces) > 3) {
+                    $lines[] = "  ... and " . (\count($namespaces) - 3) . " more";
                 }
             }
         }
@@ -472,7 +626,7 @@ final class ComposerManagerScreen implements ScreenInterface
         $lines[] = "";
         $lines[] = "Press Enter to view full details";
 
-        $this->detailsDisplay->setText(implode("\n", $lines));
+        $this->detailsDisplay->setText(\implode("\n", $lines));
         $this->rightPanel->setTitle("Details: {$package['name']}");
     }
 
@@ -481,8 +635,24 @@ final class ComposerManagerScreen implements ScreenInterface
      */
     private function openPackageDetailsScreen(string $packageName): void
     {
-        $detailsScreen = new PackageDetailsScreen($this->composerService, $packageName);
-        $this->screenManager?->pushScreen($detailsScreen);
+        if ($this->screenManager === null) {
+            // Fallback: if screen manager not set, show in details panel
+            $this->detailsDisplay->setText("ERROR: Screen manager not available!\nPackage: $packageName");
+            return;
+        }
+
+        try {
+            $detailsScreen = new PackageDetailsScreen($this->composerService, $packageName);
+            $this->screenManager->pushScreen($detailsScreen);
+        } catch (\Throwable $e) {
+            // Show error in details panel
+            $this->detailsDisplay->setText(
+                "ERROR: Failed to open package details!\n\n" .
+                "Package: $packageName\n\n" .
+                "Error: {$e->getMessage()}\n\n" .
+                $e->getTraceAsString(),
+            );
+        }
     }
 
     private function showOutdatedPackageDetails(array $package): void
@@ -511,7 +681,7 @@ final class ComposerManagerScreen implements ScreenInterface
         $lines[] = "";
         $lines[] = "Press Enter to update this package";
 
-        $this->detailsDisplay->setText(implode("\n", $lines));
+        $this->detailsDisplay->setText(\implode("\n", $lines));
         $this->rightPanel->setTitle("Outdated: {$package['name']}");
     }
 
@@ -524,7 +694,7 @@ final class ComposerManagerScreen implements ScreenInterface
         };
 
         $lines = [
-            "$severityIcon " . strtoupper($advisory['severity']) . " Severity",
+            "$severityIcon " . \strtoupper((string) $advisory['severity']) . " Severity",
             "",
             "Package: {$advisory['package']}",
             "CVE: {$advisory['cve']}",
@@ -541,225 +711,8 @@ final class ComposerManagerScreen implements ScreenInterface
             $lines[] = "More Info: {$advisory['link']}";
         }
 
-        $this->detailsDisplay->setText(implode("\n", $lines));
+        $this->detailsDisplay->setText(\implode("\n", $lines));
         $this->rightPanel->setTitle("Security Advisory");
-    }
-
-    private function showPackageActionsModal(string $packageName): void
-    {
-        $modal = new Modal('Package Actions', "Select action for: $packageName", Modal::TYPE_INFO);
-        $modal->setButtons([
-            'Update' => fn() => $this->showUpdateSingleModal($packageName),
-            'Remove' => fn() => $this->confirmRemovePackage($packageName),
-            'Cancel' => fn() => $this->closeModal(),
-        ]);
-        $modal->setSize(60, 12);
-        $this->activeModal = $modal;
-    }
-
-    private function showUpdateSingleModal(string $packageName): void
-    {
-        $this->closeModal();
-
-        $modal = Modal::confirm(
-            'Confirm Update',
-            "Update package: $packageName to latest version?",
-        );
-        $modal->onClose(function ($confirmed) use ($packageName) {
-            if ($confirmed) {
-                $this->updatePackage($packageName);
-            }
-            $this->closeModal();
-        });
-        $this->activeModal = $modal;
-    }
-
-    private function showUpdateConfirmation(string $packageName): void
-    {
-        $package = null;
-        foreach ($this->outdatedPackages as $p) {
-            if ($p['name'] === $packageName) {
-                $package = $p;
-                break;
-            }
-        }
-
-        if (!$package) {
-            return;
-        }
-
-        $updateType = match ($package['type']) {
-            'major' => 'MAJOR (breaking changes possible)',
-            'minor' => 'MINOR (new features)',
-            'patch' => 'PATCH (bug fixes)',
-            default => 'Unknown',
-        };
-
-        $message = "Update {$package['name']} from {$package['current']} to {$package['latest']}?\n\n" .
-            "Update Type: $updateType";
-
-        $modal = Modal::confirm('Confirm Update', $message);
-        $modal->onClose(function ($confirmed) use ($packageName) {
-            if ($confirmed) {
-                $this->updatePackage($packageName);
-            }
-            $this->closeModal();
-        });
-        $this->activeModal = $modal;
-    }
-
-    private function confirmRemovePackage(string $packageName): void
-    {
-        $modal = Modal::warning(
-            'Confirm Removal',
-            "Are you sure you want to remove package:\n$packageName?",
-        );
-        $modal->onClose(function ($confirmed) use ($packageName) {
-            if ($confirmed) {
-                $this->removePackage($packageName);
-            }
-            $this->closeModal();
-        });
-        $this->activeModal = $modal;
-    }
-
-    private function updatePackage(string $packageName): void
-    {
-        $this->closeModal();
-
-        // Create output screen
-        $outputScreen = new ComposerOutputScreen(
-            "Updating Package: $packageName",
-            function (callable $outputCallback) use ($packageName) {
-                return $this->composerService->updatePackage($packageName, $outputCallback);
-            },
-        );
-
-        $outputScreen->onComplete(function () {
-            $this->composerService->clearCache();
-            $this->loadData();
-            if ($this->currentTab === self::TAB_OUTDATED) {
-                $this->loadOutdatedPackages();
-            }
-        });
-
-        $this->screenManager?->pushScreen($outputScreen);
-    }
-
-    private function removePackage(string $packageName): void
-    {
-        $this->closeModal();
-
-        // Create output screen
-        $outputScreen = new ComposerOutputScreen(
-            "Removing Package: $packageName",
-            function (callable $outputCallback) use ($packageName) {
-                return $this->composerService->removePackage($packageName, $outputCallback);
-            },
-        );
-
-        $outputScreen->onComplete(function () {
-            $this->composerService->clearCache();
-            $this->loadData();
-        });
-
-        $this->screenManager?->pushScreen($outputScreen);
-    }
-
-    private function showAddPackageForm(): void
-    {
-        $form = new FormComponent();
-
-        $form->addTextField(
-            name: 'package',
-            label: 'Package Name',
-            required: true,
-            description: 'e.g., vendor/package:^1.0',
-        );
-
-        $form->addCheckboxField(
-            name: 'dev',
-            label: 'Development Dependency',
-            default: false,
-            description: 'Install as --dev dependency',
-        );
-
-        $form->onSubmit(function (array $values) {
-            $this->requirePackage($values['package'], $values['dev']);
-            $this->closeModal();
-        });
-
-        $form->onCancel(fn() => $this->closeModal());
-
-        $formPanel = new Panel('Add Package', $form);
-        $formPanel->setFocused(true);
-
-        $modal = new Modal('', '', Modal::TYPE_INFO);
-        $modal->setSize(70, 15);
-        $this->activeModal = $modal;
-    }
-
-    private function requirePackage(string $packageName, bool $dev): void
-    {
-        // Create output screen
-        $devFlag = $dev ? ' --dev' : '';
-        $outputScreen = new ComposerOutputScreen(
-            "Adding Package: $packageName$devFlag",
-            function (callable $outputCallback) use ($packageName, $dev) {
-                return $this->composerService->requirePackage($packageName, $dev, $outputCallback);
-            },
-        );
-
-        $outputScreen->onComplete(function () {
-            $this->composerService->clearCache();
-            $this->loadData();
-        });
-
-        $this->screenManager?->pushScreen($outputScreen);
-    }
-
-    private function showUpdateAllConfirmation(): void
-    {
-        $count = count($this->outdatedPackages);
-
-        if ($count === 0) {
-            $modal = Modal::info('No Updates', 'All packages are already up to date.');
-            $this->activeModal = $modal;
-            return;
-        }
-
-        $message = "Update all $count outdated packages?\n\n" .
-            "This may take several minutes.";
-
-        $modal = Modal::confirm('Confirm Update All', $message);
-        $modal->onClose(function ($confirmed) {
-            if ($confirmed) {
-                $this->updateAll();
-            }
-            $this->closeModal();
-        });
-        $this->activeModal = $modal;
-    }
-
-    private function updateAll(): void
-    {
-        $this->closeModal();
-
-        // Create output screen
-        $outputScreen = new ComposerOutputScreen(
-            "Updating All Packages",
-            function (callable $outputCallback) {
-                return $this->composerService->updateAll($outputCallback);
-            },
-        );
-
-        $outputScreen->onComplete(function () {
-            $this->composerService->clearCache();
-            $this->loadData();
-            $this->loadOutdatedPackages();
-        });
-
-        $this->screenManager?->pushScreen($outputScreen);
     }
 
     private function switchTab(int $tab): void
@@ -783,8 +736,22 @@ final class ComposerManagerScreen implements ScreenInterface
     private function switchToInstalledTab(): void
     {
         $this->leftPanel->setContent($this->installedTable);
-        $this->leftPanel->setTitle("Installed Packages (" . count($this->installedPackages) . ")");
         $this->installedTable->setFocused(true);
+
+        // Update title with current state
+        $count = \count($this->installedPackages);
+        $outdatedCount = 0;
+        foreach ($this->installedPackages as $package) {
+            if ($package['outdated'] !== null) {
+                $outdatedCount++;
+            }
+        }
+
+        $title = "Installed Packages ($count)";
+        if ($outdatedCount > 0) {
+            $title .= " - $outdatedCount outdated";
+        }
+        $this->leftPanel->setTitle($title);
 
         if (!empty($this->installedPackages)) {
             $this->showPackageDetails($this->installedPackages[0]['name']);
@@ -795,26 +762,48 @@ final class ComposerManagerScreen implements ScreenInterface
     {
         if (empty($this->outdatedPackages)) {
             $this->loadOutdatedPackages();
+        } else {
+            // Update title even if data already loaded
+            $count = \count($this->outdatedPackages);
+            $this->leftPanel->setTitle("Outdated Packages ($count)");
         }
 
         $this->leftPanel->setContent($this->outdatedTable);
         $this->outdatedTable->setFocused(true);
+
+        // Show first package or empty state
+        if (!empty($this->outdatedPackages)) {
+            $this->selectedPackageName = $this->outdatedPackages[0]['name'];
+            $this->showOutdatedPackageDetails($this->outdatedPackages[0]);
+        } else {
+            $this->detailsDisplay->setText("[OK] All packages are up to date!");
+        }
     }
 
     private function switchToSecurityTab(): void
     {
         if (empty($this->securityAdvisories) && empty($this->auditSummary)) {
             $this->loadSecurityAudit();
+        } else {
+            // Update title even if data already loaded
+            $count = \count($this->securityAdvisories);
+            $critical = $this->auditSummary['high'] ?? 0;
+            $title = "Security Audit ($count)";
+            if ($critical > 0) {
+                $title .= " - [!!] $critical Critical/High";
+            }
+            $this->leftPanel->setTitle($title);
         }
 
         $this->leftPanel->setContent($this->securityTable);
         $this->securityTable->setFocused(true);
-    }
 
-    private function closeModal(): void
-    {
-        $this->activeModal = null;
-        $this->updateFocus();
+        // Show first advisory or empty state
+        if (!empty($this->securityAdvisories)) {
+            $this->showSecurityAdvisoryDetails($this->securityAdvisories[0]);
+        } else {
+            $this->detailsDisplay->setText("[OK] No security vulnerabilities found!");
+        }
     }
 
     private function updateFocus(): void
@@ -835,128 +824,21 @@ final class ComposerManagerScreen implements ScreenInterface
 
     private function updateStatusBar(): void
     {
+        // F1-F12 are reserved for global screen switching
+        // Use Ctrl combinations for screen-specific operations
         $keys = [
-            'F1' => 'Installed',
-            'F2' => 'Outdated',
-            'F3' => 'Security',
-            'F5' => 'Refresh',
-            'F7' => 'Actions',
-            'F9' => 'Add Pkg',
+            'F5' => 'Installed',
+            'Ctrl+O' => 'Outdated',
+            'Ctrl+U' => 'Security',
+            'Ctrl+R' => 'Refresh',
             'Tab' => 'Switch',
             'Enter' => 'Details',
-            'F10' => 'Quit',
         ];
-
-        if ($this->currentTab === self::TAB_OUTDATED && !empty($this->outdatedPackages)) {
-            $keys['F6'] = 'Update All';
-        }
 
         if ($this->isLoading) {
             $keys[''] = 'Loading...';
         }
 
         $this->statusBar = new StatusBar($keys);
-    }
-
-    // ScreenInterface implementation
-
-    public function render(Renderer $renderer): void
-    {
-        $size = $renderer->getSize();
-
-        // Render main layout
-        $this->rootLayout->render($renderer, 0, 1, $size['width'], $size['height'] - 1);
-
-        // Render modal if active
-        if ($this->activeModal !== null) {
-            $this->activeModal->render($renderer, 0, 0, $size['width'], $size['height']);
-        }
-    }
-
-    public function handleInput(string $key): bool
-    {
-        // Modal has priority
-        if ($this->activeModal !== null) {
-            return $this->activeModal->handleInput($key);
-        }
-
-        // Tab shortcuts
-        if ($key === 'F1') {
-            $this->switchTab(self::TAB_INSTALLED);
-            return true;
-        }
-
-        if ($key === 'F2') {
-            $this->switchTab(self::TAB_OUTDATED);
-            return true;
-        }
-
-        if ($key === 'F3') {
-            $this->switchTab(self::TAB_SECURITY);
-            return true;
-        }
-
-        // Refresh
-        if ($key === 'F5') {
-            $this->composerService->clearCache();
-            match ($this->currentTab) {
-                self::TAB_INSTALLED => $this->loadData(),
-                self::TAB_OUTDATED => $this->loadOutdatedPackages(),
-                self::TAB_SECURITY => $this->loadSecurityAudit(),
-            };
-            return true;
-        }
-
-        // Update all (only in outdated tab)
-        if ($key === 'F6' && $this->currentTab === self::TAB_OUTDATED) {
-            $this->showUpdateAllConfirmation();
-            return true;
-        }
-
-        // Add package
-        if ($key === 'F9') {
-            $this->showAddPackageForm();
-            return true;
-        }
-
-        // Show actions modal for selected package (F7)
-        if ($key === 'F7' && $this->focusedPanelIndex === 0 && $this->selectedPackageName !== null) {
-            $this->showPackageActionsModal($this->selectedPackageName);
-            return true;
-        }
-
-        // Switch panel focus
-        if ($key === 'TAB') {
-            $this->focusedPanelIndex = ($this->focusedPanelIndex + 1) % 2;
-            $this->updateFocus();
-            return true;
-        }
-
-        // Delegate to focused panel
-        if ($this->focusedPanelIndex === 0) {
-            return $this->leftPanel->handleInput($key);
-        } else {
-            return $this->rightPanel->handleInput($key);
-        }
-    }
-
-    public function onActivate(): void
-    {
-        $this->updateFocus();
-    }
-
-    public function onDeactivate(): void
-    {
-        // Nothing to do
-    }
-
-    public function update(): void
-    {
-        // Nothing to do
-    }
-
-    public function getTitle(): string
-    {
-        return 'Composer Manager';
     }
 }

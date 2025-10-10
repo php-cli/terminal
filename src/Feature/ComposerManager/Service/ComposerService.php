@@ -10,8 +10,6 @@ use Composer\IO\BufferIO;
 use Composer\Package\CompletePackageInterface;
 use Composer\Package\PackageInterface;
 use Composer\Repository\InstalledRepositoryInterface;
-use Composer\Repository\RepositoryInterface;
-use Composer\Semver\Semver;
 
 /**
  * Handles interaction with Composer API
@@ -44,7 +42,6 @@ final class ComposerService
         }
 
         $composer = $this->getComposer();
-        trap($composer);
         if ($composer === null) {
             return [];
         }
@@ -53,18 +50,18 @@ final class ComposerService
         $rootPackage = $composer->getPackage();
 
         // Get direct dependencies from root package
-        $directDeps = array_merge(
-            array_keys($rootPackage->getRequires()),
-            array_keys($rootPackage->getDevRequires()),
+        $directDeps = \array_merge(
+            \array_keys($rootPackage->getRequires()),
+            \array_keys($rootPackage->getDevRequires()),
         );
 
         $packages = [];
         foreach ($installedRepo->getPackages() as $package) {
-            $packages[] = $this->createPackageInfo($package, in_array($package->getName(), $directDeps, true));
+            $packages[] = $this->createPackageInfo($package, \in_array($package->getName(), $directDeps, true));
         }
 
         // Sort by name
-        usort($packages, fn($a, $b) => strcasecmp($a->name, $b->name));
+        \usort($packages, static fn($a, $b) => \strcasecmp($a->name, $b->name));
 
         $this->installedPackagesCache = $packages;
         return $packages;
@@ -88,12 +85,12 @@ final class ComposerService
         }
 
         $rootPackage = $composer->getPackage();
-        $directDeps = array_merge(
-            array_keys($rootPackage->getRequires()),
-            array_keys($rootPackage->getDevRequires()),
+        $directDeps = \array_merge(
+            \array_keys($rootPackage->getRequires()),
+            \array_keys($rootPackage->getDevRequires()),
         );
 
-        return $this->createPackageInfo($package, in_array($packageName, $directDeps, true));
+        return $this->createPackageInfo($package, \in_array($packageName, $directDeps, true));
     }
 
     /**
@@ -147,7 +144,7 @@ final class ComposerService
             }
         }
 
-        sort($dependents);
+        \sort($dependents);
         return $dependents;
     }
 
@@ -222,9 +219,9 @@ final class ComposerService
         }
 
         $output = $result['output'];
-        $data = json_decode($output, true);
+        $data = \json_decode($output, true);
 
-        if (!is_array($data) || !isset($data['installed'])) {
+        if (!\is_array($data) || !isset($data['installed'])) {
             $this->outdatedPackagesCache = [];
             return [];
         }
@@ -259,9 +256,9 @@ final class ComposerService
         }
 
         $output = $result['output'];
-        $data = json_decode($output, true);
+        $data = \json_decode($output, true);
 
-        if (!is_array($data)) {
+        if (!\is_array($data)) {
             return ['summary' => [], 'advisories' => []];
         }
 
@@ -275,11 +272,11 @@ final class ComposerService
 
         foreach ($data['advisories'] ?? [] as $packageName => $packageAdvisories) {
             foreach ($packageAdvisories as $advisory) {
-                $severity = strtolower($advisory['severity'] ?? 'unknown');
+                $severity = \strtolower($advisory['severity'] ?? 'unknown');
 
                 if (isset($summary[$severity])) {
                     $summary[$severity]++;
-                } elseif (in_array($severity, ['critical'])) {
+                } elseif (\in_array($severity, ['critical'])) {
                     $summary['high']++;
                 }
 
@@ -367,7 +364,7 @@ final class ComposerService
 
         foreach ($rootPackage->getRequires() as $link) {
             $target = $link->getTarget();
-            if (str_starts_with($target, 'php') || str_starts_with($target, 'ext-')) {
+            if (\str_starts_with($target, 'php') || \str_starts_with($target, 'ext-')) {
                 $platform[$target] = $link->getConstraint()->getPrettyString();
             }
         }
@@ -445,7 +442,7 @@ final class ComposerService
 
         $composerFile = $this->workingDirectory . '/composer.json';
 
-        if (!file_exists($composerFile)) {
+        if (!\file_exists($composerFile)) {
             return null;
         }
 
@@ -453,8 +450,7 @@ final class ComposerService
             $io = new BufferIO();
             $this->composer = Factory::create($io, $composerFile);
             return $this->composer;
-        } catch (\Throwable $e) {
-            trap($e);
+        } catch (\Throwable) {
             return null;
         }
     }
@@ -497,7 +493,7 @@ final class ComposerService
             $abandoned = $package->isAbandoned();
             $homepage = $package->getHomepage();
             $keywords = $package->getKeywords();
-            $authors = array_map(fn($author)
+            $authors = \array_map(static fn($author)
                 => [
                 'name' => $author['name'] ?? null,
                 'email' => $author['email'] ?? null,
@@ -578,8 +574,8 @@ final class ComposerService
         }
 
         // Build command
-        $command = array_merge([$composerBinary], $args);
-        $commandString = implode(' ', array_map('escapeshellarg', $command));
+        $command = \array_merge([$composerBinary], $args);
+        $commandString = \implode(' ', \array_map('escapeshellarg', $command));
 
         // Execute command
         $descriptors = [
@@ -588,14 +584,14 @@ final class ComposerService
             2 => ['pipe', 'w'],  // stderr
         ];
 
-        $process = proc_open(
+        $process = \proc_open(
             $commandString,
             $descriptors,
             $pipes,
             $this->workingDirectory,
         );
 
-        if (!is_resource($process)) {
+        if (!\is_resource($process)) {
             return [
                 'exitCode' => 1,
                 'output' => '',
@@ -604,18 +600,18 @@ final class ComposerService
         }
 
         // Close stdin
-        fclose($pipes[0]);
+        \fclose($pipes[0]);
 
         // Read output
-        stream_set_blocking($pipes[1], false);
-        stream_set_blocking($pipes[2], false);
+        \stream_set_blocking($pipes[1], false);
+        \stream_set_blocking($pipes[2], false);
 
         $output = '';
         $error = '';
 
         while (true) {
             // Read stdout
-            $stdout = fgets($pipes[1]);
+            $stdout = \fgets($pipes[1]);
             if ($stdout !== false) {
                 $output .= $stdout;
                 if ($outputCallback !== null) {
@@ -624,7 +620,7 @@ final class ComposerService
             }
 
             // Read stderr
-            $stderr = fgets($pipes[2]);
+            $stderr = \fgets($pipes[2]);
             if ($stderr !== false) {
                 $error .= $stderr;
                 if ($outputCallback !== null) {
@@ -633,16 +629,16 @@ final class ComposerService
             }
 
             // Check if process is still running
-            $status = proc_get_status($process);
+            $status = \proc_get_status($process);
             if (!$status['running']) {
                 // Read remaining output
-                while (($stdout = fgets($pipes[1])) !== false) {
+                while (($stdout = \fgets($pipes[1])) !== false) {
                     $output .= $stdout;
                     if ($outputCallback !== null) {
                         $outputCallback($stdout);
                     }
                 }
-                while (($stderr = fgets($pipes[2])) !== false) {
+                while (($stderr = \fgets($pipes[2])) !== false) {
                     $error .= $stderr;
                     if ($outputCallback !== null) {
                         $outputCallback($stderr);
@@ -652,13 +648,13 @@ final class ComposerService
             }
 
             // Small delay to prevent busy-waiting
-            usleep(10000); // 10ms
+            \usleep(10000); // 10ms
         }
 
-        fclose($pipes[1]);
-        fclose($pipes[2]);
+        \fclose($pipes[1]);
+        \fclose($pipes[2]);
 
-        $exitCode = proc_close($process);
+        $exitCode = \proc_close($process);
 
         return [
             'exitCode' => $exitCode,
@@ -696,7 +692,7 @@ final class ComposerService
     private function isExecutable(string $file): bool
     {
         // Try to execute with --version
-        $output = @shell_exec(escapeshellarg($file) . ' --version 2>&1');
-        return $output !== null && stripos($output, 'composer') !== false;
+        $output = @\shell_exec(\escapeshellarg($file) . ' --version 2>&1');
+        return $output !== null && \stripos($output, 'composer') !== false;
     }
 }

@@ -13,7 +13,7 @@ use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
  * File preview component - orchestrates display of file/directory info or content
- * 
+ *
  * Uses composition:
  * - TextInfoComponent for file/directory metadata (with padding)
  * - FileContentViewer for file contents (without padding - needs full width for line numbers)
@@ -22,7 +22,6 @@ final class FilePreviewComponent extends AbstractComponent
 {
     private ?string $currentPath = null;
     private ?array $metadata = null;
-    
     private ?ComponentInterface $currentContent = null;
     private bool $showingFileContent = false;
 
@@ -48,23 +47,23 @@ final class FilePreviewComponent extends AbstractComponent
         $this->metadata = $this->fileSystem->getFileMetadata($path);
 
         // If it's a directory, show directory info
-        if (is_dir($path)) {
+        if (\is_dir($path)) {
             $this->showDirectoryInfo($path);
             return;
         }
 
         // If it's a file, show contents
         $contents = $this->fileSystem->readFileContents($path, 1000);
-        
+
         $viewer = new FileContentViewer();
         $viewer->setContent($contents);
         $viewer->setFocused($this->isFocused());
-        
+
         // Remove old content
         if ($this->currentContent !== null) {
             $this->removeChild($this->currentContent);
         }
-        
+
         $this->currentContent = $viewer;
         $this->addChild($viewer);
     }
@@ -87,13 +86,69 @@ final class FilePreviewComponent extends AbstractComponent
         $this->metadata = $this->fileSystem->getFileMetadata($path);
 
         // If it's a directory, show directory info
-        if (is_dir($path)) {
+        if (\is_dir($path)) {
             $this->showDirectoryInfo($path);
             return;
         }
 
         // For files, show metadata only
         $this->showFileInfo($path);
+    }
+
+    public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
+    {
+        $this->setBounds($x, $y, $width, $height);
+
+        // Render header
+        $this->renderHeader($renderer, $x, $y, $width);
+
+        if ($this->currentPath === null) {
+            $this->renderEmptyState($renderer, $x, $y + 3, $width, $height - 3);
+            return;
+        }
+
+        // Render metadata bar
+        $this->renderMetadata($renderer, $x, $y + 1, $width);
+
+        // Render separator
+        $separator = \str_repeat('─', $width);
+        $renderer->writeAt($x, $y + 2, $separator, ColorScheme::INACTIVE_BORDER);
+
+        // Render current content (info or file viewer)
+        if ($this->currentContent !== null) {
+            $contentY = $y + 3;
+            $contentHeight = $height - 3;
+
+            $this->currentContent->render($renderer, $x, $contentY, $width, $contentHeight);
+        }
+    }
+
+    #[\Override]
+    public function handleInput(string $key): bool
+    {
+        // Delegate to current content if it exists
+        if ($this->currentContent !== null && $this->currentContent->isFocused()) {
+            return $this->currentContent->handleInput($key);
+        }
+
+        return false;
+    }
+
+    #[\Override]
+    public function setFocused(bool $focused): void
+    {
+        parent::setFocused($focused);
+
+        // Propagate focus to current content
+        if ($this->currentContent !== null) {
+            $this->currentContent->setFocused($focused);
+        }
+    }
+
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return ['width' => 40, 'height' => 10];
     }
 
     /**
@@ -105,8 +160,8 @@ final class FilePreviewComponent extends AbstractComponent
             'File Information',
             '================',
             '',
-            "Name: " . basename($path),
-            "Path: " . dirname($path),
+            "Name: " . \basename($path),
+            "Path: " . \dirname($path),
             '',
         ];
 
@@ -132,15 +187,15 @@ final class FilePreviewComponent extends AbstractComponent
         }
 
         $infoComponent = new TextInfoComponent($lines);
-        
+
         // Add padding around info
         $paddedInfo = Padding::symmetric($infoComponent, horizontal: 2, vertical: 1);
-        
+
         // Remove old content
         if ($this->currentContent !== null) {
             $this->removeChild($this->currentContent);
         }
-        
+
         $this->currentContent = $paddedInfo;
         $this->addChild($paddedInfo);
     }
@@ -191,45 +246,17 @@ final class FilePreviewComponent extends AbstractComponent
         }
 
         $infoComponent = new TextInfoComponent($lines);
-        
+
         // Add padding around info
         $paddedInfo = Padding::symmetric($infoComponent, horizontal: 2, vertical: 1);
-        
+
         // Remove old content
         if ($this->currentContent !== null) {
             $this->removeChild($this->currentContent);
         }
-        
+
         $this->currentContent = $paddedInfo;
         $this->addChild($paddedInfo);
-    }
-
-    public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
-    {
-        $this->setBounds($x, $y, $width, $height);
-
-        // Render header
-        $this->renderHeader($renderer, $x, $y, $width);
-
-        if ($this->currentPath === null) {
-            $this->renderEmptyState($renderer, $x, $y + 3, $width, $height - 3);
-            return;
-        }
-
-        // Render metadata bar
-        $this->renderMetadata($renderer, $x, $y + 1, $width);
-
-        // Render separator
-        $separator = str_repeat('─', $width);
-        $renderer->writeAt($x, $y + 2, $separator, ColorScheme::INACTIVE_BORDER);
-
-        // Render current content (info or file viewer)
-        if ($this->currentContent !== null) {
-            $contentY = $y + 3;
-            $contentHeight = $height - 3;
-            
-            $this->currentContent->render($renderer, $x, $contentY, $width, $contentHeight);
-        }
     }
 
     /**
@@ -237,13 +264,13 @@ final class FilePreviewComponent extends AbstractComponent
      */
     private function renderHeader(Renderer $renderer, int $x, int $y, int $width): void
     {
-        $title = $this->currentPath !== null ? basename($this->currentPath) : 'File Preview';
-        $headerText = ' ' . mb_substr($title, 0, $width - 2) . ' ';
+        $title = $this->currentPath !== null ? \basename($this->currentPath) : 'File Preview';
+        $headerText = ' ' . \mb_substr($title, 0, $width - 2) . ' ';
 
         $renderer->writeAt(
             $x,
             $y,
-            str_pad($headerText, $width),
+            \str_pad($headerText, $width),
             ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
         );
     }
@@ -257,7 +284,7 @@ final class FilePreviewComponent extends AbstractComponent
             return;
         }
 
-        $metaText = sprintf(
+        $metaText = \sprintf(
             '%s | %s | %s',
             $this->metadata['type'],
             $this->fileSystem->formatSize($this->metadata['size']),
@@ -268,12 +295,12 @@ final class FilePreviewComponent extends AbstractComponent
             $metaText .= " | {$this->metadata['lines']} lines";
         }
 
-        $metaText = ' ' . mb_substr($metaText, 0, $width - 2) . ' ';
+        $metaText = ' ' . \mb_substr($metaText, 0, $width - 2) . ' ';
 
         $renderer->writeAt(
             $x,
             $y,
-            str_pad($metaText, $width),
+            \str_pad($metaText, $width),
             ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY),
         );
     }
@@ -284,34 +311,9 @@ final class FilePreviewComponent extends AbstractComponent
     private function renderEmptyState(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $emptyText = 'Select a file to preview';
-        $emptyX = $x + (int) (($width - mb_strlen($emptyText)) / 2);
+        $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
         $emptyY = $y + (int) ($height / 2);
 
         $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::NORMAL_TEXT);
-    }
-
-    public function handleInput(string $key): bool
-    {
-        // Delegate to current content if it exists
-        if ($this->currentContent !== null && $this->currentContent->isFocused()) {
-            return $this->currentContent->handleInput($key);
-        }
-
-        return false;
-    }
-
-    public function setFocused(bool $focused): void
-    {
-        parent::setFocused($focused);
-
-        // Propagate focus to current content
-        if ($this->currentContent !== null) {
-            $this->currentContent->setFocused($focused);
-        }
-    }
-
-    public function getMinSize(): array
-    {
-        return ['width' => 40, 'height' => 10];
     }
 }

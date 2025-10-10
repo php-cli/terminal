@@ -79,10 +79,8 @@ final class Modal extends AbstractComponent
     public static function confirm(string $title, string $message): self
     {
         $modal = new self($title, $message, self::TYPE_CONFIRM);
-        $modal->setButtons([
-            'Yes' => static fn() => true,
-            'No' => static fn() => false,
-        ]);
+        // Note: Default buttons are already set in setupDefaultButtons() for TYPE_CONFIRM
+        // They call $this->close(true) and $this->close(false) which triggers the onClose callback
         return $modal;
     }
 

@@ -36,9 +36,10 @@ try {
     $fileSystem = new FileSystemService();
 
     // Setup global menu bar
+    // F1-F12 are reserved for global screen switching
     $globalMenu = new MenuBar([
             'F1' => ' Help',
-            'F2' => ' Exec',
+            'F2' => ' Commands',
             'F3' => ' Files',
             'F5' => ' Composer',
             'F10' => ' Quit',

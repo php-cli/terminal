@@ -13,7 +13,7 @@ namespace Butschster\Commander\UI\Component\Display;
  * - Header label
  * - Value extraction/formatting
  */
-final class TableColumn
+final readonly class TableColumn
 {
     public const string ALIGN_LEFT = 'left';
     public const string ALIGN_RIGHT = 'right';
@@ -27,16 +27,16 @@ final class TableColumn
      *                          - '30%': percentage of available width
      *                          - '*': flex (takes remaining space)
      * @param string $align Text alignment (left, right, center)
-     * @param callable|null $formatter Optional formatter: fn(mixed $value, array $row): string
-     * @param callable|null $colorizer Optional colorizer: fn(mixed $value, array $row, bool $selected): string
+     * @param \Closure|null $formatter Optional formatter: fn(mixed $value, array $row): string
+     * @param \Closure|null $colorizer Optional colorizer: fn(mixed $value, array $row, bool $selected): string
      */
     public function __construct(
-        private readonly string $key,
-        private readonly string $label,
-        private readonly string|int $width = '*',
-        private readonly string $align = self::ALIGN_LEFT,
-        private $formatter = null,
-        private $colorizer = null,
+        private string $key,
+        private string $label,
+        private string|int $width = '*',
+        private string $align = self::ALIGN_LEFT,
+        private ?\Closure $formatter = null,
+        private ?\Closure $colorizer = null,
     ) {}
 
     public function getKey(): string
@@ -82,7 +82,7 @@ final class TableColumn
     public function getColor(mixed $value, array $row, bool $selected): ?string
     {
         if ($this->colorizer !== null) {
-            return ($this->colorizer)($value, $row, $selected);
+            return \call_user_func($this->colorizer, $value, $row, $selected);
         }
 
         return null;

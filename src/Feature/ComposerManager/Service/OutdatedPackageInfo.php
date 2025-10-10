@@ -54,10 +54,10 @@ final readonly class OutdatedPackageInfo
     private function parseVersion(string $version): array
     {
         // Remove 'v' prefix if present
-        $version = ltrim($version, 'v');
+        $version = \ltrim($version, 'v');
 
         // Extract version numbers
-        if (preg_match('/^(\d+)\.(\d+)\.(\d+)/', $version, $matches)) {
+        if (\preg_match('/^(\d+)\.(\d+)\.(\d+)/', $version, $matches)) {
             return [
                 'major' => (int) $matches[1],
                 'minor' => (int) $matches[2],

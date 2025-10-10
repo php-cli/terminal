@@ -16,11 +16,12 @@ use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
+use Butschster\Commander\UI\Screen\ScreenManager;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
  * Package Details Screen
- * 
+ *
  * Shows comprehensive information about a package:
  * - Basic info (name, version, description, license)
  * - Authors
@@ -33,10 +34,10 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  */
 final class PackageDetailsScreen implements ScreenInterface
 {
-    private const TAB_INFO = 0;
-    private const TAB_DEPENDENCIES = 1;
-    private const TAB_REVERSE_DEPS = 2;
-    private const TAB_AUTOLOAD = 3;
+    private const int TAB_INFO = 0;
+    private const int TAB_DEPENDENCIES = 1;
+    private const int TAB_REVERSE_DEPS = 2;
+    private const int TAB_AUTOLOAD = 3;
 
     private StackLayout $rootLayout;
     private Panel $mainPanel;
@@ -47,7 +48,6 @@ final class PackageDetailsScreen implements ScreenInterface
     private TableComponent $depsTable;
     private TableComponent $reverseDepsTable;
     private TextDisplay $autoloadDisplay;
-
     private int $currentTab = self::TAB_INFO;
     private ?PackageInfo $package = null;
 
@@ -59,6 +59,54 @@ final class PackageDetailsScreen implements ScreenInterface
         $this->loadData();
     }
 
+    public function render(Renderer $renderer): void
+    {
+        $size = $renderer->getSize();
+        $this->rootLayout->render($renderer, 0, 1, $size['width'], $size['height'] - 1);
+    }
+
+    public function handleInput(string $key): bool
+    {
+        // Tab shortcuts (F9-F12 for internal tabs to avoid conflict with global shortcuts)
+        if ($key === 'F9') {
+            $this->switchTab(self::TAB_INFO);
+            return true;
+        }
+
+        if ($key === 'F11') {
+            $this->switchTab(self::TAB_DEPENDENCIES);
+            return true;
+        }
+
+        if ($key === 'F12') {
+            $this->switchTab(self::TAB_AUTOLOAD);
+            return true;
+        }
+
+        // Delegate to active content
+        return $this->mainPanel->handleInput($key);
+    }
+
+    public function onActivate(): void
+    {
+        // Nothing to do
+    }
+
+    public function onDeactivate(): void
+    {
+        // Nothing to do
+    }
+
+    public function update(): void
+    {
+        // Nothing to do
+    }
+
+    public function getTitle(): string
+    {
+        return "Package Details: {$this->packageName}";
+    }
+
     private function initializeComponents(): void
     {
         // Create tab content
@@ -67,8 +115,9 @@ final class PackageDetailsScreen implements ScreenInterface
         $this->reverseDepsTable = $this->createReverseDepsTable();
         $this->autoloadDisplay = new TextDisplay();
 
-        // Create main panel
-        $this->mainPanel = new Panel('Package Details', $this->infoDisplay);
+        // Create main panel with padded info display
+        $paddedInfo = Padding::symmetric($this->infoDisplay, horizontal: 2, vertical: 1);
+        $this->mainPanel = new Panel('Package Details', $paddedInfo);
         $this->mainPanel->setFocused(true);
 
         // Create status bar
@@ -86,16 +135,20 @@ final class PackageDetailsScreen implements ScreenInterface
         $table = new TableComponent([
             new TableColumn('package', 'Package', '50%', TableColumn::ALIGN_LEFT),
             new TableColumn('version', 'Version Constraint', '30%', TableColumn::ALIGN_LEFT),
-            new TableColumn('type', 'Type', '*', TableColumn::ALIGN_CENTER,
-                formatter: fn($value) => $value === 'dev' ? '[DEV]' : '[PROD]',
-                colorizer: function($value, $row, $selected) {
+            new TableColumn(
+                'type',
+                'Type',
+                '*',
+                TableColumn::ALIGN_CENTER,
+                formatter: static fn($value) => $value === 'dev' ? '[DEV]' : '[PROD]',
+                colorizer: static function ($value, $row, $selected) {
                     if ($selected) {
                         return ColorScheme::SELECTED_TEXT;
                     }
-                    return $value === 'dev' 
+                    return $value === 'dev'
                         ? ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_YELLOW)
                         : ColorScheme::NORMAL_TEXT;
-                }
+                },
             ),
         ], showHeader: true);
 
@@ -107,15 +160,19 @@ final class PackageDetailsScreen implements ScreenInterface
     private function createReverseDepsTable(): TableComponent
     {
         $table = new TableComponent([
-            new TableColumn('package', 'Package', '*', TableColumn::ALIGN_LEFT,
-                colorizer: function($value, $row, $selected) {
+            new TableColumn(
+                'package',
+                'Package',
+                '*',
+                TableColumn::ALIGN_LEFT,
+                colorizer: static function ($value, $row, $selected) {
                     if ($selected) {
                         return ColorScheme::SELECTED_TEXT;
                     }
-                    return $row['isDirect'] 
+                    return $row['isDirect']
                         ? ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_BRIGHT_WHITE)
                         : ColorScheme::NORMAL_TEXT;
-                }
+                },
             ),
         ], showHeader: true);
 
@@ -202,14 +259,14 @@ final class PackageDetailsScreen implements ScreenInterface
 
         if (!empty($this->package->support)) {
             foreach ($this->package->support as $type => $url) {
-                $icon = match($type) {
+                $icon = match ($type) {
                     'issues' => '🐛',
                     'docs' => '📚',
                     'forum' => '💬',
                     'source' => '📦',
                     default => '🔗',
                 };
-                $lines[] = "  {$icon} " . ucfirst($type) . ": {$url}";
+                $lines[] = "  {$icon} " . \ucfirst((string) $type) . ": {$url}";
             }
         }
 
@@ -217,7 +274,7 @@ final class PackageDetailsScreen implements ScreenInterface
         if (!empty($this->package->keywords)) {
             $lines[] = "";
             $lines[] = "─────────────────────────────────────────────────────────";
-            $lines[] = "Keywords: " . implode(', ', $this->package->keywords);
+            $lines[] = "Keywords: " . \implode(', ', $this->package->keywords);
         }
 
         // Suggestions
@@ -251,18 +308,18 @@ final class PackageDetailsScreen implements ScreenInterface
         $lines[] = "Statistics:";
         $lines[] = "";
         $lines[] = "  Dependencies: {$this->package->getTotalDependencies()} total";
-        $lines[] = "    ├─ Production: " . count($this->package->requires);
-        $lines[] = "    └─ Development: " . count($this->package->devRequires);
+        $lines[] = "    ├─ Production: " . \count($this->package->requires);
+        $lines[] = "    └─ Development: " . \count($this->package->devRequires);
 
         $reverseDeps = $this->composerService->getReverseDependencies($this->packageName);
-        $lines[] = "  Reverse Dependencies: " . count($reverseDeps) . " packages depend on this";
+        $lines[] = "  Reverse Dependencies: " . \count($reverseDeps) . " packages depend on this";
 
         if ($this->package->hasAutoload()) {
             $namespaces = $this->package->getNamespaces();
-            $lines[] = "  Namespaces: " . count($namespaces);
+            $lines[] = "  Namespaces: " . \count($namespaces);
         }
 
-        $this->infoDisplay->setText(implode("\n", $lines));
+        $this->infoDisplay->setText(\implode("\n", $lines));
         $this->mainPanel->setTitle("Package: {$this->package->name}");
     }
 
@@ -293,7 +350,7 @@ final class PackageDetailsScreen implements ScreenInterface
         }
 
         $this->depsTable->setRows($rows);
-        $count = count($rows);
+        $count = \count($rows);
         $this->mainPanel->setTitle("Dependencies ({$count})");
     }
 
@@ -301,13 +358,14 @@ final class PackageDetailsScreen implements ScreenInterface
     {
         $reverseDeps = $this->composerService->getReverseDependencies($this->packageName);
 
-        $rows = array_map(fn($pkg) => [
+        $rows = \array_map(static fn($pkg)
+            => [
             'package' => $pkg,
             'isDirect' => false, // TODO: determine if direct
         ], $reverseDeps);
 
         $this->reverseDepsTable->setRows($rows);
-        $count = count($rows);
+        $count = \count($rows);
         $this->mainPanel->setTitle("Reverse Dependencies ({$count} packages depend on this)");
     }
 
@@ -332,7 +390,7 @@ final class PackageDetailsScreen implements ScreenInterface
             $lines[] = "PSR-4 Namespaces:";
             $lines[] = "";
             foreach ($this->package->autoload['psr4'] as $namespace => $paths) {
-                $pathsList = is_array($paths) ? implode(', ', $paths) : $paths;
+                $pathsList = \is_array($paths) ? \implode(', ', $paths) : $paths;
                 $lines[] = "  {$namespace}";
                 $lines[] = "    → {$pathsList}";
                 $lines[] = "";
@@ -349,7 +407,7 @@ final class PackageDetailsScreen implements ScreenInterface
             $lines[] = "PSR-0 Namespaces:";
             $lines[] = "";
             foreach ($this->package->autoload['psr0'] as $namespace => $paths) {
-                $pathsList = is_array($paths) ? implode(', ', $paths) : $paths;
+                $pathsList = \is_array($paths) ? \implode(', ', $paths) : $paths;
                 $lines[] = "  {$namespace}";
                 $lines[] = "    → {$pathsList}";
                 $lines[] = "";
@@ -390,7 +448,7 @@ final class PackageDetailsScreen implements ScreenInterface
             $lines[] = "No autoload configuration defined.";
         }
 
-        $this->autoloadDisplay->setText(implode("\n", $lines));
+        $this->autoloadDisplay->setText(\implode("\n", $lines));
         $this->mainPanel->setTitle("Autoload: {$this->package->name}");
     }
 
@@ -442,73 +500,19 @@ final class PackageDetailsScreen implements ScreenInterface
 
     private function updateStatusBar(): void
     {
+        // F1-F5 are reserved for global screen switching
+        // Use F9-F12 for internal tabs
         $this->statusBar = new StatusBar([
-            'F1' => 'Info',
-            'F2' => 'Deps',
-            'F3' => 'Rev Deps',
-            'F4' => 'Autoload',
+            'F9' => 'Info',
+            'F11' => 'Deps',
+            'F12' => 'Autoload',
             'ESC' => 'Back',
         ]);
     }
 
     private function wordWrap(string $text, int $width): string
     {
-        $lines = explode("\n", wordwrap($text, $width, "\n", false));
-        return implode("\n", array_map(fn($line) => "  " . $line, $lines));
-    }
-
-    // ScreenInterface implementation
-
-    public function render(Renderer $renderer): void
-    {
-        $size = $renderer->getSize();
-        $this->rootLayout->render($renderer, 0, 1, $size['width'], $size['height'] - 1);
-    }
-
-    public function handleInput(string $key): bool
-    {
-        // Tab shortcuts
-        if ($key === 'F1') {
-            $this->switchTab(self::TAB_INFO);
-            return true;
-        }
-
-        if ($key === 'F2') {
-            $this->switchTab(self::TAB_DEPENDENCIES);
-            return true;
-        }
-
-        if ($key === 'F3') {
-            $this->switchTab(self::TAB_REVERSE_DEPS);
-            return true;
-        }
-
-        if ($key === 'F4') {
-            $this->switchTab(self::TAB_AUTOLOAD);
-            return true;
-        }
-
-        // Delegate to active content
-        return $this->mainPanel->handleInput($key);
-    }
-
-    public function onActivate(): void
-    {
-        // Nothing to do
-    }
-
-    public function onDeactivate(): void
-    {
-        // Nothing to do
-    }
-
-    public function update(): void
-    {
-        // Nothing to do
-    }
-
-    public function getTitle(): string
-    {
-        return "Package Details: {$this->packageName}";
+        $lines = \explode("\n", \wordwrap($text, $width, "\n", false));
+        return \implode("\n", \array_map(static fn($line) => "  " . $line, $lines));
     }
 }
