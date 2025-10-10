@@ -33,6 +33,9 @@ final class Application
     /** @var MenuBar|null Global menu bar */
     private ?MenuBar $globalMenuBar = null;
 
+    /** Track screen depth to detect screen changes */
+    private int $lastScreenDepth = 0;
+
     public function __construct(private readonly ?SymfonyApplication $symfonyApp = null)
     {
         $this->frameTime = 1.0 / $this->targetFps;
@@ -190,6 +193,9 @@ final class Application
             if (isset($this->globalShortcuts[$key])) {
                 $callback = $this->globalShortcuts[$key];
                 $callback($this->screenManager);
+                
+                // Invalidate renderer after global shortcut (likely changed screen)
+                $this->checkScreenChange();
                 continue;
             }
 
@@ -202,14 +208,32 @@ final class Application
             // Route to screen manager
             $handled = $this->screenManager->handleInput($key);
 
+            // Check if screen changed (e.g., via navigation in the current screen)
+            $this->checkScreenChange();
+
             // If not handled and ESC pressed, go back
             if (!$handled && $key === 'ESCAPE') {
                 if ($this->screenManager->getDepth() > 1) {
                     $this->screenManager->popScreen();
+                    $this->checkScreenChange();
                 }
                 // $this->stop();
 
             }
+        }
+    }
+
+    /**
+     * Check if screen depth changed and invalidate renderer if so
+     */
+    private function checkScreenChange(): void
+    {
+        $currentDepth = $this->screenManager->getDepth();
+        
+        if ($currentDepth !== $this->lastScreenDepth) {
+            // Screen changed - invalidate renderer to force full redraw
+            $this->renderer->invalidate();
+            $this->lastScreenDepth = $currentDepth;
         }
     }
 

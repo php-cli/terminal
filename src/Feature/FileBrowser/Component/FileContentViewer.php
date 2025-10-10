@@ -10,6 +10,8 @@ use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
  * File content viewer with line numbers and scrolling
+ * 
+ * Now with proper width management to prevent rendering artifacts.
  */
 final class FileContentViewer extends AbstractComponent
 {
@@ -24,7 +26,9 @@ final class FileContentViewer extends AbstractComponent
      */
     public function setContent(string $content): void
     {
-        $this->lines = \explode("\n", $content);
+        // Normalize line endings: CRLF -> LF, CR -> LF
+        $normalized = \str_replace(["\r\n", "\r"], "\n", $content);
+        $this->lines = \explode("\n", $normalized);
         $this->scrollOffset = 0;
     }
 
@@ -46,6 +50,17 @@ final class FileContentViewer extends AbstractComponent
             return;
         }
 
+        // Reserve space for scrollbar if needed
+        $hasScrollbar = \count($this->lines) > $height;
+        $scrollbarWidth = $hasScrollbar ? 1 : 0;
+        
+        // Calculate line number width (e.g., "1234 │ " = 7 chars for 4-digit numbers)
+        $maxLineNumber = \count($this->lines);
+        $lineNumberWidth = \strlen((string) $maxLineNumber) + 3; // number + " │ "
+        
+        // Content width = total - line numbers - scrollbar
+        $contentWidth = $width - $lineNumberWidth - $scrollbarWidth;
+
         $endIndex = \min(
             $this->scrollOffset + $height,
             \count($this->lines),
@@ -56,38 +71,22 @@ final class FileContentViewer extends AbstractComponent
             $rowY = $y + ($i - $this->scrollOffset);
             $line = $this->lines[$i];
 
-            // Line numbers: "   1 │ "
-            $lineNumber = \str_pad((string) ($i + 1), 4, ' ', STR_PAD_LEFT) . ' │ ';
+            // Format line number with separator (right-aligned)
+            $lineNumber = \str_pad((string) ($i + 1), $lineNumberWidth - 3, ' ', STR_PAD_LEFT) . ' │ ';
+
+            // Truncate content to fit available space
+            $contentText = \mb_substr($line, 0, $contentWidth);
+            $contentText = \str_pad($contentText, $contentWidth);
 
             // Combine line number and content
-            $displayText = $lineNumber . $line;
-
-            // Truncate or pad line to fit width
-            $displayText = \mb_substr($displayText, 0, $width);
-            $displayText = \str_pad($displayText, $width);
+            $displayText = $lineNumber . $contentText;
 
             $renderer->writeAt($x, $rowY, $displayText, ColorScheme::NORMAL_TEXT);
         }
 
         // Draw scrollbar if needed
-        if (\count($this->lines) > $height) {
+        if ($hasScrollbar) {
             $this->drawScrollbar($renderer, $x + $width - 1, $y, $height);
-        }
-
-        // Show scroll position indicator
-        if (\count($this->lines) > $height) {
-            $position = \sprintf(
-                '%d-%d/%d',
-                $this->scrollOffset + 1,
-                \min($this->scrollOffset + $height, \count($this->lines)),
-                \count($this->lines),
-            );
-            $renderer->writeAt(
-                $x + $width - \mb_strlen($position) - 1,
-                $y + $height - 1,
-                $position,
-                ColorScheme::combine(ColorScheme::BG_CYAN, ColorScheme::FG_BLACK),
-            );
         }
     }
 

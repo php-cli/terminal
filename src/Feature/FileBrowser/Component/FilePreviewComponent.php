@@ -12,69 +12,29 @@ use Butschster\Commander\UI\Component\Decorator\Padding;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
- * File preview component - orchestrates display of file/directory info or content
+ * File preview component - shows file/directory metadata
  *
  * Uses composition:
  * - TextInfoComponent for file/directory metadata (with padding)
- * - FileContentViewer for file contents (without padding - needs full width for line numbers)
+ * 
+ * Note: Full file content viewing is handled by FileViewerScreen (Ctrl+R key)
  */
 final class FilePreviewComponent extends AbstractComponent
 {
     private ?string $currentPath = null;
     private ?array $metadata = null;
     private ?ComponentInterface $currentContent = null;
-    private bool $showingFileContent = false;
 
     public function __construct(
         private readonly FileSystemService $fileSystem,
     ) {}
 
     /**
-     * Set file to preview (reads file contents)
-     */
-    public function setFile(?string $path): void
-    {
-        $this->currentPath = $path;
-        $this->showingFileContent = true;
-
-        if ($path === null) {
-            $this->currentContent = null;
-            $this->metadata = null;
-            return;
-        }
-
-        // Get metadata
-        $this->metadata = $this->fileSystem->getFileMetadata($path);
-
-        // If it's a directory, show directory info
-        if (\is_dir($path)) {
-            $this->showDirectoryInfo($path);
-            return;
-        }
-
-        // If it's a file, show contents
-        $contents = $this->fileSystem->readFileContents($path, 1000);
-
-        $viewer = new FileContentViewer();
-        $viewer->setContent($contents);
-        $viewer->setFocused($this->isFocused());
-
-        // Remove old content
-        if ($this->currentContent !== null) {
-            $this->removeChild($this->currentContent);
-        }
-
-        $this->currentContent = $viewer;
-        $this->addChild($viewer);
-    }
-
-    /**
-     * Show file metadata only (without reading contents)
+     * Set file/directory to preview (shows metadata only)
      */
     public function setFileInfo(?string $path): void
     {
         $this->currentPath = $path;
-        $this->showingFileContent = false;
 
         if ($path === null) {
             $this->currentContent = null;
@@ -85,14 +45,12 @@ final class FilePreviewComponent extends AbstractComponent
         // Get metadata
         $this->metadata = $this->fileSystem->getFileMetadata($path);
 
-        // If it's a directory, show directory info
+        // Show appropriate info based on type
         if (\is_dir($path)) {
             $this->showDirectoryInfo($path);
-            return;
+        } else {
+            $this->showFileInfo($path);
         }
-
-        // For files, show metadata only
-        $this->showFileInfo($path);
     }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
@@ -182,7 +140,7 @@ final class FilePreviewComponent extends AbstractComponent
             $lines[] = '';
             $lines[] = '─────────────────────────────────────────';
             $lines[] = '';
-            $lines[] = 'Press [F4] to view file contents';
+            $lines[] = 'Press [Ctrl+R] to view file contents';
             $lines[] = '';
         }
 

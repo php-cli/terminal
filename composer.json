@@ -1,7 +1,23 @@
 {
+  "name": "cli/terminal",
+  "description": "MC-Style PHP Console Application",
+  "keywords": [],
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Pavel Buchnev",
+      "email": "butschster@gmail.com"
+    }
+  ],
   "autoload": {
     "psr-4": {
       "Butschster\\Commander\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests"
     }
   },
   "require": {
@@ -23,5 +39,10 @@
     "psalm": "vendor/bin/psalm --config=psalm.xml ./src",
     "refactor": "rector process --config=rector.php",
     "test": "vendor/bin/phpunit"
-  }
+  },
+  "config": {
+    "sort-packages": true
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }

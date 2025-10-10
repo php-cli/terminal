@@ -196,6 +196,22 @@ final class Renderer
     }
 
     /**
+     * Invalidate front buffer to force full redraw on next frame
+     * 
+     * This should be called when switching screens to ensure old content
+     * doesn't remain visible in areas the new screen doesn't write to.
+     */
+    public function invalidate(): void
+    {
+        // Set front buffer to a different state to force redraw
+        $emptyCell = ['char' => ' ', 'color' => ''];
+        
+        for ($y = 0; $y < $this->height; $y++) {
+            $this->frontBuffer[$y] = \array_fill(0, $this->width, $emptyCell);
+        }
+    }
+
+    /**
      * Get terminal size
      *
      * @return array{width: int, height: int}

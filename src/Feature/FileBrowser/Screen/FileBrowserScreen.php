@@ -74,19 +74,11 @@ final class FileBrowserScreen implements ScreenInterface
                 return true;
 
             case 'CTRL_R':
-                // View/open file
+                // View/open file in full-screen viewer
                 if ($this->leftPanelFocused) {
                     $selectedItem = $this->fileList->getSelectedItem();
-                    if ($selectedItem !== null) {
-                        $this->handleFileView($selectedItem);
-
-                        // Switch focus to right panel
-                        $this->leftPanelFocused = false;
-                        $this->leftPanel->setFocused(false);
-                        $this->fileList->setFocused(false);
-                        $this->rightPanel->setFocused(true);
-                        $this->filePreview->setFocused(true);
-                        $this->updateStatusBar();
+                    if ($selectedItem !== null && !$selectedItem['isDir']) {
+                        $this->openFileViewer($selectedItem['path']);
                     }
                 }
                 return true;
@@ -97,15 +89,8 @@ final class FileBrowserScreen implements ScreenInterface
                 return true;
 
             case 'ESCAPE':
-                // If right panel (preview) is focused, close preview and return to left panel
+                // If right panel (preview) is focused, return focus to left panel
                 if (!$this->leftPanelFocused) {
-                    // Close preview: show info only instead of full contents
-                    $selectedItem = $this->fileList->getSelectedItem();
-                    if ($selectedItem !== null) {
-                        $this->filePreview->setFileInfo($selectedItem['path']);
-                    }
-
-                    // Return focus to left panel
                     $this->leftPanelFocused = true;
                     $this->leftPanel->setFocused(true);
                     $this->fileList->setFocused(true);
@@ -319,18 +304,6 @@ final class FileBrowserScreen implements ScreenInterface
     }
 
     /**
-     * Open/view file (Ctrl+R key)
-     */
-    private function handleFileView(array $item): void
-    {
-        if (!$item['isDir']) {
-            // Open file for viewing - currently just updates preview
-            // In the future, this could open a full-screen viewer
-            $this->filePreview->setFile($item['path']);
-        }
-    }
-
-    /**
      * Handle selection change (arrow keys)
      */
     private function handleSelectionChange(array $item): void
@@ -340,6 +313,15 @@ final class FileBrowserScreen implements ScreenInterface
 
         // Update status bar based on whether item is file or directory
         $this->updateStatusBar();
+    }
+
+    /**
+     * Open file in full-screen viewer
+     */
+    private function openFileViewer(string $filePath): void
+    {
+        $viewerScreen = new FileViewerScreen($this->fileSystem, $this->screenManager, $filePath);
+        $this->screenManager->pushScreen($viewerScreen);
     }
 
     /**

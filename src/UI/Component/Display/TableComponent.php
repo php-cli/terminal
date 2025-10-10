@@ -151,20 +151,26 @@ final class TableComponent extends AbstractComponent
     {
         $this->setBounds($x, $y, $width, $height);
 
+        // Check if scrollbar is needed
+        $needsScrollbar = \count($this->rows) > ($this->showHeader ? $height - 2 : $height);
+        
+        // Reserve space for scrollbar if needed
+        $contentWidth = $needsScrollbar ? $width - 1 : $width;
+
         // Calculate column widths if not done yet or if width changed
-        if (empty($this->calculatedWidths) || \array_sum($this->calculatedWidths) !== $width) {
-            $this->calculateColumnWidths($width);
+        if (empty($this->calculatedWidths) || \array_sum($this->calculatedWidths) !== $contentWidth) {
+            $this->calculateColumnWidths($contentWidth);
         }
 
         $currentY = $y;
 
         // Render header if enabled
         if ($this->showHeader) {
-            $this->renderHeader($renderer, $x, $currentY, $width);
+            $this->renderHeader($renderer, $x, $currentY, $contentWidth);
             $currentY += 1;
 
             // Render separator line
-            $separator = \str_repeat('─', $width);
+            $separator = \str_repeat('─', $contentWidth);
             $renderer->writeAt($x, $currentY, $separator, ColorScheme::INACTIVE_BORDER);
             $currentY += 1;
 
@@ -176,7 +182,7 @@ final class TableComponent extends AbstractComponent
 
         if (empty($this->rows)) {
             // Show empty state
-            $this->renderEmptyState($renderer, $x, $currentY, $width, $this->visibleRows);
+            $this->renderEmptyState($renderer, $x, $currentY, $contentWidth, $this->visibleRows);
             return;
         }
 
@@ -193,12 +199,12 @@ final class TableComponent extends AbstractComponent
             $row = $this->rows[$i];
             $selected = ($i === $this->selectedIndex);
 
-            $this->renderRow($renderer, $x, $rowY, $width, $row, $selected);
+            $this->renderRow($renderer, $x, $rowY, $contentWidth, $row, $selected);
         }
 
         // Draw scrollbar if needed
-        if (\count($this->rows) > $this->visibleRows) {
-            $this->drawScrollbar($renderer, $x + $width - 1, $currentY, $this->visibleRows);
+        if ($needsScrollbar) {
+            $this->drawScrollbar($renderer, $x + $contentWidth, $currentY, $this->visibleRows);
         }
     }
 

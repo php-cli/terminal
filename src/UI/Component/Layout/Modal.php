@@ -221,7 +221,7 @@ final class Modal extends AbstractComponent
                 $callback();
                 return true;
 
-                // Quick access keys (1-9 for button indices)
+            // Quick access keys (1-9 for button indices)
             case '1':
             case '2':
             case '3':

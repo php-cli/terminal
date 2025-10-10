@@ -96,6 +96,10 @@ final class ListComponent extends AbstractComponent
             return;
         }
 
+        // Check if scrollbar is needed and reserve space for it
+        $needsScrollbar = \count($this->items) > $this->visibleRows;
+        $contentWidth = $needsScrollbar ? $width - 1 : $width;
+
         // Calculate visible range
         $endIndex = \min(
             $this->scrollOffset + $this->visibleRows,
@@ -107,9 +111,9 @@ final class ListComponent extends AbstractComponent
             $rowY = $y + ($i - $this->scrollOffset);
             $item = $this->items[$i];
 
-            // Truncate or pad item to fit width
-            $displayText = \mb_substr($item, 0, $width);
-            $displayText = \str_pad($displayText, $width);
+            // Truncate or pad item to fit content width (excluding scrollbar)
+            $displayText = \mb_substr($item, 0, $contentWidth);
+            $displayText = \str_pad($displayText, $contentWidth);
 
             // Highlight selected item
             if ($i === $this->selectedIndex && $this->isFocused()) {
@@ -130,8 +134,8 @@ final class ListComponent extends AbstractComponent
         }
 
         // Draw scrollbar if needed
-        if (\count($this->items) > $this->visibleRows) {
-            $this->drawScrollbar($renderer, $x + $width - 1, $y, $height);
+        if ($needsScrollbar) {
+            $this->drawScrollbar($renderer, $x + $contentWidth, $y, $height);
         }
     }
 

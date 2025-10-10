@@ -99,6 +99,10 @@ final class TextDisplay extends AbstractComponent
             return;
         }
 
+        // Check if scrollbar is needed and reserve space for it
+        $needsScrollbar = \count($this->lines) > $this->visibleLines;
+        $contentWidth = $needsScrollbar ? $width - 1 : $width;
+
         // Calculate visible range
         $endIndex = \min(
             $this->scrollOffset + $this->visibleLines,
@@ -110,8 +114,8 @@ final class TextDisplay extends AbstractComponent
             $rowY = $y + ($i - $this->scrollOffset);
             $line = $this->lines[$i];
 
-            // Word wrap if line is too long
-            $wrappedLines = $this->wrapLine($line, $width);
+            // Word wrap if line is too long (using content width)
+            $wrappedLines = $this->wrapLine($line, $contentWidth);
 
             foreach ($wrappedLines as $wrappedLine) {
                 if ($rowY >= $y + $height) {
@@ -130,8 +134,8 @@ final class TextDisplay extends AbstractComponent
         }
 
         // Draw scrollbar if needed
-        if (\count($this->lines) > $this->visibleLines) {
-            $this->drawScrollbar($renderer, $x + $width - 1, $y, $height);
+        if ($needsScrollbar) {
+            $this->drawScrollbar($renderer, $x + $contentWidth, $y, $height);
         }
     }
 
