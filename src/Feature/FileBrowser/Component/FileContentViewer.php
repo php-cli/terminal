@@ -10,7 +10,7 @@ use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
  * File content viewer with line numbers and scrolling
- * 
+ *
  * Now with proper width management to prevent rendering artifacts.
  */
 final class FileContentViewer extends AbstractComponent
@@ -53,11 +53,11 @@ final class FileContentViewer extends AbstractComponent
         // Reserve space for scrollbar if needed
         $hasScrollbar = \count($this->lines) > $height;
         $scrollbarWidth = $hasScrollbar ? 1 : 0;
-        
+
         // Calculate line number width (e.g., "1234 │ " = 7 chars for 4-digit numbers)
         $maxLineNumber = \count($this->lines);
         $lineNumberWidth = \strlen((string) $maxLineNumber) + 3; // number + " │ "
-        
+
         // Content width = total - line numbers - scrollbar
         $contentWidth = $width - $lineNumberWidth - $scrollbarWidth;
 

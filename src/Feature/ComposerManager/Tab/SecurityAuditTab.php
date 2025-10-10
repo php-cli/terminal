@@ -29,7 +29,6 @@ final class SecurityAuditTab extends AbstractTab
     private Panel $rightPanel;
     private TableComponent $table;
     private TextDisplay $detailsDisplay;
-
     private array $advisories = [];
     private array $auditSummary = [];
     private int $focusedPanelIndex = 0;
@@ -43,17 +42,10 @@ final class SecurityAuditTab extends AbstractTab
 
     public function getTitle(): string
     {
-        $count = count($this->advisories);
-        $critical = $this->auditSummary['high'] ?? 0;
-        
-        $title = "Security ($count)";
-        if ($critical > 0) {
-            $title .= " - [!!] $critical Critical/High";
-        }
-
-        return $title;
+        return 'Security';
     }
 
+    #[\Override]
     public function getShortcuts(): array
     {
         return [
@@ -69,6 +61,7 @@ final class SecurityAuditTab extends AbstractTab
         $this->layout->render($renderer, $x, $y, $width, $height);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // Refresh data
@@ -93,6 +86,7 @@ final class SecurityAuditTab extends AbstractTab
         return $this->rightPanel->handleInput($key);
     }
 
+    #[\Override]
     protected function onTabActivated(): void
     {
         // Lazy load data only when tab is first activated
@@ -152,7 +146,7 @@ final class SecurityAuditTab extends AbstractTab
                 'Vulnerability',
                 '*',
                 TableColumn::ALIGN_LEFT,
-                formatter: static fn($value) => mb_substr((string) $value, 0, 60) . (mb_strlen((string) $value) > 60 ? '...' : ''),
+                formatter: static fn($value) => \mb_substr((string) $value, 0, 60) . (\mb_strlen((string) $value) > 60 ? '...' : ''),
             ),
             new TableColumn('cve', 'CVE', '15%', TableColumn::ALIGN_CENTER),
         ], showHeader: true);
@@ -175,20 +169,20 @@ final class SecurityAuditTab extends AbstractTab
         $auditResult = $this->composerService->runAudit();
         $this->auditSummary = $auditResult['summary'];
 
-        $this->advisories = array_map(static fn(SecurityAdvisory $advisory)
+        $this->advisories = \array_map(static fn(SecurityAdvisory $advisory)
             => [
-            'severity' => $advisory->severity,
-            'package' => $advisory->packageName,
-            'title' => $advisory->title,
-            'cve' => $advisory->cve ?: 'N/A',
-            'affectedVersions' => $advisory->affectedVersions,
-            'link' => $advisory->link,
-        ], $auditResult['advisories']);
+                'severity' => $advisory->severity,
+                'package' => $advisory->packageName,
+                'title' => $advisory->title,
+                'cve' => $advisory->cve ?: 'N/A',
+                'affectedVersions' => $advisory->affectedVersions,
+                'link' => $advisory->link,
+            ], $auditResult['advisories']);
 
         $this->table->setRows($this->advisories);
 
         // Update panel title
-        $count = count($this->advisories);
+        $count = \count($this->advisories);
         $critical = $this->auditSummary['high'] ?? 0;
         $title = "Security Audit ($count)";
         if ($critical > 0) {
@@ -213,7 +207,7 @@ final class SecurityAuditTab extends AbstractTab
         };
 
         $lines = [
-            "$severityIcon " . strtoupper((string) $advisory['severity']) . " Severity",
+            "$severityIcon " . \strtoupper((string) $advisory['severity']) . " Severity",
             "",
             "Package: {$advisory['package']}",
             "CVE: {$advisory['cve']}",
@@ -230,7 +224,7 @@ final class SecurityAuditTab extends AbstractTab
             $lines[] = "More Info: {$advisory['link']}";
         }
 
-        $this->detailsDisplay->setText(implode("\n", $lines));
+        $this->detailsDisplay->setText(\implode("\n", $lines));
         $this->rightPanel->setTitle("Security Advisory");
     }
 

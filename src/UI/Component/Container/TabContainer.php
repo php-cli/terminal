@@ -6,7 +6,6 @@ namespace Butschster\Commander\UI\Component\Container;
 
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
-use Butschster\Commander\UI\Component\ComponentInterface;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
@@ -28,20 +27,14 @@ use Butschster\Commander\UI\Theme\ColorScheme;
 final class TabContainer extends AbstractComponent
 {
     private int $activeTabIndex = 0;
-
-    /** @var array<TabInterface> */
-    private array $tabs = [];
-
     private ?StatusBar $statusBar = null;
     private int $statusBarHeight = 1;
 
     /**
      * @param array<TabInterface> $tabs
      */
-    public function __construct(array $tabs = [])
+    public function __construct(private array $tabs = [])
     {
-        $this->tabs = $tabs;
-
         // Activate first tab
         if (!empty($this->tabs)) {
             $this->tabs[0]->onActivate();
@@ -56,7 +49,7 @@ final class TabContainer extends AbstractComponent
         $this->tabs[] = $tab;
 
         // If this is the first tab, activate it
-        if (count($this->tabs) === 1) {
+        if (\count($this->tabs) === 1) {
             $tab->onActivate();
         }
     }
@@ -82,7 +75,7 @@ final class TabContainer extends AbstractComponent
      */
     public function switchToTab(int $index): void
     {
-        if ($index < 0 || $index >= count($this->tabs)) {
+        if ($index < 0 || $index >= \count($this->tabs)) {
             return;
         }
 
@@ -108,7 +101,7 @@ final class TabContainer extends AbstractComponent
      */
     public function nextTab(): void
     {
-        $nextIndex = ($this->activeTabIndex + 1) % count($this->tabs);
+        $nextIndex = ($this->activeTabIndex + 1) % \count($this->tabs);
         $this->switchToTab($nextIndex);
     }
 
@@ -117,7 +110,7 @@ final class TabContainer extends AbstractComponent
      */
     public function previousTab(): void
     {
-        $prevIndex = ($this->activeTabIndex - 1 + count($this->tabs)) % count($this->tabs);
+        $prevIndex = ($this->activeTabIndex - 1 + \count($this->tabs)) % \count($this->tabs);
         $this->switchToTab($prevIndex);
     }
 
@@ -164,6 +157,7 @@ final class TabContainer extends AbstractComponent
         }
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // Tab navigation with Ctrl+Left/Right
@@ -186,6 +180,7 @@ final class TabContainer extends AbstractComponent
         return false;
     }
 
+    #[\Override]
     public function setFocused(bool $focused): void
     {
         parent::setFocused($focused);
@@ -209,7 +204,7 @@ final class TabContainer extends AbstractComponent
             $tabTitle = $tab->getTitle();
 
             // Calculate tab width (title + padding + separators)
-            $tabWidth = mb_strlen($tabTitle) + 4; // 2 spaces padding + 2 for brackets/separators
+            $tabWidth = \mb_strlen($tabTitle) + 4; // 2 spaces padding + 2 for brackets/separators
 
             // Choose colors based on active state
             if ($isActive) {
@@ -242,7 +237,7 @@ final class TabContainer extends AbstractComponent
             $renderer->writeAt(
                 $currentX,
                 $y,
-                str_repeat(' ', $remaining),
+                \str_repeat(' ', $remaining),
                 ColorScheme::NORMAL_TEXT,
             );
         }
@@ -263,7 +258,7 @@ final class TabContainer extends AbstractComponent
         }
 
         // Get tab-specific shortcuts and merge with navigation shortcuts
-        $shortcuts = array_merge(
+        $shortcuts = \array_merge(
             [
                 'Ctrl+←/→' => 'switch Tab',
             ],

@@ -7,6 +7,7 @@ namespace Butschster\Commander\Feature\ComposerManager\Screen;
 use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Feature\ComposerManager\Tab\InstalledPackagesTab;
 use Butschster\Commander\Feature\ComposerManager\Tab\OutdatedPackagesTab;
+use Butschster\Commander\Feature\ComposerManager\Tab\ScriptsTab;
 use Butschster\Commander\Feature\ComposerManager\Tab\SecurityAuditTab;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Container\TabContainer;
@@ -24,6 +25,7 @@ use Butschster\Commander\UI\Screen\ScreenManager;
  * - View installed packages (composer show)
  * - Check for outdated packages (composer outdated)
  * - Security audit (composer audit)
+ * - Run composer scripts
  */
 final class ComposerManagerScreen implements ScreenInterface
 {
@@ -46,6 +48,7 @@ final class ComposerManagerScreen implements ScreenInterface
                 new InstalledPackagesTab($this->composerService, $screenManager),
                 new OutdatedPackagesTab($this->composerService),
                 new SecurityAuditTab($this->composerService),
+                new ScriptsTab($this->composerService),
             ]);
 
             // Set status bar
@@ -103,9 +106,11 @@ final class ComposerManagerScreen implements ScreenInterface
         $installedTab = new InstalledPackagesTab($this->composerService);
         $outdatedTab = new OutdatedPackagesTab($this->composerService);
         $securityTab = new SecurityAuditTab($this->composerService);
+        $scriptsTab = new ScriptsTab($this->composerService);
 
         // Create tab container with all tabs
         $this->tabContainer = new TabContainer([
+            $scriptsTab,
             $installedTab,
             $outdatedTab,
             $securityTab,

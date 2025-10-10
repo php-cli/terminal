@@ -153,7 +153,7 @@ final class TableComponent extends AbstractComponent
 
         // Check if scrollbar is needed
         $needsScrollbar = \count($this->rows) > ($this->showHeader ? $height - 2 : $height);
-        
+
         // Reserve space for scrollbar if needed
         $contentWidth = $needsScrollbar ? $width - 1 : $width;
 
@@ -388,7 +388,7 @@ final class TableComponent extends AbstractComponent
 
             // Determine cell color - check for custom colorizer
             $customColor = $column->getColor($value, $row, $selected);
-            $cellColor = $customColor !== null ? $customColor : $defaultColor;
+            $cellColor = $customColor ?? $defaultColor;
 
             // Render this cell
             $renderer->writeAt($currentX, $y, $cellText, $cellColor);

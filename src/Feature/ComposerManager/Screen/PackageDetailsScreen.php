@@ -16,7 +16,6 @@ use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
-use Butschster\Commander\UI\Screen\ScreenManager;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -360,9 +359,9 @@ final class PackageDetailsScreen implements ScreenInterface
 
         $rows = \array_map(static fn($pkg)
             => [
-            'package' => $pkg,
-            'isDirect' => false, // TODO: determine if direct
-        ], $reverseDeps);
+                'package' => $pkg,
+                'isDirect' => false, // TODO: determine if direct
+            ], $reverseDeps);
 
         $this->reverseDepsTable->setRows($rows);
         $count = \count($rows);

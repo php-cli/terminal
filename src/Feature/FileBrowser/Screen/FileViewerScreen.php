@@ -16,7 +16,7 @@ use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
  * Full-screen file viewer
- * 
+ *
  * Opens files in a dedicated full-screen view with:
  * - Line numbers (dynamically sized based on total lines)
  * - Smooth scrolling
@@ -133,13 +133,13 @@ final class FileViewerScreen implements ScreenInterface
         $this->metadata = $this->fileSystem->getFileMetadata($this->filePath);
 
         // Check if file is readable
-        if (!is_readable($this->filePath)) {
+        if (!\is_readable($this->filePath)) {
             $this->contentViewer->setContent("Error: File is not readable");
             return;
         }
 
         // Check if file is binary
-        if ($this->metadata !== null && str_contains($this->metadata['mimeType'], 'octet-stream')) {
+        if ($this->metadata !== null && \str_contains($this->metadata['mimeType'], 'octet-stream')) {
             $info = $this->getBinaryFileMessage();
             $this->contentViewer->setContent($info);
             return;
@@ -156,9 +156,9 @@ final class FileViewerScreen implements ScreenInterface
     private function renderHeader(Renderer $renderer, int $x, int $y, int $width): void
     {
         // Line 1: File name
-        $fileName = basename($this->filePath);
+        $fileName = \basename($this->filePath);
         $line1 = ' File: ' . $fileName;
-        $line1 = str_pad(mb_substr($line1, 0, $width), $width);
+        $line1 = \str_pad(\mb_substr($line1, 0, $width), $width);
         $renderer->writeAt(
             $x,
             $y,
@@ -178,8 +178,8 @@ final class FileViewerScreen implements ScreenInterface
                 $metaParts[] = "{$this->metadata['lines']} lines";
             }
 
-            $line2 = ' ' . implode(' | ', $metaParts);
-            $line2 = str_pad(mb_substr($line2, 0, $width), $width);
+            $line2 = ' ' . \implode(' | ', $metaParts);
+            $line2 = \str_pad(\mb_substr($line2, 0, $width), $width);
             $renderer->writeAt(
                 $x,
                 $y + 1,
@@ -198,7 +198,7 @@ final class FileViewerScreen implements ScreenInterface
             return "Binary file (cannot be displayed)";
         }
 
-        return sprintf(
+        return \sprintf(
             "Binary file\n" .
             "───────────\n" .
             "\n" .
@@ -208,7 +208,7 @@ final class FileViewerScreen implements ScreenInterface
             "Size: %s\n" .
             "\n" .
             "(Binary files cannot be displayed as text)",
-            basename($this->filePath),
+            \basename($this->filePath),
             $this->metadata['type'],
             $this->metadata['mimeType'],
             $this->fileSystem->formatSize($this->metadata['size']),

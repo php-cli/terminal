@@ -9,7 +9,7 @@ use Butschster\Commander\UI\Component\AbstractComponent;
 
 /**
  * Abstract base class for tabs
- * 
+ *
  * Provides common functionality for tab implementations
  */
 abstract class AbstractTab extends AbstractComponent implements TabInterface
@@ -58,6 +58,7 @@ abstract class AbstractTab extends AbstractComponent implements TabInterface
     /**
      * Update tab state
      */
+    #[\Override]
     public function update(): void
     {
         // Override in subclasses if needed
@@ -71,6 +72,7 @@ abstract class AbstractTab extends AbstractComponent implements TabInterface
     /**
      * Handle keyboard input
      */
+    #[\Override]
     public function handleInput(string $key): bool
     {
         return false;

@@ -193,7 +193,7 @@ final class Application
             if (isset($this->globalShortcuts[$key])) {
                 $callback = $this->globalShortcuts[$key];
                 $callback($this->screenManager);
-                
+
                 // Invalidate renderer after global shortcut (likely changed screen)
                 $this->checkScreenChange();
                 continue;
@@ -229,7 +229,7 @@ final class Application
     private function checkScreenChange(): void
     {
         $currentDepth = $this->screenManager->getDepth();
-        
+
         if ($currentDepth !== $this->lastScreenDepth) {
             // Screen changed - invalidate renderer to force full redraw
             $this->renderer->invalidate();

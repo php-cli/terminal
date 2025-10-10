@@ -58,7 +58,7 @@ final class KeyboardHandler
         "\n" => 'ENTER',      // Line feed (LF) - Unix/Mac
         "\r" => 'ENTER',      // Carriage return (CR) - Old Mac
         "\r\n" => 'ENTER',    // CRLF - Windows
-        
+
         // Other special keys
         "\t" => 'TAB',
         "\033" => 'ESCAPE',

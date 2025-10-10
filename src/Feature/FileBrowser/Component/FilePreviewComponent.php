@@ -16,7 +16,7 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  *
  * Uses composition:
  * - TextInfoComponent for file/directory metadata (with padding)
- * 
+ *
  * Note: Full file content viewing is handled by FileViewerScreen (Ctrl+R key)
  */
 final class FilePreviewComponent extends AbstractComponent

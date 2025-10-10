@@ -405,6 +405,17 @@ final class ComposerService
     }
 
     /**
+     * Run a composer script
+     *
+     * @param callable(string): void $outputCallback Called with each line of output
+     * @return array{exitCode: int, error: string}
+     */
+    public function runScript(string $scriptName, callable $outputCallback): array
+    {
+        return $this->runComposerCommand(['run-script', $scriptName], $outputCallback);
+    }
+
+    /**
      * Clear all caches
      */
     public function clearCache(): void
@@ -495,11 +506,11 @@ final class ComposerService
             $keywords = $package->getKeywords();
             $authors = \array_map(static fn($author)
                 => [
-                'name' => $author['name'] ?? null,
-                'email' => $author['email'] ?? null,
-                'homepage' => $author['homepage'] ?? null,
-                'role' => $author['role'] ?? null,
-            ], $package->getAuthors());
+                    'name' => $author['name'] ?? null,
+                    'email' => $author['email'] ?? null,
+                    'homepage' => $author['homepage'] ?? null,
+                    'role' => $author['role'] ?? null,
+                ], $package->getAuthors());
             $license = $package->getLicense();
             $support = $package->getSupport();
             $suggests = $package->getSuggests();

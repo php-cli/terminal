@@ -33,7 +33,6 @@ final class InstalledPackagesTab extends AbstractTab
     private Panel $rightPanel;
     private TableComponent $table;
     private TextDisplay $detailsDisplay;
-
     private array $packages = [];
     private ?string $selectedPackageName = null;
     private int $focusedPanelIndex = 0;
@@ -47,23 +46,10 @@ final class InstalledPackagesTab extends AbstractTab
 
     public function getTitle(): string
     {
-        $count = count($this->packages);
-        $outdatedCount = 0;
-
-        foreach ($this->packages as $package) {
-            if ($package['outdated'] !== null) {
-                $outdatedCount++;
-            }
-        }
-
-        $title = "Installed ($count)";
-        if ($outdatedCount > 0) {
-            $title .= " - $outdatedCount outdated";
-        }
-
-        return $title;
+        return 'Installed';
     }
 
+    #[\Override]
     public function getShortcuts(): array
     {
         return [
@@ -79,6 +65,7 @@ final class InstalledPackagesTab extends AbstractTab
         $this->layout->render($renderer, $x, $y, $width, $height);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // Refresh data
@@ -103,6 +90,7 @@ final class InstalledPackagesTab extends AbstractTab
         return $this->rightPanel->handleInput($key);
     }
 
+    #[\Override]
     protected function onTabActivated(): void
     {
         $this->loadData();
@@ -230,24 +218,24 @@ final class InstalledPackagesTab extends AbstractTab
     private function loadData(): void
     {
         // Load installed packages
-        $this->packages = array_map(static fn(PackageInfo $pkg)
+        $this->packages = \array_map(static fn(PackageInfo $pkg)
             => [
-            'name' => $pkg->name,
-            'version' => $pkg->version,
-            'source' => $pkg->source,
-            'description' => $pkg->description,
-            'homepage' => $pkg->homepage,
-            'keywords' => $pkg->keywords,
-            'isDirect' => $pkg->isDirect,
-            'abandoned' => $pkg->abandoned,
-            'authors' => $pkg->authors,
-            'license' => $pkg->license,
-            'requires' => $pkg->requires,
-            'devRequires' => $pkg->devRequires,
-            'autoload' => $pkg->autoload,
-            'outdated' => null,
-            'updateType' => null,
-        ], $this->composerService->getInstalledPackages());
+                'name' => $pkg->name,
+                'version' => $pkg->version,
+                'source' => $pkg->source,
+                'description' => $pkg->description,
+                'homepage' => $pkg->homepage,
+                'keywords' => $pkg->keywords,
+                'isDirect' => $pkg->isDirect,
+                'abandoned' => $pkg->abandoned,
+                'authors' => $pkg->authors,
+                'license' => $pkg->license,
+                'requires' => $pkg->requires,
+                'devRequires' => $pkg->devRequires,
+                'autoload' => $pkg->autoload,
+                'outdated' => null,
+                'updateType' => null,
+            ], $this->composerService->getInstalledPackages());
 
         // Load outdated information and merge
         $outdatedPackages = $this->composerService->getOutdatedPackages();
@@ -328,50 +316,50 @@ final class InstalledPackagesTab extends AbstractTab
 
         if (!empty($package['keywords'])) {
             $lines[] = "";
-            $lines[] = "Keywords: " . implode(', ', $package['keywords']);
+            $lines[] = "Keywords: " . \implode(', ', $package['keywords']);
         }
 
         if (!empty($package['authors'])) {
             $lines[] = "";
             $lines[] = "Authors: ";
-            foreach (array_slice($package['authors'], 0, 3) as $author) {
+            foreach (\array_slice($package['authors'], 0, 3) as $author) {
                 $lines[] = "  • " . ($author['name'] ?? 'Unknown');
             }
-            if (count($package['authors']) > 3) {
-                $lines[] = "  ... and " . (count($package['authors']) - 3) . " more";
+            if (\count($package['authors']) > 3) {
+                $lines[] = "  ... and " . (\count($package['authors']) - 3) . " more";
             }
         }
 
         if (!empty($package['license'])) {
             $lines[] = "";
-            $lines[] = "License: " . implode(', ', $package['license']);
+            $lines[] = "License: " . \implode(', ', $package['license']);
         }
 
-        $totalDeps = count($package['requires'] ?? []) + count($package['devRequires'] ?? []);
+        $totalDeps = \count($package['requires'] ?? []) + \count($package['devRequires'] ?? []);
         if ($totalDeps > 0) {
             $lines[] = "";
             $lines[] = "Dependencies: {$totalDeps} total";
             if (!empty($package['requires'])) {
-                $lines[] = "  Production: " . count($package['requires']);
+                $lines[] = "  Production: " . \count($package['requires']);
             }
             if (!empty($package['devRequires'])) {
-                $lines[] = "  Development: " . count($package['devRequires']);
+                $lines[] = "  Development: " . \count($package['devRequires']);
             }
         }
 
         if (!empty($package['autoload'])) {
-            $namespaces = array_merge(
-                array_keys($package['autoload']['psr4'] ?? []),
-                array_keys($package['autoload']['psr0'] ?? []),
+            $namespaces = \array_merge(
+                \array_keys($package['autoload']['psr4'] ?? []),
+                \array_keys($package['autoload']['psr0'] ?? []),
             );
             if (!empty($namespaces)) {
                 $lines[] = "";
-                $lines[] = "Namespaces: " . count($namespaces);
-                foreach (array_slice($namespaces, 0, 3) as $ns) {
-                    $lines[] = "  • " . rtrim((string) $ns, '\\');
+                $lines[] = "Namespaces: " . \count($namespaces);
+                foreach (\array_slice($namespaces, 0, 3) as $ns) {
+                    $lines[] = "  • " . \rtrim((string) $ns, '\\');
                 }
-                if (count($namespaces) > 3) {
-                    $lines[] = "  ... and " . (count($namespaces) - 3) . " more";
+                if (\count($namespaces) > 3) {
+                    $lines[] = "  ... and " . (\count($namespaces) - 3) . " more";
                 }
             }
         }
@@ -379,7 +367,7 @@ final class InstalledPackagesTab extends AbstractTab
         $lines[] = "";
         $lines[] = "Press Enter to view full details";
 
-        $this->detailsDisplay->setText(implode("\n", $lines));
+        $this->detailsDisplay->setText(\implode("\n", $lines));
         $this->rightPanel->setTitle("Details: {$package['name']}");
     }
 

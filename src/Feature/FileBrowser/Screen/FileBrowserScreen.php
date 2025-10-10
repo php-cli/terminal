@@ -25,6 +25,7 @@ use Butschster\Commander\UI\Screen\ScreenManager;
 final class FileBrowserScreen implements ScreenInterface
 {
     private string $currentPath;
+    private readonly string $initialPath;
     private bool $leftPanelFocused = true;
     private StatusBar $statusBar;
     private StackLayout $rootLayout;
@@ -38,7 +39,8 @@ final class FileBrowserScreen implements ScreenInterface
         private readonly ScreenManager $screenManager,
         ?string $initialPath = null,
     ) {
-        $this->currentPath = $initialPath ?? \getcwd();
+        $this->initialPath = $initialPath ?? \getcwd();
+        $this->currentPath = $this->initialPath;
 
         $this->initializeComponents();
     }
@@ -80,6 +82,13 @@ final class FileBrowserScreen implements ScreenInterface
                     if ($selectedItem !== null && !$selectedItem['isDir']) {
                         $this->openFileViewer($selectedItem['path']);
                     }
+                }
+                return true;
+
+            case 'CTRL_G':
+                // Return to initial working directory
+                if ($this->currentPath !== $this->initialPath) {
+                    $this->setCurrentPath($this->initialPath);
                 }
                 return true;
 
@@ -245,6 +254,7 @@ final class FileBrowserScreen implements ScreenInterface
                     '↑↓' => ' Navigate',
                     'Enter' => ' Open Dir',
                     'Ctrl+R' => ' View File',
+                    'Ctrl+G' => ' Home',
                     'Tab' => ' Switch',
                     'ESC' => ' Back',
                 ];
@@ -252,6 +262,7 @@ final class FileBrowserScreen implements ScreenInterface
                 $hints = [
                     '↑↓' => ' Navigate',
                     'Enter' => ' Open',
+                    'Ctrl+G' => ' Home',
                     'Tab' => ' Switch',
                     'ESC' => ' Back',
                 ];
@@ -261,6 +272,7 @@ final class FileBrowserScreen implements ScreenInterface
             $hints = [
                 '↑↓' => ' Scroll',
                 'PgUp/Dn' => ' Page',
+                'Ctrl+G' => ' Home',
                 'Tab' => ' Switch',
                 'ESC' => ' Back',
             ];

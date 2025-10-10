@@ -29,7 +29,6 @@ final class OutdatedPackagesTab extends AbstractTab
     private Panel $rightPanel;
     private TableComponent $table;
     private TextDisplay $detailsDisplay;
-
     private array $packages = [];
     private ?string $selectedPackageName = null;
     private int $focusedPanelIndex = 0;
@@ -43,10 +42,10 @@ final class OutdatedPackagesTab extends AbstractTab
 
     public function getTitle(): string
     {
-        $count = count($this->packages);
-        return "Outdated ($count)";
+        return 'Outdated';
     }
 
+    #[\Override]
     public function getShortcuts(): array
     {
         return [
@@ -62,6 +61,7 @@ final class OutdatedPackagesTab extends AbstractTab
         $this->layout->render($renderer, $x, $y, $width, $height);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // Refresh data
@@ -86,6 +86,7 @@ final class OutdatedPackagesTab extends AbstractTab
         return $this->rightPanel->handleInput($key);
     }
 
+    #[\Override]
     protected function onTabActivated(): void
     {
         // Lazy load data only when tab is first activated
@@ -149,7 +150,7 @@ final class OutdatedPackagesTab extends AbstractTab
                 'Description',
                 '*',
                 TableColumn::ALIGN_LEFT,
-                formatter: static fn($value) => mb_substr((string) $value, 0, 50) . (mb_strlen((string) $value) > 50 ? '...' : ''),
+                formatter: static fn($value) => \mb_substr((string) $value, 0, 50) . (\mb_strlen((string) $value) > 50 ? '...' : ''),
             ),
         ], showHeader: true);
 
@@ -170,20 +171,20 @@ final class OutdatedPackagesTab extends AbstractTab
 
     private function loadData(): void
     {
-        $this->packages = array_map(static fn(OutdatedPackageInfo $pkg)
+        $this->packages = \array_map(static fn(OutdatedPackageInfo $pkg)
             => [
-            'name' => $pkg->name,
-            'current' => $pkg->currentVersion,
-            'latest' => $pkg->latestVersion,
-            'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
-            'description' => $pkg->description,
-            'warning' => $pkg->warning,
-        ], $this->composerService->getOutdatedPackages());
+                'name' => $pkg->name,
+                'current' => $pkg->currentVersion,
+                'latest' => $pkg->latestVersion,
+                'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
+                'description' => $pkg->description,
+                'warning' => $pkg->warning,
+            ], $this->composerService->getOutdatedPackages());
 
         $this->table->setRows($this->packages);
 
         // Update panel title
-        $count = count($this->packages);
+        $count = \count($this->packages);
         $this->leftPanel->setTitle("Outdated Packages ($count)");
 
         // Show first package or empty state
@@ -221,7 +222,7 @@ final class OutdatedPackagesTab extends AbstractTab
         $lines[] = "";
         $lines[] = "Press Enter to update this package";
 
-        $this->detailsDisplay->setText(implode("\n", $lines));
+        $this->detailsDisplay->setText(\implode("\n", $lines));
         $this->rightPanel->setTitle("Outdated: {$package['name']}");
     }
 
