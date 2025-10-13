@@ -8,14 +8,17 @@ use Butschster\Commander\Infrastructure\Terminal\KeyboardHandler;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\Infrastructure\Terminal\TerminalManager;
 use Butschster\Commander\UI\Component\Layout\MenuBar;
+use Butschster\Commander\UI\Menu\MenuDefinition;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
+use Butschster\Commander\UI\Screen\ScreenRegistry;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
 /**
  * Main MC-style console application
  *
- * Manages the event loop, rendering, and keyboard input
+ * Manages the event loop, rendering, and keyboard input with automatic
+ * screen registration and menu system generation.
  */
 final class Application
 {
@@ -32,6 +35,12 @@ final class Application
 
     /** @var MenuBar|null Global menu bar */
     private ?MenuBar $globalMenuBar = null;
+
+    /** @var ScreenRegistry|null Screen registry for automatic navigation */
+    private ?ScreenRegistry $screenRegistry = null;
+
+    /** @var array<string, MenuDefinition> Menu system definitions */
+    private array $menuSystem = [];
 
     /** Track screen depth to detect screen changes */
     private int $lastScreenDepth = 0;
@@ -60,6 +69,43 @@ final class Application
     }
 
     /**
+     * Set screen registry (enables automatic screen navigation)
+     */
+    public function setScreenRegistry(ScreenRegistry $registry): void
+    {
+        $this->screenRegistry = $registry;
+    }
+
+    /**
+     * Set menu system from MenuBuilder
+     *
+     * Automatically registers F-key shortcuts for menu navigation.
+     *
+     * @param array<string, MenuDefinition> $menus
+     */
+    public function setMenuSystem(array $menus): void
+    {
+        $this->menuSystem = $menus;
+
+        // Build menu bar from menu definitions
+        $menuItems = [];
+        foreach ($menus as $menu) {
+            if ($menu->fkey !== null) {
+                $label = $menu->label;
+                $menuItems[$menu->fkey] = $label;
+
+                // Register F-key shortcut for menu navigation
+                $this->registerMenuShortcut($menu);
+            }
+        }
+
+        // Create global menu bar
+        if (!empty($menuItems)) {
+            $this->globalMenuBar = new MenuBar($menuItems);
+        }
+    }
+
+    /**
      * Register a global function key shortcut
      *
      * @param string $key Function key (e.g., 'F3', 'F4')
@@ -68,22 +114,6 @@ final class Application
     public function registerGlobalShortcut(string $key, callable $callback): void
     {
         $this->globalShortcuts[$key] = $callback;
-    }
-
-    /**
-     * Set global menu bar
-     */
-    public function setGlobalMenuBar(?MenuBar $menuBar): void
-    {
-        $this->globalMenuBar = $menuBar;
-    }
-
-    /**
-     * Get Symfony Application instance
-     */
-    public function getSymfonyApplication(): ?SymfonyApplication
-    {
-        return $this->symfonyApp;
     }
 
     /**
@@ -133,22 +163,6 @@ final class Application
     public function getRenderer(): Renderer
     {
         return $this->renderer;
-    }
-
-    /**
-     * Get terminal manager (for debugging/testing)
-     */
-    public function getTerminal(): TerminalManager
-    {
-        return $this->terminal;
-    }
-
-    /**
-     * Get keyboard handler (for debugging/testing)
-     */
-    public function getKeyboard(): KeyboardHandler
-    {
-        return $this->keyboard;
     }
 
     /**
@@ -217,8 +231,6 @@ final class Application
                     $this->screenManager->popScreen();
                     $this->checkScreenChange();
                 }
-                // $this->stop();
-
             }
         }
     }
@@ -262,6 +274,55 @@ final class Application
 
         // End frame (flush to terminal)
         $this->renderer->endFrame();
+    }
+
+    /**
+     * Register F-key shortcut for menu navigation
+     *
+     * When F-key is pressed, navigate to first screen in that menu category.
+     */
+    private function registerMenuShortcut(MenuDefinition $menu): void
+    {
+        if ($menu->fkey === null || $this->screenRegistry === null) {
+            return;
+        }
+
+        // Special handling for F10 (Quit)
+        if ($menu->fkey === 'F10') {
+            $this->registerGlobalShortcut('F10', fn() => $this->stop());
+            return;
+        }
+
+        // Get first screen from menu
+        $firstItem = $menu->getFirstItem();
+        if ($firstItem === null || !$firstItem->isScreen()) {
+            return;
+        }
+
+        $screenName = $firstItem->screenName;
+
+        // Register shortcut to navigate to this screen
+        $this->registerGlobalShortcut($menu->fkey, function (ScreenManager $screenManager) use ($screenName): void {
+            $screen = $this->screenRegistry?->getScreen($screenName);
+
+            if ($screen === null) {
+                return;
+            }
+
+            // Check if we're already on this screen
+            $current = $screenManager->getCurrentScreen();
+            if ($current !== null && $current::class === $screen::class) {
+                return; // Already on this screen
+            }
+
+            // Pop to root and push target screen
+            $screenManager->popUntil(static fn($s): bool => $s::class === $screen::class);
+
+            // If not found in stack, push it
+            if (!($screenManager->getCurrentScreen()::class === $screen::class)) {
+                $screenManager->pushScreen($screen);
+            }
+        });
     }
 
     /**

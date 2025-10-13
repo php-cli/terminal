@@ -14,6 +14,7 @@ use Butschster\Commander\UI\Component\Container\TabContainer;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
+use Butschster\Commander\UI\Screen\ScreenMetadata;
 
 /**
  * Composer Manager Screen
@@ -121,5 +122,15 @@ final class ComposerManagerScreen implements ScreenInterface
             'Ctrl+←/→' => 'Switch Tab',
         ]);
         $this->tabContainer->setStatusBar($statusBar, 1);
+    }
+
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::system(
+            name: 'composer_manager',
+            title: 'Composer Manager',
+            description: 'Manage Composer packages and dependencies',
+            priority: 20,
+        );
     }
 }

@@ -17,21 +17,12 @@ final class MenuBar extends AbstractComponent
      * @param array<string, string> $items Menu items (key => label)
      */
     public function __construct(
-        private array $items = [],
+        private readonly array $items = [],
     ) {}
-
-    /**
-     * Set menu items
-     *
-     * @param array<string, string> $items
-     */
-    public function setItems(array $items): void
-    {
-        $this->items = $items;
-    }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
+        trap($this->items)->once();
         $this->setBounds($x, $y, $width, $height);
 
         // Fill background
@@ -62,6 +53,7 @@ final class MenuBar extends AbstractComponent
     #[\Override]
     public function handleInput(string $key): bool
     {
+        trap($key);
         // MenuBar typically doesn't handle input directly
         // Input is handled by the application or screen
         return false;

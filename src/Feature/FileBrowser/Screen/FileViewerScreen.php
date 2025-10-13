@@ -12,6 +12,7 @@ use Butschster\Commander\UI\Component\Container\Direction;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
+use Butschster\Commander\UI\Screen\ScreenMetadata;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -212,6 +213,16 @@ final class FileViewerScreen implements ScreenInterface
             $this->metadata['type'],
             $this->metadata['mimeType'],
             $this->fileSystem->formatSize($this->metadata['size']),
+        );
+    }
+
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::files(
+            name: 'file_viewer',
+            title: 'File Viewer',
+            description: 'View and edit files',
+            priority: 20,
         );
     }
 }

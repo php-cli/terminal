@@ -16,6 +16,7 @@ use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
+use Butschster\Commander\UI\Screen\ScreenMetadata;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -359,9 +360,9 @@ final class PackageDetailsScreen implements ScreenInterface
 
         $rows = \array_map(static fn($pkg)
             => [
-                'package' => $pkg,
-                'isDirect' => false, // TODO: determine if direct
-            ], $reverseDeps);
+            'package' => $pkg,
+            'isDirect' => false, // TODO: determine if direct
+        ], $reverseDeps);
 
         $this->reverseDepsTable->setRows($rows);
         $count = \count($rows);
@@ -513,5 +514,14 @@ final class PackageDetailsScreen implements ScreenInterface
     {
         $lines = \explode("\n", \wordwrap($text, $width, "\n", false));
         return \implode("\n", \array_map(static fn($line) => "  " . $line, $lines));
+    }
+
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::system(
+            name: 'composer_package_details',
+            title: 'Package Details',
+            description: 'Shows detailed information about a Composer package',
+        );
     }
 }

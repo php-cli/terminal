@@ -15,6 +15,7 @@ use Butschster\Commander\UI\Component\Container\StackLayout;
 use Butschster\Commander\UI\Component\Container\Direction;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
+use Butschster\Commander\UI\Screen\ScreenMetadata;
 
 /**
  * File browser screen with MC-style dual-panel layout
@@ -351,5 +352,15 @@ final class FileBrowserScreen implements ScreenInterface
 
         // Update status bar to reflect new context
         $this->updateStatusBar();
+    }
+
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::files(
+            name: 'file_browser',
+            title: 'File Browser',
+            description: 'Browse and manage files and directories',
+            priority: 10,
+        );
     }
 }
