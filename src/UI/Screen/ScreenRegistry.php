@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Screen;
 
+use Butschster\Commander\UI\Screen\Attribute\Metadata;
+
 /**
  * Screen Registry - discovers and manages all registered screens
  *
@@ -23,8 +25,8 @@ final class ScreenRegistry
      */
     public function register(ScreenInterface $screen): void
     {
-        // Get metadata from screen
-        $metadata = $screen->getMetadata();
+        // Get metadata from attribute or fallback to getMetadata() method (for BC)
+        $metadata = $this->extractMetadata($screen);
 
         // Check for duplicate names
         if (isset($this->screens[$metadata->name])) {
@@ -38,19 +40,39 @@ final class ScreenRegistry
     }
 
     /**
+     * Extract metadata from screen using attribute or method
+     */
+    private function extractMetadata(ScreenInterface $screen): ScreenMetadata
+    {
+        $reflection = new \ReflectionClass($screen);
+        $attributes = $reflection->getAttributes(Metadata::class);
+
+        // Try to get metadata from attribute first
+        if (!empty($attributes)) {
+            /** @var Metadata $metadataAttr */
+            $metadataAttr = $attributes[0]->newInstance();
+
+            return new ScreenMetadata(
+                name: $metadataAttr->name,
+                title: $metadataAttr->title,
+                description: $metadataAttr->description,
+                icon: $metadataAttr->icon,
+                category: $metadataAttr->category,
+                priority: $metadataAttr->priority,
+            );
+        }
+
+        throw new \RuntimeException(
+            "Screen class {$reflection->getName()} must have either #[Metadata] attribute or getMetadata() method",
+        );
+    }
+
+    /**
      * Get screen class by name
      */
     public function getScreen(string $name): ?ScreenInterface
     {
         return $this->screens[$name] ?? null;
-    }
-
-    /**
-     * Get screen metadata by name
-     */
-    public function getMetadata(string $name): ?ScreenMetadata
-    {
-        return $this->metadata[$name] ?? null;
     }
 
     /**
@@ -87,27 +109,6 @@ final class ScreenRegistry
     }
 
     /**
-     * Get screens in a specific category
-     *
-     * @return array<ScreenMetadata>
-     */
-    public function getCategory(string $category): array
-    {
-        $screens = [];
-
-        foreach ($this->metadata as $metadata) {
-            if ($metadata->category === $category) {
-                $screens[] = $metadata;
-            }
-        }
-
-        // Sort by priority
-        \usort($screens, static fn($a, $b) => $a->priority <=> $b->priority);
-
-        return $screens;
-    }
-
-    /**
      * Check if screen is registered
      */
     public function has(string $name): bool
@@ -138,27 +139,5 @@ final class ScreenRegistry
         }
 
         return new $class(...$dependencies);
-    }
-
-    /**
-     * Get all metadata sorted by priority within categories
-     *
-     * @return array<ScreenMetadata>
-     */
-    public function getAllMetadata(): array
-    {
-        $metadata = \array_values($this->metadata);
-
-        // Sort by category first, then by priority
-        \usort($metadata, static function ($a, $b) {
-            $categoryCompare = ($a->category ?? 'z') <=> ($b->category ?? 'z');
-            if ($categoryCompare !== 0) {
-                return $categoryCompare;
-            }
-
-            return $a->priority <=> $b->priority;
-        });
-
-        return $metadata;
     }
 }

@@ -13,9 +13,9 @@ use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Component\Container\SplitLayout;
 use Butschster\Commander\UI\Component\Container\StackLayout;
 use Butschster\Commander\UI\Component\Container\Direction;
+use Butschster\Commander\UI\Screen\Attribute\Metadata;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
-use Butschster\Commander\UI\Screen\ScreenMetadata;
 
 /**
  * File browser screen with MC-style dual-panel layout
@@ -23,6 +23,13 @@ use Butschster\Commander\UI\Screen\ScreenMetadata;
  * Left panel: File list with metadata (name, size, date)
  * Right panel: File preview or directory information
  */
+#[Metadata(
+    name: 'file_browser',
+    title: 'File Browser',
+    description: 'Browse and manage files and directories',
+    category: 'files',
+    priority: 10,
+)]
 final class FileBrowserScreen implements ScreenInterface
 {
     private string $currentPath;
@@ -185,16 +192,6 @@ final class FileBrowserScreen implements ScreenInterface
                 $this->filePreview->setFileInfo($selectedItem['path']);
             }
         }
-    }
-
-    public function getMetadata(): ScreenMetadata
-    {
-        return ScreenMetadata::files(
-            name: 'file_browser',
-            title: 'File Browser',
-            description: 'Browse and manage files and directories',
-            priority: 10,
-        );
     }
 
     /**

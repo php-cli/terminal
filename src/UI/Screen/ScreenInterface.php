@@ -12,13 +12,6 @@ use Butschster\Commander\Infrastructure\Terminal\Renderer;
 interface ScreenInterface
 {
     /**
-     * Get screen metadata for registration
-     *
-     * This static method allows automatic screen discovery and menu generation.
-     */
-    public function getMetadata(): ScreenMetadata;
-
-    /**
      * Render the entire screen
      *
      * @param Renderer $renderer The renderer to draw to

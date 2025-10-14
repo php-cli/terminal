@@ -12,9 +12,9 @@ use Butschster\Commander\Feature\ComposerManager\Tab\SecurityAuditTab;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Container\TabContainer;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
+use Butschster\Commander\UI\Screen\Attribute\Metadata;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
-use Butschster\Commander\UI\Screen\ScreenMetadata;
 
 /**
  * Composer Manager Screen
@@ -28,6 +28,13 @@ use Butschster\Commander\UI\Screen\ScreenMetadata;
  * - Security audit (composer audit)
  * - Run composer scripts
  */
+#[Metadata(
+    name: 'composer_manager',
+    title: 'Composer Manager',
+    description: 'Manage Composer packages and dependencies',
+    category: 'system',
+    priority: 20,
+)]
 final class ComposerManagerScreen implements ScreenInterface
 {
     private TabContainer $tabContainer;
@@ -104,16 +111,6 @@ final class ComposerManagerScreen implements ScreenInterface
     public function getTitle(): string
     {
         return 'Composer Manager';
-    }
-
-    public function getMetadata(): ScreenMetadata
-    {
-        return ScreenMetadata::system(
-            name: 'composer_manager',
-            title: 'Composer Manager',
-            description: 'Manage Composer packages and dependencies',
-            priority: 20,
-        );
     }
 
     private function initializeComponents(): void

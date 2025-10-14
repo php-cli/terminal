@@ -18,8 +18,8 @@ use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Component\Container\GridLayout;
 use Butschster\Commander\UI\Component\Container\StackLayout;
 use Butschster\Commander\UI\Component\Container\Direction;
+use Butschster\Commander\UI\Screen\Attribute\Metadata;
 use Butschster\Commander\UI\Screen\ScreenInterface;
-use Butschster\Commander\UI\Screen\ScreenMetadata;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -42,6 +42,13 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  * │ └──────────────────────────────────────────────┘ │
  * └──────────────────────────────────────────────────┘
  */
+#[Metadata(
+    name: 'command_browser',
+    title: 'Command Browser',
+    description: 'Browse and execute Symfony console commands',
+    category: 'tools',
+    priority: 10,
+)]
 final class CommandsScreen implements ScreenInterface
 {
     // Layout components
@@ -158,16 +165,6 @@ final class CommandsScreen implements ScreenInterface
     public function getTitle(): string
     {
         return 'Command Browser';
-    }
-
-    public function getMetadata(): ScreenMetadata
-    {
-        return ScreenMetadata::tools(
-            name: 'command_browser',
-            title: 'Command Browser',
-            description: 'Browse and execute Symfony console commands',
-            priority: 10,
-        );
     }
 
     /**
