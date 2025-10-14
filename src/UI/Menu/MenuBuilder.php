@@ -34,14 +34,6 @@ final class MenuBuilder
     }
 
     /**
-     * Static factory: create builder from registry
-     */
-    public static function fromRegistry(ScreenRegistry $registry): self
-    {
-        return new self($registry);
-    }
-
-    /**
      * Set custom F-key mapping for categories
      *
      * @param array<string, string> $map Category => F-key mapping
@@ -141,15 +133,5 @@ final class MenuBuilder
     public function addSeparator(string $category): self
     {
         return $this->addItem($category, MenuItem::separator());
-    }
-
-    /**
-     * Get all menu definitions
-     *
-     * @return array<string, MenuDefinition>
-     */
-    public function getMenus(): array
-    {
-        return $this->menus;
     }
 }

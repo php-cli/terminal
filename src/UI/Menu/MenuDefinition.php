@@ -23,31 +23,6 @@ final readonly class MenuDefinition
     ) {}
 
     /**
-     * Create menu from category in ScreenRegistry
-     *
-     * @param string $label Menu label
-     * @param string|null $fkey Function key
-     * @param array<\Butschster\Commander\UI\Screen\ScreenMetadata> $screens
-     */
-    public static function fromScreens(
-        string $label,
-        ?string $fkey,
-        array $screens,
-        int $priority = 100,
-    ): self {
-        $items = [];
-
-        foreach ($screens as $metadata) {
-            $items[] = MenuItem::screen(
-                $metadata->getDisplayText(),
-                $metadata->name,
-            );
-        }
-
-        return new self($label, $fkey, $items, $priority);
-    }
-
-    /**
      * Get first non-separator item
      */
     public function getFirstItem(): ?MenuItem
