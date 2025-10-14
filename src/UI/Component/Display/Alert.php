@@ -93,9 +93,9 @@ final class Alert implements ComponentInterface
         // Center the message if it's shorter than width
         $padding = $width > $messageLength ? (int) (($width - $messageLength) / 2) : 0;
         $centeredMessage = \str_repeat(' ', $padding) . $messageText . \str_repeat(
-                ' ',
-                $width - $messageLength - $padding,
-            );
+            ' ',
+            $width - $messageLength - $padding,
+        );
 
         // Truncate if message is too long
         if ($messageLength > $width) {

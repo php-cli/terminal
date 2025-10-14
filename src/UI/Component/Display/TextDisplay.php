@@ -44,6 +44,14 @@ final class TextDisplay extends AbstractComponent
     }
 
     /**
+     * Get current text content
+     */
+    public function getText(): string
+    {
+        return \implode("\n", $this->lines);
+    }
+
+    /**
      * Append text to content
      */
     public function appendText(string $text): void

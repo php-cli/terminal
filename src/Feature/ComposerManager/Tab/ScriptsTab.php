@@ -10,12 +10,14 @@ use Butschster\Commander\UI\Component\Container\AbstractTab;
 use Butschster\Commander\UI\Component\Container\GridLayout;
 use Butschster\Commander\UI\Component\Decorator\Padding;
 use Butschster\Commander\UI\Component\Display\Alert;
+use Butschster\Commander\UI\Component\Display\Spinner;
 use Butschster\Commander\UI\Component\Display\TableColumn;
 use Butschster\Commander\UI\Component\Display\TableComponent;
 use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Layout\Modal;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Theme\ColorScheme;
+use Symfony\Component\Process\Process;
 
 /**
  * Scripts Tab
@@ -23,7 +25,8 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  * Shows all available composer scripts with:
  * - Script name
  * - Script commands
- * - Ability to execute scripts
+ * - Ability to execute scripts with real-time output
+ * - Spinner animation during execution
  */
 final class ScriptsTab extends AbstractTab
 {
@@ -38,10 +41,14 @@ final class ScriptsTab extends AbstractTab
     private bool $isExecuting = false;
     private ?Modal $activeModal = null;
     private ?Alert $statusAlert = null;
+    private ?Process $runningProcess = null;
+    private readonly Spinner $spinner;
+    private string $lastProgressLine = '';
 
     public function __construct(
         private readonly ComposerService $composerService,
     ) {
+        $this->spinner = new Spinner(Spinner::STYLE_BRAILLE, 0.1);
         $this->initializeComponents();
     }
 
@@ -53,6 +60,12 @@ final class ScriptsTab extends AbstractTab
     #[\Override]
     public function getShortcuts(): array
     {
+        if ($this->isExecuting) {
+            return [
+                'Ctrl+C' => 'Cancel',
+            ];
+        }
+
         return [
             'Tab' => 'Switch Panel',
             'Enter' => 'Run Script',
@@ -63,6 +76,13 @@ final class ScriptsTab extends AbstractTab
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
+
+        // Update right panel title with spinner during execution
+        if ($this->isExecuting && $this->selectedScript !== null) {
+            $spinnerFrame = $this->spinner->getCurrentFrame();
+            $this->rightPanel->setTitle("$spinnerFrame Running: {$this->selectedScript}");
+        }
+
         $this->layout->render($renderer, $x, $y, $width, $height);
 
         // Overlay: Status alert at top of viewport (error, success, or executing)
@@ -88,7 +108,13 @@ final class ScriptsTab extends AbstractTab
             return $this->activeModal->handleInput($key);
         }
 
-        // Priority 2: Block input during script execution
+        // Priority 2: Cancel running process with Ctrl+C
+        if ($this->isExecuting && $key === 'CTRL_C') {
+            $this->cancelExecution();
+            return true;
+        }
+
+        // Priority 3: Block other input during script execution
         if ($this->isExecuting) {
             return true;
         }
@@ -127,6 +153,18 @@ final class ScriptsTab extends AbstractTab
     {
         parent::update();
 
+        // Update spinner animation during execution
+        if ($this->isExecuting && $this->runningProcess !== null) {
+            $this->spinner->update();
+
+            // Update alert with current spinner frame
+            $spinnerFrame = $this->spinner->getCurrentFrame();
+            $this->showAlert(Alert::info("$spinnerFrame EXECUTING..."));
+
+            // Check process status and read output
+            $this->updateProcessOutput();
+        }
+
         // Auto-hide alert if expired
         if ($this->statusAlert !== null && $this->statusAlert->isExpired()) {
             $this->statusAlert = null;
@@ -159,11 +197,11 @@ final class ScriptsTab extends AbstractTab
         $this->leftPanel = new Panel('Scripts', $this->table);
         $this->leftPanel->setFocused(true);
 
-        $paddedDetails = Padding::symmetric($this->detailsDisplay, horizontal: 2, vertical: 1);
+        $paddedDetails = Padding::symmetric($this->detailsDisplay, vertical: 1, horizontal: 2);
         $this->rightPanel = new Panel('Details', $paddedDetails);
 
         // Create grid layout
-        $this->layout = new GridLayout(columns: ['40%', '60%']);
+        $this->layout = new GridLayout(columns: ['30%', '70%']);
         $this->layout->setColumn(0, $this->leftPanel);
         $this->layout->setColumn(1, $this->rightPanel);
     }
@@ -280,7 +318,11 @@ final class ScriptsTab extends AbstractTab
         $lines[] = "Press Enter to run this script";
 
         $this->detailsDisplay->setText(\implode("\n", $lines));
-        $this->rightPanel->setTitle("Details: {$script['name']}");
+
+        // Only update title if not currently executing
+        if (!$this->isExecuting) {
+            $this->rightPanel->setTitle("Details: {$script['name']}");
+        }
     }
 
     private function runScript(string $scriptName): void
@@ -295,9 +337,14 @@ final class ScriptsTab extends AbstractTab
     private function performScriptExecution(string $scriptName): void
     {
         $this->isExecuting = true;
+        $this->lastProgressLine = '';
 
-        // Show executing alert
-        $this->showAlert(Alert::info('EXECUTING...'));
+        // Start spinner
+        $this->spinner->start();
+
+        // Show executing alert with spinner
+        $spinnerFrame = $this->spinner->getCurrentFrame();
+        $this->showAlert(Alert::info("$spinnerFrame EXECUTING..."));
 
         // Switch focus to right panel to show output
         $this->focusedPanelIndex = 1;
@@ -308,42 +355,248 @@ final class ScriptsTab extends AbstractTab
         $this->rightPanel->setTitle("Running: $scriptName");
 
         try {
-            $hasOutput = false;
-
-            // Execute script
-            $result = $this->composerService->runScript($scriptName, function (string $line) use (&$hasOutput): void {
-                // Strip ANSI escape codes and normalize line endings
-                $cleaned = $this->cleanOutput($line);
-                if ($cleaned !== '') {
-                    $this->detailsDisplay->appendText($cleaned);
-                    $hasOutput = true;
-                }
-            });
-
-            // If no output was produced, show a message
-            if (!$hasOutput) {
-                $this->detailsDisplay->appendText("(No output from script)\n");
+            // Find composer binary
+            $composerBinary = $this->findComposerBinary();
+            if ($composerBinary === null) {
+                throw new \RuntimeException('Composer binary not found');
             }
 
-            // Display result
-            $this->detailsDisplay->appendText("\n" . \str_repeat('─', 50) . "\n");
+            // Create process
+            $this->runningProcess = new Process(
+                [$composerBinary, 'run-script', $scriptName],
+                \getcwd(),
+                null,
+                null,
+                null, // No timeout
+            );
 
-            if ($result['exitCode'] === 0) {
-                $this->detailsDisplay->appendText("✅ Success (exit code: 0)\n");
-                $this->showAlert(Alert::success('SUCCESS'));
-            } else {
-                $this->detailsDisplay->appendText("❌ Failed (exit code: {$result['exitCode']})\n");
-                $this->showAlert(Alert::error('FAILED'));
-            }
-
-            $this->detailsDisplay->appendText("\nPress Enter to run again, Tab to select another script.");
+            // Start process
+            $this->runningProcess->start();
+            // Note: Output will be read in update() method for real-time display
         } catch (\Throwable $e) {
             $this->detailsDisplay->appendText("\n❌ EXCEPTION\n" . \str_repeat('─', 50) . "\n");
             $this->detailsDisplay->appendText($e->getMessage() . "\n");
             $this->detailsDisplay->appendText("\nPress Enter to run again, Tab to select another script.");
             $this->showAlert(Alert::error('EXCEPTION'));
+            $this->isExecuting = false;
+            $this->runningProcess = null;
+            $this->spinner->stop();
+        }
+    }
+
+    /**
+     * Update process output in real-time
+     */
+    private function updateProcessOutput(): void
+    {
+        if ($this->runningProcess === null) {
+            return;
+        }
+
+        // Read incremental output (non-blocking)
+        $output = $this->runningProcess->getIncrementalOutput();
+        $errorOutput = $this->runningProcess->getIncrementalErrorOutput();
+
+        // Process and append output
+        if ($output !== '') {
+            $this->processOutput($output);
+        }
+
+        if ($errorOutput !== '') {
+            $this->processOutput($errorOutput);
+        }
+
+        // Check if process finished
+        if (!$this->runningProcess->isRunning()) {
+            $this->handleProcessCompletion();
+        }
+    }
+
+    /**
+     * Process output handling carriage returns for progress bars
+     */
+    private function processOutput(string $output): void
+    {
+        // Remove ANSI escape sequences first
+        $output = $this->stripAnsiCodes($output);
+
+        // Process character by character to handle \r and \n correctly
+        $buffer = '';
+        $len = \strlen($output);
+
+        for ($i = 0; $i < $len; $i++) {
+            $char = $output[$i];
+            if ($char === "\r") {
+                // Carriage return - this line will be overwritten
+                if ($buffer !== '') {
+                    // If we have a previous progress line, replace it
+                    if ($this->lastProgressLine !== '') {
+                        $this->replaceLastLine($buffer);
+                    } else {
+                        // First progress line - append it
+                        $this->detailsDisplay->appendText($buffer);
+                    }
+                    $this->lastProgressLine = $buffer;
+                    $buffer = '';
+                }
+            } elseif ($char === "\n") {
+                // Newline - finalize the line
+                if ($this->lastProgressLine !== '') {
+                    // We had a progress line, replace it with final content
+                    if ($buffer !== '') {
+                        $this->replaceLastLine($buffer . "\n");
+                    } else {
+                        // Just add newline to existing progress line
+                        $this->detailsDisplay->appendText("\n");
+                    }
+                    $this->lastProgressLine = '';
+                } else {
+                    // Normal line
+                    $this->detailsDisplay->appendText($buffer . "\n");
+                }
+                $buffer = '';
+            } else {
+                $buffer .= $char;
+            }
+        }
+
+        // Handle remaining buffer
+        if ($buffer !== '') {
+            if ($this->lastProgressLine !== '') {
+                // Update progress line
+                $this->replaceLastLine($buffer);
+                $this->lastProgressLine = $buffer;
+            } else {
+                // Append to output
+                $this->detailsDisplay->appendText($buffer);
+            }
+        }
+    }
+
+    /**
+     * Replace the last line in the display
+     */
+    private function replaceLastLine(string $newLine): void
+    {
+        $currentText = $this->detailsDisplay->getText();
+        $lines = \explode("\n", $currentText);
+
+        if (!empty($lines)) {
+            // Replace the last line
+            $lines[\count($lines) - 1] = $newLine;
+            $this->detailsDisplay->setText(\implode("\n", $lines));
+        }
+    }
+
+    /**
+     * Strip ANSI escape codes from output
+     */
+    private function stripAnsiCodes(string $output): string
+    {
+        // Remove ANSI escape sequences (colors, cursor movements, etc.)
+        $output = \preg_replace('/\x1b\[[0-9;]*[a-zA-Z]/', '', $output);
+
+        // Remove ANSI OSC sequences (e.g., setting terminal title)
+        $output = \preg_replace('/\x1b\][^\x07]*\x07/', '', (string) $output);
+
+        // Remove other control sequences
+        $output = \preg_replace('/\x1b[><=]/', '', (string) $output);
+
+        return $output;
+    }
+
+    /**
+     * Handle process completion
+     */
+    private function handleProcessCompletion(): void
+    {
+        if ($this->runningProcess === null) {
+            return;
+        }
+
+        $exitCode = $this->runningProcess->getExitCode();
+
+        // Display result
+        $this->detailsDisplay->appendText("\n" . \str_repeat('─', 50) . "\n");
+
+        if ($exitCode === 0) {
+            $this->detailsDisplay->appendText("✅ Success (exit code: 0)\n");
+            $this->showAlert(Alert::success('SUCCESS'));
+        } else {
+            $this->detailsDisplay->appendText("❌ Failed (exit code: {$exitCode})\n");
+            $this->showAlert(Alert::error('FAILED'));
+        }
+
+        $this->detailsDisplay->appendText("\nPress Enter to run again, Tab to select another script.");
+
+        // Cleanup
+        $this->isExecuting = false;
+        $this->runningProcess = null;
+        $this->spinner->stop();
+    }
+
+    /**
+     * Find composer binary
+     */
+    private function findComposerBinary(): ?string
+    {
+        // Try common locations
+        $candidates = [
+            'composer',           // In PATH
+            'composer.phar',      // Local phar
+            '/usr/local/bin/composer',
+            '/usr/bin/composer',
+            $_SERVER['HOME'] . '/.composer/composer.phar',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($this->isExecutable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if a file is executable
+     */
+    private function isExecutable(string $file): bool
+    {
+        // Try to execute with --version
+        try {
+            $process = new Process([$file, '--version']);
+            $process->run();
+            return $process->isSuccessful() && \stripos($process->getOutput(), 'composer') !== false;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Cancel running process
+     */
+    private function cancelExecution(): void
+    {
+        if ($this->runningProcess === null) {
+            return;
+        }
+
+        try {
+            $this->runningProcess->stop(3, SIGTERM); // Give 3 seconds to gracefully stop
+
+            $this->detailsDisplay->appendText("\n\n" . \str_repeat('─', 50) . "\n");
+            $this->detailsDisplay->appendText("⚠️  Cancelled by user\n");
+            $this->detailsDisplay->appendText("\nPress Enter to run again, Tab to select another script.");
+
+            $this->showAlert(Alert::warning('CANCELLED'));
+        } catch (\Throwable $e) {
+            $this->detailsDisplay->appendText("\n\n❌ Error cancelling process: {$e->getMessage()}\n");
+            $this->showAlert(Alert::error('ERROR'));
         } finally {
             $this->isExecuting = false;
+            $this->runningProcess = null;
+            $this->spinner->stop();
         }
     }
 
@@ -361,14 +614,5 @@ final class ScriptsTab extends AbstractTab
     private function showAlert(Alert $alert): void
     {
         $this->statusAlert = $alert;
-    }
-
-    /**
-     * Clean output by removing ANSI escape codes and normalizing line endings
-     */
-    private function cleanOutput(string $output): string
-    {
-        // Normalize line endings (convert \r\n and \r to \n)
-        return \str_replace(["\r\n", "\r"], ["\n", "\n"], $output);
     }
 }

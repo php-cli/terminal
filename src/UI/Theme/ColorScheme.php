@@ -56,32 +56,6 @@ final class ColorScheme
     public const string BLINK = "\033[5m";
     public const string REVERSE = "\033[7m";
 
-    // Theme-aware color getters (use current theme)
-    public static string $NORMAL_BG;
-    public static string $NORMAL_FG;
-    public static string $NORMAL_TEXT;
-    public static string $MENU_BG;
-    public static string $MENU_FG;
-    public static string $MENU_TEXT;
-    public static string $MENU_HOTKEY;
-    public static string $STATUS_BG;
-    public static string $STATUS_FG;
-    public static string $STATUS_TEXT;
-    public static string $STATUS_KEY;
-    public static string $SELECTED_BG;
-    public static string $SELECTED_FG;
-    public static string $SELECTED_TEXT;
-    public static string $ACTIVE_BORDER;
-    public static string $INACTIVE_BORDER;
-    public static string $INPUT_BG;
-    public static string $INPUT_FG;
-    public static string $INPUT_TEXT;
-    public static string $INPUT_CURSOR;
-    public static string $SCROLLBAR;
-    public static string $ERROR_TEXT;
-    public static string $WARNING_TEXT;
-    public static string $HIGHLIGHT_TEXT;
-
     // Backward compatibility - use constants for default theme
     public const string NORMAL_BG = self::BG_BLUE;
     public const string NORMAL_FG = self::FG_WHITE;
@@ -107,6 +81,32 @@ final class ColorScheme
     public const string ERROR_TEXT = self::BG_BLUE . self::FG_RED;
     public const string WARNING_TEXT = self::BG_BLUE . self::FG_YELLOW;
     public const string HIGHLIGHT_TEXT = self::BG_BLUE . self::FG_BRIGHT_WHITE . self::BOLD;
+
+    // Theme-aware color getters (use current theme)
+    public static string $NORMAL_BG;
+    public static string $NORMAL_FG;
+    public static string $NORMAL_TEXT;
+    public static string $MENU_BG;
+    public static string $MENU_FG;
+    public static string $MENU_TEXT;
+    public static string $MENU_HOTKEY;
+    public static string $STATUS_BG;
+    public static string $STATUS_FG;
+    public static string $STATUS_TEXT;
+    public static string $STATUS_KEY;
+    public static string $SELECTED_BG;
+    public static string $SELECTED_FG;
+    public static string $SELECTED_TEXT;
+    public static string $ACTIVE_BORDER;
+    public static string $INACTIVE_BORDER;
+    public static string $INPUT_BG;
+    public static string $INPUT_FG;
+    public static string $INPUT_TEXT;
+    public static string $INPUT_CURSOR;
+    public static string $SCROLLBAR;
+    public static string $ERROR_TEXT;
+    public static string $WARNING_TEXT;
+    public static string $HIGHLIGHT_TEXT;
 
     /**
      * Initialize theme colors from current theme
