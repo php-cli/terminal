@@ -13,5 +13,3 @@ enum SizeType
     case PERCENTAGE; // Percentage of available space
     case FRACTION;   // Fractional unit (shares remaining space)
 }
-
-
