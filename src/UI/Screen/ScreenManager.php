@@ -129,13 +129,25 @@ final class ScreenManager
 
     /**
      * Render the current screen
+     *
+     * @param int $x X position offset
+     * @param int $y Y position offset
+     * @param int $width Available width
+     * @param int $height Available height
      */
-    public function render(Renderer $renderer): void
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
         $screen = $this->getCurrentScreen();
 
         if ($screen) {
-            $screen->render($renderer);
+            // If width/height not specified, use full renderer size minus offset
+            if ($width === null || $height === null) {
+                $size = $renderer->getSize();
+                $width = $size['width'] - $x;
+                $height = $size['height'] - $y;
+            }
+
+            $screen->render($renderer, $x, $y, $width, $height);
         }
     }
 

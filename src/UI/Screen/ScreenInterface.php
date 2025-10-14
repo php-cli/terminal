@@ -22,8 +22,12 @@ interface ScreenInterface
      * Render the entire screen
      *
      * @param Renderer $renderer The renderer to draw to
+     * @param int $x X position offset (typically 0)
+     * @param int $y Y position offset (typically 1 to account for menu bar)
+     * @param int $width Available width
+     * @param int $height Available height
      */
-    public function render(Renderer $renderer): void;
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void;
 
     /**
      * Handle keyboard input

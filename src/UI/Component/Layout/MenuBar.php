@@ -22,7 +22,6 @@ final class MenuBar extends AbstractComponent
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
-        trap($this->items)->once();
         $this->setBounds($x, $y, $width, $height);
 
         // Fill background
@@ -53,7 +52,6 @@ final class MenuBar extends AbstractComponent
     #[\Override]
     public function handleInput(string $key): bool
     {
-        trap($key);
         // MenuBar typically doesn't handle input directly
         // Input is handled by the application or screen
         return false;

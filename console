@@ -6,6 +6,7 @@ declare(strict_types=1);
 require __DIR__ . '/vendor/autoload.php';
 
 use Butschster\Commander\Application;
+use Butschster\Commander\ExceptionRenderer;
 use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
@@ -31,8 +32,8 @@ ColorScheme::applyTheme(new MidnightTheme());
 
 // Create and run the MC-style application
 try {
-    $app = new Application($symfonyApp);
-    $app->setTargetFps(5);
+    $app = new Application();
+    $app->setTargetFps(30);
 
     // 1. Create screen registry
     $registry = new ScreenRegistry();
@@ -53,7 +54,7 @@ try {
     $menuBuilder = new MenuBuilder($registry);
     $app->setMenuSystem($menuBuilder->build());
 
-    // 5. Start with first registered screen
+    // 4. Start with first registered screen
     $firstScreen = $registry->getScreen('command_browser');
     if ($firstScreen === null) {
         throw new \RuntimeException('No screens registered');
@@ -61,13 +62,7 @@ try {
 
     $app->run($firstScreen);
 } catch (\Throwable $e) {
-    // Restore terminal on error
-    echo "\033[?25h";  // Show cursor
-    echo "\033[?1049l"; // Exit alternate screen
-    echo "\033[0m";     // Reset colors
-
-    echo "Error: " . $e->getMessage() . "\n";
-    echo $e->getTraceAsString() . "\n";
+    echo (new ExceptionRenderer())->render($e, true);
 
     exit(1);
 }

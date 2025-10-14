@@ -40,7 +40,7 @@ final class FileViewerScreen implements ScreenInterface
         $this->loadFile();
     }
 
-    public function render(Renderer $renderer): void
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
         $size = $renderer->getSize();
         $width = $size['width'];
@@ -100,6 +100,16 @@ final class FileViewerScreen implements ScreenInterface
     public function getFilePath(): string
     {
         return $this->filePath;
+    }
+
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::files(
+            name: 'file_viewer',
+            title: 'File Viewer',
+            description: 'View and edit files',
+            priority: 20,
+        );
     }
 
     /**
@@ -213,16 +223,6 @@ final class FileViewerScreen implements ScreenInterface
             $this->metadata['type'],
             $this->metadata['mimeType'],
             $this->fileSystem->formatSize($this->metadata['size']),
-        );
-    }
-
-    public function getMetadata(): ScreenMetadata
-    {
-        return ScreenMetadata::files(
-            name: 'file_viewer',
-            title: 'File Viewer',
-            description: 'View and edit files',
-            priority: 20,
         );
     }
 }

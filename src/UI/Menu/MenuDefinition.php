@@ -28,7 +28,6 @@ final readonly class MenuDefinition
      * @param string $label Menu label
      * @param string|null $fkey Function key
      * @param array<\Butschster\Commander\UI\Screen\ScreenMetadata> $screens
-     * @param int $priority
      */
     public static function fromScreens(
         string $label,

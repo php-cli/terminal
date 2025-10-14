@@ -7,12 +7,11 @@ namespace Butschster\Commander;
 use Butschster\Commander\Infrastructure\Terminal\KeyboardHandler;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\Infrastructure\Terminal\TerminalManager;
-use Butschster\Commander\UI\Component\Layout\MenuBar;
+use Butschster\Commander\UI\Component\Layout\MenuSystem;
 use Butschster\Commander\UI\Menu\MenuDefinition;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
 use Butschster\Commander\UI\Screen\ScreenRegistry;
-use Symfony\Component\Console\Application as SymfonyApplication;
 
 /**
  * Main MC-style console application
@@ -33,19 +32,16 @@ final class Application
     /** @var array<string, callable> Global function key shortcuts */
     private array $globalShortcuts = [];
 
-    /** @var MenuBar|null Global menu bar */
-    private ?MenuBar $globalMenuBar = null;
+    /** @var MenuSystem|null Global menu system (menu bar + dropdowns) */
+    private ?MenuSystem $menuSystem = null;
 
     /** @var ScreenRegistry|null Screen registry for automatic navigation */
     private ?ScreenRegistry $screenRegistry = null;
 
-    /** @var array<string, MenuDefinition> Menu system definitions */
-    private array $menuSystem = [];
-
     /** Track screen depth to detect screen changes */
     private int $lastScreenDepth = 0;
 
-    public function __construct(private readonly ?SymfonyApplication $symfonyApp = null)
+    public function __construct()
     {
         $this->frameTime = 1.0 / $this->targetFps;
 
@@ -85,24 +81,22 @@ final class Application
      */
     public function setMenuSystem(array $menus): void
     {
-        $this->menuSystem = $menus;
-
-        // Build menu bar from menu definitions
-        $menuItems = [];
-        foreach ($menus as $menu) {
-            if ($menu->fkey !== null) {
-                $label = $menu->label;
-                $menuItems[$menu->fkey] = $label;
-
-                // Register F-key shortcut for menu navigation
-                $this->registerMenuShortcut($menu);
-            }
+        if ($this->screenRegistry === null) {
+            throw new \RuntimeException('Screen registry must be set before menu system');
         }
 
-        // Create global menu bar
-        if (!empty($menuItems)) {
-            $this->globalMenuBar = new MenuBar($menuItems);
-        }
+        // Create MenuSystem component
+        $this->menuSystem = new MenuSystem(
+            $menus,
+            $this->screenRegistry,
+            $this->screenManager,
+        );
+
+        // Set quit callback
+        $this->menuSystem->onQuit(fn() => $this->stop());
+
+        // Note: F-key shortcuts are now handled by MenuSystem itself
+        // No need to register them separately as global shortcuts
     }
 
     /**
@@ -203,9 +197,19 @@ final class Application
     private function handleInput(): void
     {
         while (($key = $this->keyboard->getKey()) !== null) {
-            // Global shortcuts have highest priority
+            // Priority 1: Menu system (handles both dropdown when open AND F-key presses)
+            if ($this->menuSystem !== null) {
+                $handled = $this->menuSystem->handleInput($key);
+                if ($handled) {
+                    $this->checkScreenChange();
+                    continue;
+                }
+            }
+
+            // Priority 2: Global shortcuts (Ctrl+C, custom shortcuts)
             if (isset($this->globalShortcuts[$key])) {
                 $callback = $this->globalShortcuts[$key];
+
                 $callback($this->screenManager);
 
                 // Invalidate renderer after global shortcut (likely changed screen)
@@ -213,19 +217,13 @@ final class Application
                 continue;
             }
 
-            // Global shortcuts
-            if ($key === 'CTRL_C') {
-                $this->stop();
-                return;
-            }
-
-            // Route to screen manager
+            // Priority 4: Route to current screen
             $handled = $this->screenManager->handleInput($key);
 
             // Check if screen changed (e.g., via navigation in the current screen)
             $this->checkScreenChange();
 
-            // If not handled and ESC pressed, go back
+            // Priority 5: ESC to go back (if not handled by screen)
             if (!$handled && $key === 'ESCAPE') {
                 if ($this->screenManager->getDepth() > 1) {
                     $this->screenManager->popScreen();
@@ -264,13 +262,19 @@ final class Application
         $width = $size['width'];
         $height = $size['height'];
 
-        // Render global menu bar at top if set
-        if ($this->globalMenuBar !== null) {
-            $this->globalMenuBar->render($this->renderer, 0, 0, $width, 1);
+        // 1. Render menu bar at top
+        $menuHeight = 1;
+        if ($this->menuSystem !== null) {
+            $this->menuSystem->render($this->renderer, 0, 0, $width, $height);
         }
 
-        // Render current screen (screen handles its own status bar)
-        $this->screenManager->render($this->renderer);
+        // 2. Render current screen below menu
+        $this->screenManager->render($this->renderer, 0, $menuHeight, $width, $height - $menuHeight);
+
+        // 3. Render dropdown LAST (on top of everything)
+        if ($this->menuSystem !== null) {
+            $this->menuSystem->renderDropdown($this->renderer, 0, 0, $width, $height);
+        }
 
         // End frame (flush to terminal)
         $this->renderer->endFrame();
@@ -312,14 +316,24 @@ final class Application
             // Check if we're already on this screen
             $current = $screenManager->getCurrentScreen();
             if ($current !== null && $current::class === $screen::class) {
-                return; // Already on this screen
+                // Already on this screen, don't navigate
+                return;
             }
 
-            // Pop to root and push target screen
-            $screenManager->popUntil(static fn($s): bool => $s::class === $screen::class);
+            // Check if screen is already in stack
+            $found = false;
+            foreach ($screenManager->getStack() as $stackScreen) {
+                if ($stackScreen::class === $screen::class) {
+                    $found = true;
+                    break;
+                }
+            }
 
-            // If not found in stack, push it
-            if (!($screenManager->getCurrentScreen()::class === $screen::class)) {
+            if ($found) {
+                // Screen already in stack, pop until we reach it
+                $screenManager->popUntil(static fn($s): bool => $s::class === $screen::class);
+            } else {
+                // Not in stack, push it
                 $screenManager->pushScreen($screen);
             }
         });

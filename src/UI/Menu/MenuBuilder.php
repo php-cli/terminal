@@ -13,16 +13,16 @@ use Butschster\Commander\UI\Screen\ScreenRegistry;
  */
 final class MenuBuilder
 {
-    /** @var array<string, MenuDefinition> */
-    private array $menus = [];
-
     /** Default F-key assignments for categories */
     private const array DEFAULT_FKEY_MAP = [
-        'tools' => 'F9',
-        'files' => 'F10',
-        'system' => 'F11',
         'help' => 'F1',
+        'tools' => 'F2',
+        'files' => 'F3',
+        'system' => 'F4',
     ];
+
+    /** @var array<string, MenuDefinition> */
+    private array $menus = [];
 
     /** @var array<string, string> Custom F-key assignments */
     private array $fkeyMap = [];
@@ -31,6 +31,14 @@ final class MenuBuilder
         private readonly ScreenRegistry $registry,
     ) {
         $this->fkeyMap = self::DEFAULT_FKEY_MAP;
+    }
+
+    /**
+     * Static factory: create builder from registry
+     */
+    public static function fromRegistry(ScreenRegistry $registry): self
+    {
+        return new self($registry);
     }
 
     /**
@@ -82,23 +90,19 @@ final class MenuBuilder
             );
         }
 
-        // Add quit menu item to last menu
-        if (!empty($this->menus)) {
-            $lastCategory = \array_key_last($this->menus);
-            $lastMenu = $this->menus[$lastCategory];
-
-            // Add separator and quit item
-            $items = $lastMenu->items;
-            $items[] = MenuItem::separator();
-            $items[] = MenuItem::action('Quit', fn() => null, 'q');
-
-            $this->menus[$lastCategory] = new MenuDefinition(
-                $lastMenu->label,
-                $lastMenu->fkey,
-                $items,
-                $lastMenu->priority,
-            );
-        }
+        // Add standalone Quit menu with F10
+        // Note: The quit action will be handled by Application via a special marker
+        $this->menus['quit'] = new MenuDefinition(
+            'Quit',
+            'F10',
+            [
+                MenuItem::action('Quit', static function (): void {
+                    // This is a marker action that MenuSystem will recognize
+                    // It will be handled by Application to actually stop
+                }, 'q'),
+            ],
+            999, // High priority to appear last
+        );
 
         return $this->menus;
     }
@@ -147,13 +151,5 @@ final class MenuBuilder
     public function getMenus(): array
     {
         return $this->menus;
-    }
-
-    /**
-     * Static factory: create builder from registry
-     */
-    public static function fromRegistry(ScreenRegistry $registry): self
-    {
-        return new self($registry);
     }
 }

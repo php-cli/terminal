@@ -62,12 +62,17 @@ final class ComposerManagerScreen implements ScreenInterface
 
     // ScreenInterface implementation
 
-    public function render(Renderer $renderer): void
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
-        $size = $renderer->getSize();
+        // Get actual size if not provided
+        if ($width === null || $height === null) {
+            $size = $renderer->getSize();
+            $width ??= $size['width'] - $x;
+            $height ??= $size['height'] - $y;
+        }
 
         // Render tab container (includes tab headers, content, and status bar)
-        $this->tabContainer->render($renderer, 0, 1, $size['width'], $size['height'] - 1);
+        $this->tabContainer->render($renderer, $x, $y, $width, $height);
     }
 
     public function handleInput(string $key): bool
@@ -101,6 +106,16 @@ final class ComposerManagerScreen implements ScreenInterface
         return 'Composer Manager';
     }
 
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::system(
+            name: 'composer_manager',
+            title: 'Composer Manager',
+            description: 'Manage Composer packages and dependencies',
+            priority: 20,
+        );
+    }
+
     private function initializeComponents(): void
     {
         // Create tabs
@@ -122,15 +137,5 @@ final class ComposerManagerScreen implements ScreenInterface
             'Ctrl+←/→' => 'Switch Tab',
         ]);
         $this->tabContainer->setStatusBar($statusBar, 1);
-    }
-
-    public function getMetadata(): ScreenMetadata
-    {
-        return ScreenMetadata::system(
-            name: 'composer_manager',
-            title: 'Composer Manager',
-            description: 'Manage Composer packages and dependencies',
-            priority: 20,
-        );
     }
 }

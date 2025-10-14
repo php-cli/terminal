@@ -79,7 +79,7 @@ final class ScreenRegistry
 
         // Sort each category by priority
         foreach ($grouped as $category => $screens) {
-            \usort($screens, fn($a, $b) => $a->priority <=> $b->priority);
+            \usort($screens, static fn($a, $b) => $a->priority <=> $b->priority);
             $grouped[$category] = $screens;
         }
 
@@ -102,7 +102,7 @@ final class ScreenRegistry
         }
 
         // Sort by priority
-        \usort($screens, fn($a, $b) => $a->priority <=> $b->priority);
+        \usort($screens, static fn($a, $b) => $a->priority <=> $b->priority);
 
         return $screens;
     }
@@ -128,7 +128,6 @@ final class ScreenRegistry
      *
      * @param string $name Screen name
      * @param array<mixed> $dependencies Constructor dependencies
-     * @return ScreenInterface
      */
     public function create(string $name, array $dependencies = []): ScreenInterface
     {
@@ -151,7 +150,7 @@ final class ScreenRegistry
         $metadata = \array_values($this->metadata);
 
         // Sort by category first, then by priority
-        \usort($metadata, function ($a, $b) {
+        \usort($metadata, static function ($a, $b) {
             $categoryCompare = ($a->category ?? 'z') <=> ($b->category ?? 'z');
             if ($categoryCompare !== 0) {
                 return $categoryCompare;

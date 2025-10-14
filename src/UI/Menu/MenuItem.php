@@ -58,9 +58,7 @@ final readonly class MenuItem
     /**
      * Create a submenu
      *
-     * @param string $label
      * @param array<MenuItem> $items
-     * @param string|null $hotkey
      */
     public static function submenu(string $label, array $items, ?string $hotkey = null): self
     {

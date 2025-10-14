@@ -19,16 +19,6 @@ final readonly class ScreenMetadata
     ) {}
 
     /**
-     * Get display text with icon
-     */
-    public function getDisplayText(): string
-    {
-        return $this->icon !== null
-            ? "{$this->icon} {$this->title}"
-            : $this->title;
-    }
-
-    /**
      * Create metadata for a screen in Files category
      */
     public static function files(
@@ -78,5 +68,15 @@ final readonly class ScreenMetadata
         int $priority = 100,
     ): self {
         return new self($name, $title, $description, $icon, 'help', $priority);
+    }
+
+    /**
+     * Get display text with icon
+     */
+    public function getDisplayText(): string
+    {
+        return $this->icon !== null
+            ? "{$this->icon} {$this->title}"
+            : $this->title;
     }
 }

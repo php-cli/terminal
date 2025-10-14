@@ -59,7 +59,7 @@ final class PackageDetailsScreen implements ScreenInterface
         $this->loadData();
     }
 
-    public function render(Renderer $renderer): void
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
         $size = $renderer->getSize();
         $this->rootLayout->render($renderer, 0, 1, $size['width'], $size['height'] - 1);
@@ -107,6 +107,15 @@ final class PackageDetailsScreen implements ScreenInterface
         return "Package Details: {$this->packageName}";
     }
 
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::system(
+            name: 'composer_package_details',
+            title: 'Package Details',
+            description: 'Shows detailed information about a Composer package',
+        );
+    }
+
     private function initializeComponents(): void
     {
         // Create tab content
@@ -116,7 +125,7 @@ final class PackageDetailsScreen implements ScreenInterface
         $this->autoloadDisplay = new TextDisplay();
 
         // Create main panel with padded info display
-        $paddedInfo = Padding::symmetric($this->infoDisplay, horizontal: 2, vertical: 1);
+        $paddedInfo = Padding::symmetric($this->infoDisplay, vertical: 1, horizontal: 2);
         $this->mainPanel = new Panel('Package Details', $paddedInfo);
         $this->mainPanel->setFocused(true);
 
@@ -360,9 +369,9 @@ final class PackageDetailsScreen implements ScreenInterface
 
         $rows = \array_map(static fn($pkg)
             => [
-            'package' => $pkg,
-            'isDirect' => false, // TODO: determine if direct
-        ], $reverseDeps);
+                'package' => $pkg,
+                'isDirect' => false, // TODO: determine if direct
+            ], $reverseDeps);
 
         $this->reverseDepsTable->setRows($rows);
         $count = \count($rows);
@@ -514,14 +523,5 @@ final class PackageDetailsScreen implements ScreenInterface
     {
         $lines = \explode("\n", \wordwrap($text, $width, "\n", false));
         return \implode("\n", \array_map(static fn($line) => "  " . $line, $lines));
-    }
-
-    public function getMetadata(): ScreenMetadata
-    {
-        return ScreenMetadata::system(
-            name: 'composer_package_details',
-            title: 'Package Details',
-            description: 'Shows detailed information about a Composer package',
-        );
     }
 }
