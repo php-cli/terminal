@@ -147,7 +147,17 @@ final class InstalledPackagesTab extends AbstractTab
                     return ColorScheme::$NORMAL_TEXT;
                 },
             ),
-            new TableColumn('version', 'Version', '15%', TableColumn::ALIGN_LEFT),
+            new TableColumn(
+                'version',
+                'Version',
+                '15%',
+                TableColumn::ALIGN_LEFT,
+                colorizer: function ($value, $row, $selected) {
+                    return $selected && $this->leftPanel->isFocused()
+                        ? ColorScheme::$SELECTED_TEXT
+                        : ColorScheme::$NORMAL_TEXT;
+                },
+            ),
             new TableColumn(
                 'outdated',
                 'Outdated',

@@ -19,6 +19,16 @@ documents:
           - src/UI/Component/Decorator
           - src/UI/Component/Layout
 
+  - description: Table component
+    outputPath: table.md
+    sources:
+      - type: file
+        sourcePaths:
+          - src/UI/Component/Display/TableComponent.php
+          - src/UI/Component/Display/TableColumn.php
+          - src/Feature/ComposerManager/Tab/InstalledPackagesTab.php
+          - console
+
   - description: Menu
     outputPath: menu.md
     sources:

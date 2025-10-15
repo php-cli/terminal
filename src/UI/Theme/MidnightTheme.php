@@ -61,7 +61,16 @@ final class MidnightTheme extends AbstractTheme
 
     public function getSelectedFg(): string
     {
-        return ColorScheme::FG_BLACK;
+        return ColorScheme::FG_WHITE;
+    }
+
+    public function getSelectedText(): string
+    {
+        return ColorScheme::combine(
+            ColorScheme::BG_CYAN,
+            ColorScheme::FG_WHITE,
+            ColorScheme::BOLD
+        );
     }
 
     public function getActiveBorder(): string
