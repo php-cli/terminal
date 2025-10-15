@@ -598,7 +598,7 @@ final class CommandsScreen implements ScreenInterface
 
         // Create output display with padding
         $this->outputDisplay = new TextDisplay();
-        $paddedOutput = Padding::symmetric($this->outputDisplay, horizontal: 2, vertical: 1);
+        $paddedOutput = Padding::symmetric($this->outputDisplay, vertical: 1, horizontal: 2);
         $this->rightPanel->setTitle("Output: {$this->selectedCommand->name}");
         $this->rightPanel->setContent($paddedOutput);
 

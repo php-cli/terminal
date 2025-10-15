@@ -9,13 +9,15 @@ use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Component\ComponentInterface;
 use Butschster\Commander\UI\Component\Decorator\Padding;
+use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
  * File preview component - shows file/directory metadata
  *
  * Uses composition:
- * - TextInfoComponent for file/directory metadata (with padding)
+ * - TextDisplay with feature components (FileInfoSection, DirectoryInfoSection)
+ * - Padding decorator for spacing
  *
  * Note: Full file content viewing is handled by FileViewerScreen (Ctrl+R key)
  */
@@ -23,11 +25,19 @@ final class FilePreviewComponent extends AbstractComponent
 {
     private ?string $currentPath = null;
     private ?array $metadata = null;
-    private ?ComponentInterface $currentContent = null;
+    private readonly TextDisplay $innerDisplay;
+    private readonly ComponentInterface $paddedDisplay;
 
     public function __construct(
         private readonly FileSystemService $fileSystem,
-    ) {}
+    ) {
+        // Create text display component
+        $this->innerDisplay = new TextDisplay();
+
+        // Wrap with padding
+        $this->paddedDisplay = Padding::symmetric($this->innerDisplay, horizontal: 2, vertical: 1);
+        $this->addChild($this->paddedDisplay);
+    }
 
     /**
      * Set file/directory to preview (shows metadata only)
@@ -37,13 +47,18 @@ final class FilePreviewComponent extends AbstractComponent
         $this->currentPath = $path;
 
         if ($path === null) {
-            $this->currentContent = null;
             $this->metadata = null;
+            $this->innerDisplay->clear();
             return;
         }
 
         // Get metadata
         $this->metadata = $this->fileSystem->getFileMetadata($path);
+
+        if ($this->metadata === null) {
+            $this->innerDisplay->setText('Error: Unable to read file metadata');
+            return;
+        }
 
         // Show appropriate info based on type
         if (\is_dir($path)) {
@@ -72,35 +87,24 @@ final class FilePreviewComponent extends AbstractComponent
         $separator = \str_repeat('─', $width);
         $renderer->writeAt($x, $y + 2, $separator, ColorScheme::$INACTIVE_BORDER);
 
-        // Render current content (info or file viewer)
-        if ($this->currentContent !== null) {
-            $contentY = $y + 3;
-            $contentHeight = $height - 3;
-
-            $this->currentContent->render($renderer, $x, $contentY, $width, $contentHeight);
-        }
+        // Render text display content
+        $contentY = $y + 3;
+        $contentHeight = $height - 3;
+        $this->paddedDisplay->render($renderer, $x, $contentY, $width, $contentHeight);
     }
 
     #[\Override]
     public function handleInput(string $key): bool
     {
-        // Delegate to current content if it exists
-        if ($this->currentContent !== null && $this->currentContent->isFocused()) {
-            return $this->currentContent->handleInput($key);
-        }
-
-        return false;
+        // Delegate to inner text display
+        return $this->innerDisplay->handleInput($key);
     }
 
     #[\Override]
     public function setFocused(bool $focused): void
     {
         parent::setFocused($focused);
-
-        // Propagate focus to current content
-        if ($this->currentContent !== null) {
-            $this->currentContent->setFocused($focused);
-        }
+        $this->innerDisplay->setFocused($focused);
     }
 
     #[\Override]
@@ -114,48 +118,9 @@ final class FilePreviewComponent extends AbstractComponent
      */
     private function showFileInfo(string $path): void
     {
-        $lines = [
-            'File Information',
-            '================',
-            '',
-            "Name: " . \basename($path),
-            "Path: " . \dirname($path),
-            '',
-        ];
-
-        if ($this->metadata !== null) {
-            $lines[] = 'Details:';
-            $lines[] = "  Type: {$this->metadata['type']}";
-            $lines[] = "  Size: " . $this->fileSystem->formatSize($this->metadata['size']);
-            $lines[] = "  Permissions: {$this->metadata['permissions']}";
-            $lines[] = "  Owner: {$this->metadata['owner']}";
-            $lines[] = "  Group: {$this->metadata['group']}";
-            $lines[] = "  Modified: " . $this->fileSystem->formatDate($this->metadata['modified']);
-
-            if ($this->metadata['lines'] > 0) {
-                $lines[] = "  Lines: {$this->metadata['lines']}";
-            }
-
-            $lines[] = '';
-            $lines[] = '';
-            $lines[] = '─────────────────────────────────────────';
-            $lines[] = '';
-            $lines[] = 'Press [Ctrl+R] to view file contents';
-            $lines[] = '';
-        }
-
-        $infoComponent = new TextInfoComponent($lines);
-
-        // Add padding around info
-        $paddedInfo = Padding::symmetric($infoComponent, horizontal: 2, vertical: 1);
-
-        // Remove old content
-        if ($this->currentContent !== null) {
-            $this->removeChild($this->currentContent);
-        }
-
-        $this->currentContent = $paddedInfo;
-        $this->addChild($paddedInfo);
+        // Use feature component for file info
+        $content = FileInfoSection::create($this->metadata, $this->fileSystem);
+        $this->innerDisplay->setText($content);
     }
 
     /**
@@ -163,58 +128,12 @@ final class FilePreviewComponent extends AbstractComponent
      */
     private function showDirectoryInfo(string $path): void
     {
+        // Get directory contents for statistics
         $items = $this->fileSystem->listDirectory($path, true);
 
-        $dirCount = 0;
-        $fileCount = 0;
-        $totalSize = 0;
-
-        foreach ($items as $item) {
-            if ($item['name'] === '..') {
-                continue;
-            }
-
-            if ($item['isDir']) {
-                $dirCount++;
-            } else {
-                $fileCount++;
-                $totalSize += $item['size'];
-            }
-        }
-
-        $lines = [
-            'Directory Information',
-            '====================',
-            '',
-            "Path: {$path}",
-            '',
-            'Contents:',
-            "  Directories: {$dirCount}",
-            "  Files: {$fileCount}",
-            "  Total size: " . $this->fileSystem->formatSize($totalSize),
-            '',
-        ];
-
-        if ($this->metadata !== null) {
-            $lines[] = 'Metadata:';
-            $lines[] = "  Permissions: {$this->metadata['permissions']}";
-            $lines[] = "  Owner: {$this->metadata['owner']}";
-            $lines[] = "  Group: {$this->metadata['group']}";
-            $lines[] = "  Modified: " . $this->fileSystem->formatDate($this->metadata['modified']);
-        }
-
-        $infoComponent = new TextInfoComponent($lines);
-
-        // Add padding around info
-        $paddedInfo = Padding::symmetric($infoComponent, horizontal: 2, vertical: 1);
-
-        // Remove old content
-        if ($this->currentContent !== null) {
-            $this->removeChild($this->currentContent);
-        }
-
-        $this->currentContent = $paddedInfo;
-        $this->addChild($paddedInfo);
+        // Use feature component for directory info
+        $content = DirectoryInfoSection::create($path, $this->metadata, $items, $this->fileSystem);
+        $this->innerDisplay->setText($content);
     }
 
     /**

@@ -48,34 +48,6 @@ final class ScreenRegistry
     }
 
     /**
-     * Extract metadata from screen using attribute or method
-     */
-    private function extractMetadata(ScreenInterface $screen): ScreenMetadata
-    {
-        $reflection = new \ReflectionClass($screen);
-        $attributes = $reflection->getAttributes(Metadata::class);
-
-        // Try to get metadata from attribute first
-        if (!empty($attributes)) {
-            /** @var Metadata $metadataAttr */
-            $metadataAttr = $attributes[0]->newInstance();
-
-            return new ScreenMetadata(
-                name: $metadataAttr->name,
-                title: $metadataAttr->title,
-                description: $metadataAttr->description,
-                icon: $metadataAttr->icon,
-                category: $metadataAttr->category,
-                priority: $metadataAttr->priority,
-            );
-        }
-
-        throw new \RuntimeException(
-            "Screen class {$reflection->getName()} must have either #[Metadata] attribute or getMetadata() method",
-        );
-    }
-
-    /**
      * Get screen class by name
      */
     public function getScreen(string $name): ?ScreenInterface
@@ -147,5 +119,33 @@ final class ScreenRegistry
         }
 
         return new $class(...$dependencies);
+    }
+
+    /**
+     * Extract metadata from screen using attribute or method
+     */
+    private function extractMetadata(ScreenInterface $screen): ScreenMetadata
+    {
+        $reflection = new \ReflectionClass($screen);
+        $attributes = $reflection->getAttributes(Metadata::class);
+
+        // Try to get metadata from attribute first
+        if (!empty($attributes)) {
+            /** @var Metadata $metadataAttr */
+            $metadataAttr = $attributes[0]->newInstance();
+
+            return new ScreenMetadata(
+                name: $metadataAttr->name,
+                title: $metadataAttr->title,
+                description: $metadataAttr->description,
+                icon: $metadataAttr->icon,
+                category: $metadataAttr->category,
+                priority: $metadataAttr->priority,
+            );
+        }
+
+        throw new \RuntimeException(
+            "Screen class {$reflection->getName()} must have either #[Metadata] attribute or getMetadata() method",
+        );
     }
 }

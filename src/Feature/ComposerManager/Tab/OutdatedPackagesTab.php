@@ -163,8 +163,8 @@ final class OutdatedPackagesTab extends AbstractTab
                 '*',
                 TableColumn::ALIGN_LEFT,
                 formatter: static fn($value) => \mb_substr((string) $value, 0, 50) . (\mb_strlen(
-                        (string) $value,
-                    ) > 50 ? '...' : ''),
+                    (string) $value,
+                ) > 50 ? '...' : ''),
             ),
         ], showHeader: true);
 
@@ -187,13 +187,13 @@ final class OutdatedPackagesTab extends AbstractTab
     {
         $this->packages = \array_map(static fn(OutdatedPackageInfo $pkg)
             => [
-            'name' => $pkg->name,
-            'current' => $pkg->currentVersion,
-            'latest' => $pkg->latestVersion,
-            'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
-            'description' => $pkg->description,
-            'warning' => $pkg->warning,
-        ], $this->composerService->getOutdatedPackages());
+                'name' => $pkg->name,
+                'current' => $pkg->currentVersion,
+                'latest' => $pkg->latestVersion,
+                'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
+                'description' => $pkg->description,
+                'warning' => $pkg->warning,
+            ], $this->composerService->getOutdatedPackages());
 
         $this->table->setRows($this->packages);
 

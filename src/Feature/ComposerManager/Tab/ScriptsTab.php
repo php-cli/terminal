@@ -13,6 +13,7 @@ use Butschster\Commander\UI\Component\Display\Alert;
 use Butschster\Commander\UI\Component\Display\Spinner;
 use Butschster\Commander\UI\Component\Display\TableColumn;
 use Butschster\Commander\UI\Component\Display\TableComponent;
+use Butschster\Commander\UI\Component\Display\Text\TextBlock;
 use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Layout\Modal;
 use Butschster\Commander\UI\Component\Layout\Panel;
@@ -585,7 +586,7 @@ final class ScriptsTab extends AbstractTab
         try {
             $this->runningProcess->stop(3, SIGTERM); // Give 3 seconds to gracefully stop
 
-            $this->detailsDisplay->appendText("\n\n" . \str_repeat('─', 50) . "\n");
+            $this->detailsDisplay->appendText(TextBlock::repeat('-', 50));
             $this->detailsDisplay->appendText("⚠️  Cancelled by user\n");
             $this->detailsDisplay->appendText("\nPress Enter to run again, Tab to select another script.");
 

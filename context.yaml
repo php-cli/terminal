@@ -29,6 +29,16 @@ documents:
           - src/Feature/ComposerManager/Tab/InstalledPackagesTab.php
           - console
 
+  - description: Components
+    outputPath: table.md
+    sources:
+      - type: file
+        sourcePaths:
+          - src/UI/Component/Display/Text
+          - src/Feature/ComposerManager/Component
+          - src/Feature/ComposerManager/Tab/InstalledPackagesTab.php
+          - src/UI/Component/Display/TextDisplay.php
+
   - description: Menu
     outputPath: menu.md
     sources:

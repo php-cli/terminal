@@ -64,12 +64,13 @@ final class MidnightTheme extends AbstractTheme
         return ColorScheme::FG_WHITE;
     }
 
+    #[\Override]
     public function getSelectedText(): string
     {
         return ColorScheme::combine(
             ColorScheme::BG_CYAN,
             ColorScheme::FG_WHITE,
-            ColorScheme::BOLD
+            ColorScheme::BOLD,
         );
     }
 

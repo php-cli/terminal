@@ -27,7 +27,7 @@ use Attribute;
  * }
  * ```
  */
-#[Attribute(Attribute::TARGET_CLASS)]
+#[\Attribute(\Attribute::TARGET_CLASS)]
 final readonly class Metadata
 {
     public function __construct(

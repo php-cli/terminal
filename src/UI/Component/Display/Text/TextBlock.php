@@ -23,6 +23,11 @@ final class TextBlock extends TextComponent
         return new self('');
     }
 
+    public static function repeat($symbol = '─', int $times = 50): self
+    {
+        return new self("\n\n" . \str_repeat((string) $symbol, $times) . "\n");
+    }
+
     /**
      * Create a text block from an array of values joined by a separator
      *

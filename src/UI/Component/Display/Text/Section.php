@@ -15,9 +15,6 @@ final class Section extends TextComponent
     private int $spacing = 1;
     private int $marginBottom = 1;
 
-    /**
-     * @param string|\Stringable|null $content
-     */
     public function __construct(
         private readonly string $title,
         private readonly string|\Stringable|null $content = null,
@@ -77,6 +74,7 @@ final class Section extends TextComponent
             $lines[] = \str_repeat($this->separator, $this->separatorLength);
         }
 
+        $lines[] = '';
         $lines[] = $this->title . ':';
 
         for ($i = 0; $i < $this->spacing; $i++) {

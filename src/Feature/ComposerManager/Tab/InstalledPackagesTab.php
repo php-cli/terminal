@@ -152,11 +152,9 @@ final class InstalledPackagesTab extends AbstractTab
                 'Version',
                 '15%',
                 TableColumn::ALIGN_LEFT,
-                colorizer: function ($value, $row, $selected) {
-                    return $selected && $this->leftPanel->isFocused()
-                        ? ColorScheme::$SELECTED_TEXT
-                        : ColorScheme::$NORMAL_TEXT;
-                },
+                colorizer: fn($value, $row, $selected) => $selected && $this->leftPanel->isFocused()
+                    ? ColorScheme::$SELECTED_TEXT
+                    : ColorScheme::$NORMAL_TEXT,
             ),
             new TableColumn(
                 'outdated',
@@ -232,22 +230,22 @@ final class InstalledPackagesTab extends AbstractTab
         // Load installed packages
         $this->packages = \array_map(static fn(PackageInfo $pkg)
             => [
-            'name' => $pkg->name,
-            'version' => $pkg->version,
-            'source' => $pkg->source,
-            'description' => $pkg->description,
-            'homepage' => $pkg->homepage,
-            'keywords' => $pkg->keywords,
-            'isDirect' => $pkg->isDirect,
-            'abandoned' => $pkg->abandoned,
-            'authors' => $pkg->authors,
-            'license' => $pkg->license,
-            'requires' => $pkg->requires,
-            'devRequires' => $pkg->devRequires,
-            'autoload' => $pkg->autoload,
-            'outdated' => null,
-            'updateType' => null,
-        ], $this->composerService->getInstalledPackages());
+                'name' => $pkg->name,
+                'version' => $pkg->version,
+                'source' => $pkg->source,
+                'description' => $pkg->description,
+                'homepage' => $pkg->homepage,
+                'keywords' => $pkg->keywords,
+                'isDirect' => $pkg->isDirect,
+                'abandoned' => $pkg->abandoned,
+                'authors' => $pkg->authors,
+                'license' => $pkg->license,
+                'requires' => $pkg->requires,
+                'devRequires' => $pkg->devRequires,
+                'autoload' => $pkg->autoload,
+                'outdated' => null,
+                'updateType' => null,
+            ], $this->composerService->getInstalledPackages());
 
         // Load outdated information and merge
         $outdatedPackages = $this->composerService->getOutdatedPackages();
