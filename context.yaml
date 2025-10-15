@@ -13,7 +13,19 @@ documents:
     sources:
       - type: file
         sourcePaths:
-          - src
+          - src/Infrastructure
+          - src/UI/Screen
+          - src/UI/Component/Container
+          - src/UI/Component/Decorator
+          - src/UI/Component/Layout
+
+  - description: Menu
+    outputPath: menu.md
+    sources:
+      - type: file
+        sourcePaths:
+          - src/UI/Menu
+          - console
 
   - description: File Browser
     outputPath: file.md

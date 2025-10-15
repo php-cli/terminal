@@ -70,40 +70,6 @@ final class CommandDiscovery
     }
 
     /**
-     * Search commands by name or description
-     *
-     * @param string $query Search query
-     * @return array<string>
-     */
-    public function searchCommands(string $query): array
-    {
-        if ($query === '') {
-            return $this->getAllCommands();
-        }
-
-        $query = \strtolower($query);
-        $metadata = $this->getAllCommandMetadata();
-        $results = [];
-
-        foreach ($metadata as $name => $meta) {
-            if (\str_contains(\strtolower($name), $query) ||
-                \str_contains(\strtolower($meta->description), $query)) {
-                $results[] = $name;
-            }
-        }
-
-        return $results;
-    }
-
-    /**
-     * Check if a command exists
-     */
-    public function commandExists(string $command): bool
-    {
-        return isset($this->getAllCommandMetadata()[$command]);
-    }
-
-    /**
      * Clear command cache
      */
     public function clearCache(): void

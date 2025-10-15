@@ -15,6 +15,7 @@ use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\Attribute\Metadata;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
+use Butschster\Commander\UI\Screen\ScreenManagerAware;
 
 /**
  * Composer Manager Screen
@@ -35,36 +36,36 @@ use Butschster\Commander\UI\Screen\ScreenManager;
     category: 'system',
     priority: 20,
 )]
-final class ComposerManagerScreen implements ScreenInterface
+final class ComposerManagerScreen implements ScreenInterface, ScreenManagerAware
 {
     private TabContainer $tabContainer;
 
     public function __construct(
         private readonly ComposerService $composerService,
-    ) {
-        $this->initializeComponents();
-    }
+    ) {}
 
     public function setScreenManager(ScreenManager $screenManager): void
     {
-        // Pass screen manager to tabs that need it (for navigation)
-        $activeTab = $this->tabContainer->getActiveTab();
-        if ($activeTab instanceof InstalledPackagesTab) {
-            // Since we can't modify the constructor, we'll need to handle this differently
-            // For now, we'll create a new instance when setting screen manager
-            $this->tabContainer = new TabContainer([
-                new InstalledPackagesTab($this->composerService, $screenManager),
-                new OutdatedPackagesTab($this->composerService),
-                new SecurityAuditTab($this->composerService),
-                new ScriptsTab($this->composerService),
-            ]);
+        // Create tabs
+        $installedTab = new InstalledPackagesTab($this->composerService, $screenManager);
+        $outdatedTab = new OutdatedPackagesTab($this->composerService);
+        $securityTab = new SecurityAuditTab($this->composerService);
+        $scriptsTab = new ScriptsTab($this->composerService);
 
-            // Set status bar
-            $statusBar = new StatusBar([
-                'Ctrl+←/→' => 'Switch Tab',
-            ]);
-            $this->tabContainer->setStatusBar($statusBar, 1);
-        }
+        // Create tab container with all tabs
+        $this->tabContainer = new TabContainer([
+            $scriptsTab,
+            $installedTab,
+            $outdatedTab,
+            $securityTab,
+        ]);
+
+        // Set status bar (will be updated by TabContainer based on active tab)
+        $statusBar = new StatusBar([
+            'Ctrl+←/→' => 'Switch Tab',
+        ]);
+
+        $this->tabContainer->setStatusBar($statusBar, 1);
     }
 
     // ScreenInterface implementation
@@ -111,28 +112,5 @@ final class ComposerManagerScreen implements ScreenInterface
     public function getTitle(): string
     {
         return 'Composer Manager';
-    }
-
-    private function initializeComponents(): void
-    {
-        // Create tabs
-        $installedTab = new InstalledPackagesTab($this->composerService);
-        $outdatedTab = new OutdatedPackagesTab($this->composerService);
-        $securityTab = new SecurityAuditTab($this->composerService);
-        $scriptsTab = new ScriptsTab($this->composerService);
-
-        // Create tab container with all tabs
-        $this->tabContainer = new TabContainer([
-            $scriptsTab,
-            $installedTab,
-            $outdatedTab,
-            $securityTab,
-        ]);
-
-        // Set status bar (will be updated by TabContainer based on active tab)
-        $statusBar = new StatusBar([
-            'Ctrl+←/→' => 'Switch Tab',
-        ]);
-        $this->tabContainer->setStatusBar($statusBar, 1);
     }
 }

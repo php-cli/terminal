@@ -368,11 +368,17 @@ final class TableComponent extends AbstractComponent
         array $row,
         bool $selected,
     ): void {
+        // First, render the background for selected rows
+        if ($selected && $this->isFocused()) {
+            $bgLine = \str_repeat(' ', $width);
+            $renderer->writeAt($x, $y, $bgLine, ColorScheme::$SELECTED_BG);
+        }
+
         $currentX = $x;
 
-        // Default colors
+        // Default colors for text (use selected foreground on transparent background)
         $defaultColor = $selected && $this->isFocused()
-            ? ColorScheme::$SELECTED_TEXT
+            ? ColorScheme::combine(ColorScheme::$SELECTED_BG, ColorScheme::$SELECTED_FG)
             : ColorScheme::$NORMAL_TEXT;
 
         foreach ($this->columns as $index => $column) {

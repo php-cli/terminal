@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Feature\ComposerManager\Tab;
 
+use Butschster\Commander\Feature\ComposerManager\Component\AuthorsList;
+use Butschster\Commander\Feature\ComposerManager\Component\LinkList;
+use Butschster\Commander\Feature\ComposerManager\Component\PackageInfoSection;
 use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Feature\ComposerManager\Service\PackageInfo;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
@@ -12,6 +15,9 @@ use Butschster\Commander\UI\Component\Container\GridLayout;
 use Butschster\Commander\UI\Component\Decorator\Padding;
 use Butschster\Commander\UI\Component\Display\TableColumn;
 use Butschster\Commander\UI\Component\Display\TableComponent;
+use Butschster\Commander\UI\Component\Display\Text\Container;
+use Butschster\Commander\UI\Component\Display\Text\Section;
+use Butschster\Commander\UI\Component\Display\Text\TextBlock;
 use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Screen\ScreenManager;
@@ -39,7 +45,7 @@ final class InstalledPackagesTab extends AbstractTab
 
     public function __construct(
         private readonly ComposerService $composerService,
-        private readonly ?ScreenManager $screenManager = null,
+        private readonly ScreenManager $screenManager,
     ) {
         $this->initializeComponents();
     }
@@ -208,10 +214,6 @@ final class InstalledPackagesTab extends AbstractTab
             $this->showPackageDetails($row['name']);
         });
 
-        $table->onSelect(function (array $row, int $index): void {
-            $this->openPackageDetailsScreen($row['name']);
-        });
-
         return $table;
     }
 
@@ -220,22 +222,22 @@ final class InstalledPackagesTab extends AbstractTab
         // Load installed packages
         $this->packages = \array_map(static fn(PackageInfo $pkg)
             => [
-                'name' => $pkg->name,
-                'version' => $pkg->version,
-                'source' => $pkg->source,
-                'description' => $pkg->description,
-                'homepage' => $pkg->homepage,
-                'keywords' => $pkg->keywords,
-                'isDirect' => $pkg->isDirect,
-                'abandoned' => $pkg->abandoned,
-                'authors' => $pkg->authors,
-                'license' => $pkg->license,
-                'requires' => $pkg->requires,
-                'devRequires' => $pkg->devRequires,
-                'autoload' => $pkg->autoload,
-                'outdated' => null,
-                'updateType' => null,
-            ], $this->composerService->getInstalledPackages());
+            'name' => $pkg->name,
+            'version' => $pkg->version,
+            'source' => $pkg->source,
+            'description' => $pkg->description,
+            'homepage' => $pkg->homepage,
+            'keywords' => $pkg->keywords,
+            'isDirect' => $pkg->isDirect,
+            'abandoned' => $pkg->abandoned,
+            'authors' => $pkg->authors,
+            'license' => $pkg->license,
+            'requires' => $pkg->requires,
+            'devRequires' => $pkg->devRequires,
+            'autoload' => $pkg->autoload,
+            'outdated' => null,
+            'updateType' => null,
+        ], $this->composerService->getInstalledPackages());
 
         // Load outdated information and merge
         $outdatedPackages = $this->composerService->getOutdatedPackages();
@@ -267,131 +269,73 @@ final class InstalledPackagesTab extends AbstractTab
 
     private function showPackageDetails(string $packageName): void
     {
-        $package = null;
-        foreach ($this->packages as $p) {
-            if ($p['name'] === $packageName) {
-                $package = $p;
-                break;
-            }
-        }
+        // Get full package details
+        $packageInfo = $this->composerService->getPackageDetails($packageName);
 
-        if (!$package) {
+        if (!$packageInfo) {
             $this->detailsDisplay->setText("Package not found");
             return;
         }
 
-        $lines = [
-            "Package: {$package['name']}",
-            "Version: {$package['version']}",
-        ];
+        $this->detailsDisplay->setText(
+            Container::create([
+                PackageInfoSection::create($packageInfo),
+                TextBlock::newLine(),
+                Section::create(
+                    'Description',
+                    TextBlock::create($packageInfo->description ?: 'N/A'),
+                )->displayWhen($packageInfo->description),
+                Section::create(
+                    'Links',
+                    LinkList::fromPackageData(
+                        $packageInfo->source,
+                        $packageInfo->homepage,
+                        [],
+                    ),
+                )->displayWhen($packageInfo->source || $packageInfo->homepage),
+                Section::create(
+                    'Keywords',
+                    TextBlock::implode($packageInfo->keywords),
+                )->displayWhen(!empty($packageInfo->keywords)),
+                Section::create(
+                    'Authors',
+                    Container::create([
+                        AuthorsList::create(\array_slice($packageInfo->authors, 0, 3)),
+                        TextBlock::create("... and " . (\count($packageInfo->authors) - 3) . " more")
+                            ->displayWhen(\count($packageInfo->authors) > 3),
+                    ])->spacing(0),
+                )->displayWhen(!empty($packageInfo->authors)),
+                Section::create(
+                    'Dependencies',
+                    Container::create([
+                        TextBlock::create("  Total: {$packageInfo->getTotalDependencies()}"),
+                        TextBlock::create("  Production: " . \count($packageInfo->requires))
+                            ->displayWhen(!empty($packageInfo->requires)),
+                        TextBlock::create("  Development: " . \count($packageInfo->devRequires))
+                            ->displayWhen(!empty($packageInfo->devRequires)),
+                    ])->spacing(0),
+                )->displayWhen($packageInfo->getTotalDependencies() > 0),
+                Section::create(
+                    'Namespaces',
+                    Container::create([
+                        TextBlock::create("  Total: " . \count($packageInfo->getNamespaces())),
+                        TextBlock::newLine(),
+                        Container::create(
+                            \array_map(
+                                static fn($ns) => TextBlock::create("  • " . \rtrim((string) $ns, '\\')),
+                                \array_slice($packageInfo->getNamespaces(), 0, 3),
+                            ),
+                        )->spacing(0),
+                        TextBlock::create("  ... and " . (\count($packageInfo->getNamespaces()) - 3) . " more")
+                            ->displayWhen(\count($packageInfo->getNamespaces()) > 3),
+                    ])->spacing(0),
+                )->displayWhen($packageInfo->hasAutoload() && !empty($packageInfo->getNamespaces())),
+                TextBlock::newLine(),
+                TextBlock::create("Press Enter to view full details"),
+            ])->spacing(0),
+        );
 
-        if ($package['abandoned']) {
-            $lines[] = "";
-            $lines[] = "[!] WARNING: This package is ABANDONED!";
-            $lines[] = "    Consider migrating to an alternative package.";
-        }
-
-        $lines[] = "";
-        if ($package['isDirect']) {
-            $lines[] = "* Direct dependency (required in composer.json)";
-        } else {
-            $lines[] = "  Transitive dependency (required by another package)";
-        }
-
-        $lines[] = "";
-        $lines[] = "Description:";
-        $lines[] = "  " . ($package['description'] ?: 'N/A');
-
-        if ($package['source']) {
-            $lines[] = "";
-            $lines[] = "Source:";
-            $lines[] = "  {$package['source']}";
-        }
-
-        if ($package['homepage']) {
-            $lines[] = "";
-            $lines[] = "Homepage:";
-            $lines[] = "  {$package['homepage']}";
-        }
-
-        if (!empty($package['keywords'])) {
-            $lines[] = "";
-            $lines[] = "Keywords: " . \implode(', ', $package['keywords']);
-        }
-
-        if (!empty($package['authors'])) {
-            $lines[] = "";
-            $lines[] = "Authors: ";
-            foreach (\array_slice($package['authors'], 0, 3) as $author) {
-                $lines[] = "  • " . ($author['name'] ?? 'Unknown');
-            }
-            if (\count($package['authors']) > 3) {
-                $lines[] = "  ... and " . (\count($package['authors']) - 3) . " more";
-            }
-        }
-
-        if (!empty($package['license'])) {
-            $lines[] = "";
-            $lines[] = "License: " . \implode(', ', $package['license']);
-        }
-
-        $totalDeps = \count($package['requires'] ?? []) + \count($package['devRequires'] ?? []);
-        if ($totalDeps > 0) {
-            $lines[] = "";
-            $lines[] = "Dependencies: {$totalDeps} total";
-            if (!empty($package['requires'])) {
-                $lines[] = "  Production: " . \count($package['requires']);
-            }
-            if (!empty($package['devRequires'])) {
-                $lines[] = "  Development: " . \count($package['devRequires']);
-            }
-        }
-
-        if (!empty($package['autoload'])) {
-            $namespaces = \array_merge(
-                \array_keys($package['autoload']['psr4'] ?? []),
-                \array_keys($package['autoload']['psr0'] ?? []),
-            );
-            if (!empty($namespaces)) {
-                $lines[] = "";
-                $lines[] = "Namespaces: " . \count($namespaces);
-                foreach (\array_slice($namespaces, 0, 3) as $ns) {
-                    $lines[] = "  • " . \rtrim((string) $ns, '\\');
-                }
-                if (\count($namespaces) > 3) {
-                    $lines[] = "  ... and " . (\count($namespaces) - 3) . " more";
-                }
-            }
-        }
-
-        $lines[] = "";
-        $lines[] = "Press Enter to view full details";
-
-        $this->detailsDisplay->setText(\implode("\n", $lines));
-        $this->rightPanel->setTitle("Details: {$package['name']}");
-    }
-
-    private function openPackageDetailsScreen(string $packageName): void
-    {
-        if ($this->screenManager === null) {
-            $this->detailsDisplay->setText("ERROR: Screen manager not available!\nPackage: $packageName");
-            return;
-        }
-
-        try {
-            $detailsScreen = new \Butschster\Commander\Feature\ComposerManager\Screen\PackageDetailsScreen(
-                $this->composerService,
-                $packageName,
-            );
-            $this->screenManager->pushScreen($detailsScreen);
-        } catch (\Throwable $e) {
-            $this->detailsDisplay->setText(
-                "ERROR: Failed to open package details!\n\n" .
-                "Package: $packageName\n\n" .
-                "Error: {$e->getMessage()}\n\n" .
-                $e->getTraceAsString(),
-            );
-        }
+        $this->rightPanel->setTitle("Details: {$packageInfo->name}");
     }
 
     private function updateFocus(): void

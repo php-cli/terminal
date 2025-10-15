@@ -21,9 +21,9 @@ final class TextDisplay extends AbstractComponent
     private bool $autoScroll = true;
 
     /**
-     * @param string $text Initial text content
+     * @param string|\Stringable $text Initial text content
      */
-    public function __construct(string $text = '')
+    public function __construct(string|\Stringable $text = '')
     {
         if ($text !== '') {
             $this->setText($text);
@@ -32,10 +32,13 @@ final class TextDisplay extends AbstractComponent
 
     /**
      * Set text content
+     *
+     * @param string|\Stringable $text Text content or Stringable component
      */
-    public function setText(string $text): void
+    public function setText(string|\Stringable $text): void
     {
-        $this->lines = \explode("\n", $text);
+        $textStr = (string) $text;
+        $this->lines = \explode("\n", $textStr);
 
         // Auto-scroll to bottom if enabled
         if ($this->autoScroll) {
@@ -53,10 +56,13 @@ final class TextDisplay extends AbstractComponent
 
     /**
      * Append text to content
+     *
+     * @param string|\Stringable $text Text content or Stringable component
      */
-    public function appendText(string $text): void
+    public function appendText(string|\Stringable $text): void
     {
-        $newLines = \explode("\n", $text);
+        $textStr = (string) $text;
+        $newLines = \explode("\n", $textStr);
 
         if (!empty($this->lines) && !empty($newLines)) {
             // Append first new line to last existing line

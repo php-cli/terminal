@@ -202,28 +202,34 @@ final class TabContainer extends AbstractComponent
         foreach ($this->tabs as $index => $tab) {
             $isActive = $index === $this->activeTabIndex;
             $tabTitle = $tab->getTitle();
-
-            // Calculate tab width (title + padding + separators)
-            $tabWidth = \mb_strlen($tabTitle) + 4; // 2 spaces padding + 2 for brackets/separators
+            $isFirst = $index === 0;
 
             // Choose colors based on active state
             if ($isActive) {
-                $bgColor = ColorScheme::BG_CYAN;
-                $fgColor = ColorScheme::FG_BLACK;
+                // Active: Black background with white text
+                $bgColor = ColorScheme::BG_BLACK;
+                $fgColor = ColorScheme::FG_WHITE;
                 $style = ColorScheme::BOLD;
             } else {
-                $bgColor = ColorScheme::BG_BLUE;
+                // Inactive: Normal background with white text
+                $bgColor = ColorScheme::$NORMAL_BG;
                 $fgColor = ColorScheme::FG_WHITE;
                 $style = '';
             }
 
             $color = ColorScheme::combine($bgColor, $fgColor, $style);
 
-            // Render tab
-            $tabText = $isActive ? "[ {$tabTitle} ]" : "  {$tabTitle}  ";
-            $renderer->writeAt($currentX, $y, $tabText, $color);
+            // Active tab: black background with borders, no space between border and bg
+            if ($isFirst) {
+                // First tab always has left border
+                $tabText = "│ {$tabTitle} │";
+            } else {
+                // Non-first active tab shares left border with previous tab
+                $tabText = " {$tabTitle} │";
+            }
 
-            $currentX += $tabWidth;
+            $renderer->writeAt($currentX, $y, $tabText, $color);
+            $currentX += \mb_strlen($tabText);
 
             // Stop if we exceed width
             if ($currentX >= $x + $width) {

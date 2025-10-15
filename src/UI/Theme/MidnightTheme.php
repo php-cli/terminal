@@ -106,6 +106,6 @@ final class MidnightTheme extends AbstractTheme
 
     public function getHighlightText(): string
     {
-        return ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_BRIGHT_WHITE, ColorScheme::BOLD);
+        return ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_WHITE, ColorScheme::BOLD);
     }
 }

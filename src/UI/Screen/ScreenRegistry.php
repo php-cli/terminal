@@ -20,6 +20,10 @@ final class ScreenRegistry
     /** @var array<string, ScreenMetadata> */
     private array $metadata = [];
 
+    public function __construct(
+        private readonly ScreenManager $screenManager,
+    ) {}
+
     /**
      * Register a screen class
      */
@@ -33,6 +37,10 @@ final class ScreenRegistry
             throw new \RuntimeException(
                 "Screen with name '{$metadata->name}' is already registered",
             );
+        }
+
+        if ($screen instanceof ScreenManagerAware) {
+            $screen->setScreenManager($this->screenManager);
         }
 
         $this->screens[$metadata->name] = $screen;

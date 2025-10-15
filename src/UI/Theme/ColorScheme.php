@@ -58,29 +58,7 @@ final class ColorScheme
 
     // Backward compatibility - use constants for default theme
     public const string NORMAL_BG = self::BG_BLUE;
-    public const string NORMAL_FG = self::FG_WHITE;
     public const string NORMAL_TEXT = self::BG_BLUE . self::FG_WHITE;
-    public const string MENU_BG = self::BG_CYAN;
-    public const string MENU_FG = self::FG_BLACK;
-    public const string MENU_TEXT = self::BG_CYAN . self::FG_BLACK;
-    public const string MENU_HOTKEY = self::BG_CYAN . self::FG_YELLOW;
-    public const string STATUS_BG = self::BG_CYAN;
-    public const string STATUS_FG = self::FG_BLACK;
-    public const string STATUS_TEXT = self::BG_CYAN . self::FG_BLACK;
-    public const string STATUS_KEY = self::BG_CYAN . self::BOLD . self::FG_WHITE;
-    public const string SELECTED_BG = self::BG_CYAN;
-    public const string SELECTED_FG = self::FG_BLACK;
-    public const string SELECTED_TEXT = self::BG_CYAN . self::FG_BLACK;
-    public const string ACTIVE_BORDER = self::BG_BLUE . self::FG_BRIGHT_WHITE;
-    public const string INACTIVE_BORDER = self::BG_BLUE . self::FG_GRAY;
-    public const string INPUT_BG = self::BG_BLACK;
-    public const string INPUT_FG = self::FG_YELLOW;
-    public const string INPUT_TEXT = self::BG_BLACK . self::FG_YELLOW;
-    public const string INPUT_CURSOR = self::REVERSE;
-    public const string SCROLLBAR = self::BG_BLUE . self::FG_CYAN;
-    public const string ERROR_TEXT = self::BG_BLUE . self::FG_RED;
-    public const string WARNING_TEXT = self::BG_BLUE . self::FG_YELLOW;
-    public const string HIGHLIGHT_TEXT = self::BG_BLUE . self::FG_BRIGHT_WHITE . self::BOLD;
 
     // Theme-aware color getters (use current theme)
     public static string $NORMAL_BG;

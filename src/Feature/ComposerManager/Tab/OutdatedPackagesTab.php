@@ -138,9 +138,21 @@ final class OutdatedPackagesTab extends AbstractTab
                         return ColorScheme::$SELECTED_TEXT;
                     }
                     return match ($value) {
-                        'major' => ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_RED, ColorScheme::BOLD),
-                        'minor' => ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
-                        'patch' => ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_GREEN, ColorScheme::BOLD),
+                        'major' => ColorScheme::combine(
+                            ColorScheme::$NORMAL_BG,
+                            ColorScheme::FG_RED,
+                            ColorScheme::BOLD,
+                        ),
+                        'minor' => ColorScheme::combine(
+                            ColorScheme::$NORMAL_BG,
+                            ColorScheme::FG_YELLOW,
+                            ColorScheme::BOLD,
+                        ),
+                        'patch' => ColorScheme::combine(
+                            ColorScheme::$NORMAL_BG,
+                            ColorScheme::FG_GREEN,
+                            ColorScheme::BOLD,
+                        ),
                         default => ColorScheme::$NORMAL_TEXT,
                     };
                 },
@@ -150,7 +162,9 @@ final class OutdatedPackagesTab extends AbstractTab
                 'Description',
                 '*',
                 TableColumn::ALIGN_LEFT,
-                formatter: static fn($value) => \mb_substr((string) $value, 0, 50) . (\mb_strlen((string) $value) > 50 ? '...' : ''),
+                formatter: static fn($value) => \mb_substr((string) $value, 0, 50) . (\mb_strlen(
+                        (string) $value,
+                    ) > 50 ? '...' : ''),
             ),
         ], showHeader: true);
 
@@ -173,13 +187,13 @@ final class OutdatedPackagesTab extends AbstractTab
     {
         $this->packages = \array_map(static fn(OutdatedPackageInfo $pkg)
             => [
-                'name' => $pkg->name,
-                'current' => $pkg->currentVersion,
-                'latest' => $pkg->latestVersion,
-                'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
-                'description' => $pkg->description,
-                'warning' => $pkg->warning,
-            ], $this->composerService->getOutdatedPackages());
+            'name' => $pkg->name,
+            'current' => $pkg->currentVersion,
+            'latest' => $pkg->latestVersion,
+            'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
+            'description' => $pkg->description,
+            'warning' => $pkg->warning,
+        ], $this->composerService->getOutdatedPackages());
 
         $this->table->setRows($this->packages);
 
