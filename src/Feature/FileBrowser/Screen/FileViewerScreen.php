@@ -12,6 +12,7 @@ use Butschster\Commander\UI\Component\Container\Direction;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
+use Butschster\Commander\UI\Screen\ScreenMetadata;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -39,7 +40,7 @@ final class FileViewerScreen implements ScreenInterface
         $this->loadFile();
     }
 
-    public function render(Renderer $renderer): void
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
         $size = $renderer->getSize();
         $width = $size['width'];
@@ -99,6 +100,16 @@ final class FileViewerScreen implements ScreenInterface
     public function getFilePath(): string
     {
         return $this->filePath;
+    }
+
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::files(
+            name: 'file_viewer',
+            title: 'File Viewer',
+            description: 'View and edit files',
+            priority: 20,
+        );
     }
 
     /**

@@ -15,6 +15,7 @@ use Butschster\Commander\UI\Component\Container\StackLayout;
 use Butschster\Commander\UI\Component\Container\Direction;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
+use Butschster\Commander\UI\Screen\ScreenMetadata;
 
 /**
  * File browser screen with MC-style dual-panel layout
@@ -45,23 +46,26 @@ final class FileBrowserScreen implements ScreenInterface
         $this->initializeComponents();
     }
 
-    public function render(Renderer $renderer): void
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
-        $size = $renderer->getSize();
-        $width = $size['width'];
-        $height = $size['height'];
+        // Get actual size if not provided
+        if ($width === null || $height === null) {
+            $size = $renderer->getSize();
+            $width ??= $size['width'] - $x;
+            $height ??= $size['height'] - $y;
+        }
 
         // Update focus state
         $this->leftPanel->setFocused($this->leftPanelFocused);
         $this->rightPanel->setFocused(!$this->leftPanelFocused);
 
-        // NEW: Single render call! Layout system handles all positioning
+        // Render layout at provided position
         $this->rootLayout->render(
             $renderer,
-            0,
-            1,  // x, y (account for global menu bar at top)
+            $x,
+            $y,
             $width,
-            $height - 1,  // Account for global menu bar
+            $height,
         );
     }
 
@@ -181,6 +185,16 @@ final class FileBrowserScreen implements ScreenInterface
                 $this->filePreview->setFileInfo($selectedItem['path']);
             }
         }
+    }
+
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::files(
+            name: 'file_browser',
+            title: 'File Browser',
+            description: 'Browse and manage files and directories',
+            priority: 10,
+        );
     }
 
     /**

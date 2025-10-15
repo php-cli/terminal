@@ -16,6 +16,7 @@ use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Screen\ScreenInterface;
+use Butschster\Commander\UI\Screen\ScreenMetadata;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -58,7 +59,7 @@ final class PackageDetailsScreen implements ScreenInterface
         $this->loadData();
     }
 
-    public function render(Renderer $renderer): void
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
         $size = $renderer->getSize();
         $this->rootLayout->render($renderer, 0, 1, $size['width'], $size['height'] - 1);
@@ -106,6 +107,15 @@ final class PackageDetailsScreen implements ScreenInterface
         return "Package Details: {$this->packageName}";
     }
 
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::system(
+            name: 'composer_package_details',
+            title: 'Package Details',
+            description: 'Shows detailed information about a Composer package',
+        );
+    }
+
     private function initializeComponents(): void
     {
         // Create tab content
@@ -115,7 +125,7 @@ final class PackageDetailsScreen implements ScreenInterface
         $this->autoloadDisplay = new TextDisplay();
 
         // Create main panel with padded info display
-        $paddedInfo = Padding::symmetric($this->infoDisplay, horizontal: 2, vertical: 1);
+        $paddedInfo = Padding::symmetric($this->infoDisplay, vertical: 1, horizontal: 2);
         $this->mainPanel = new Panel('Package Details', $paddedInfo);
         $this->mainPanel->setFocused(true);
 

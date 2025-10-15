@@ -6,6 +6,7 @@ declare(strict_types=1);
 require __DIR__ . '/vendor/autoload.php';
 
 use Butschster\Commander\Application;
+use Butschster\Commander\ExceptionRenderer;
 use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
@@ -13,9 +14,9 @@ use Butschster\Commander\Feature\ComposerManager\Screen\ComposerManagerScreen;
 use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
 use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
-use Butschster\Commander\UI\Component\Layout\MenuBar;
+use Butschster\Commander\UI\Menu\MenuBuilder;
+use Butschster\Commander\UI\Screen\ScreenRegistry;
 use Butschster\Commander\UI\Theme\ColorScheme;
-use Butschster\Commander\UI\Theme\DarkTheme;
 use Butschster\Commander\UI\Theme\MidnightTheme;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
@@ -25,90 +26,43 @@ $symfonyApp = new SymfonyApplication('My Console Application', '1.0.0');
 // Add more commands here as needed
 // $symfonyApp->add(new AnotherCommand());
 
-
-// Initialize with default theme
+// Initialize theme
 ColorScheme::applyTheme(new MidnightTheme());
 // ColorScheme::applyTheme(new DarkTheme());
 
 // Create and run the MC-style application
 try {
-    $app = new Application($symfonyApp);
+    $app = new Application();
     $app->setTargetFps(30);
 
-    // Get screen manager from application
-    $screenManager = $app->getScreenManager();
+    // 1. Create screen registry
+    $registry = new ScreenRegistry();
+    $app->setScreenRegistry($registry);
 
-    // Create services
+    // 2. Create and register screen instances
+    //    Each screen now self-registers with its metadata
     $commandDiscovery = new CommandDiscovery($symfonyApp);
     $commandExecutor = new CommandExecutor($symfonyApp);
     $fileSystem = new FileSystemService();
 
-    // Setup global menu bar
-    // F1-F12 are reserved for global screen switching
-    $globalMenu = new MenuBar([
-            'F1' => ' Help',
-            'F2' => ' Commands',
-            'F3' => ' Files',
-            'F5' => ' Composer',
-            'F10' => ' Quit',
-    ]);
-    $app->setGlobalMenuBar($globalMenu);
+    $registry->register(new CommandsScreen($commandDiscovery, $commandExecutor));
+    $registry->register(new FileBrowserScreen($fileSystem, $app->getScreenManager(), getcwd()));
+    $registry->register(new ComposerManagerScreen(new ComposerService(__DIR__)));
 
-    // Register global shortcuts
-    // F2: Switch to Command Browser
-    $app->registerGlobalShortcut('F2', function ($screenManager) use ($commandDiscovery, $commandExecutor) {
-        // Pop to root and push command browser
-        $screenManager->popUntil(fn($screen) => $screen instanceof CommandsScreen);
+    // 3. Build menu system from registered screens
+    //    Automatically groups screens by category and assigns F-keys
+    $menuBuilder = new MenuBuilder($registry);
+    $app->setMenuSystem($menuBuilder->build());
 
-        // If not on welcome screen, push it
-        if (!($screenManager->getCurrentScreen() instanceof CommandsScreen)) {
-            $welcomeScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
-            $screenManager->pushScreen($welcomeScreen);
-        }
-    });
+    // 4. Start with first registered screen
+    $firstScreen = $registry->getScreen('command_browser');
+    if ($firstScreen === null) {
+        throw new \RuntimeException('No screens registered');
+    }
 
-    // F3: Switch to File Browser
-    $app->registerGlobalShortcut('F3', function ($screenManager) use ($fileSystem) {
-        // Pop to root and push file browser
-        $screenManager->popUntil(fn($screen) => $screen instanceof FileBrowserScreen);
-
-        // If not on file browser screen, push it
-        if (!($screenManager->getCurrentScreen() instanceof FileBrowserScreen)) {
-            $fileBrowserScreen = new FileBrowserScreen($fileSystem, $screenManager, getcwd());
-            $screenManager->pushScreen($fileBrowserScreen);
-        }
-    });
-
-    // F5: Switch to Composer Manager
-    $app->registerGlobalShortcut('F5', function ($screenManager) {
-        // Pop to root and push composer manager
-        $screenManager->popUntil(fn($screen) => $screen instanceof ComposerManagerScreen);
-
-        // If not on composer manager screen, push it
-        if (!($screenManager->getCurrentScreen() instanceof ComposerManagerScreen)) {
-            $composerScreen = new ComposerManagerScreen(new ComposerService(__DIR__));
-            $composerScreen->setScreenManager($screenManager);
-            $screenManager->pushScreen($composerScreen);
-        }
-    });
-
-    // F10: Quit application
-    $app->registerGlobalShortcut('F10', function ($screenManager) use ($app) {
-        $app->stop();
-    });
-
-    // Start with welcome screen (Command Browser)
-    $welcomeScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
-
-    $app->run($welcomeScreen);
+    $app->run($firstScreen);
 } catch (\Throwable $e) {
-    // Restore terminal on error
-    echo "\033[?25h";  // Show cursor
-    echo "\033[?1049l"; // Exit alternate screen
-    echo "\033[0m";     // Reset colors
-
-    echo "Error: " . $e->getMessage() . "\n";
-    echo $e->getTraceAsString() . "\n";
+    echo (new ExceptionRenderer())->render($e, true);
 
     exit(1);
 }

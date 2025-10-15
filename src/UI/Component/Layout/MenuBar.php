@@ -17,18 +17,8 @@ final class MenuBar extends AbstractComponent
      * @param array<string, string> $items Menu items (key => label)
      */
     public function __construct(
-        private array $items = [],
+        private readonly array $items = [],
     ) {}
-
-    /**
-     * Set menu items
-     *
-     * @param array<string, string> $items
-     */
-    public function setItems(array $items): void
-    {
-        $this->items = $items;
-    }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {

@@ -19,6 +19,7 @@ use Butschster\Commander\UI\Component\Container\GridLayout;
 use Butschster\Commander\UI\Component\Container\StackLayout;
 use Butschster\Commander\UI\Component\Container\Direction;
 use Butschster\Commander\UI\Screen\ScreenInterface;
+use Butschster\Commander\UI\Screen\ScreenMetadata;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -74,11 +75,14 @@ final class CommandsScreen implements ScreenInterface
     /**
      * Render the entire screen
      */
-    public function render(Renderer $renderer): void
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
-        $size = $renderer->getSize();
-        $width = $size['width'];
-        $height = $size['height'];
+        // Get actual size if not provided
+        if ($width === null || $height === null) {
+            $size = $renderer->getSize();
+            $width ??= $size['width'];
+            $height ??= $size['height'];
+        }
 
         // Update panel focus states
         $this->leftPanel->setFocused($this->focusedPanelIndex === 0);
@@ -87,21 +91,21 @@ final class CommandsScreen implements ScreenInterface
         // Single render call! Layout system handles all calculations
         $this->rootLayout->render(
             $renderer,
-            0,
-            1,  // x, y (account for global menu bar)
+            $x,
+            $y,
             $width,
-            $height - 1,  // Account for global menu bar
+            $height,
         );
 
         // Overlay: Executing indicator
         if ($this->isExecuting) {
-            $this->renderExecutingIndicator($renderer, $width);
+            $this->renderExecutingIndicator($renderer, $x, $y, $width);
         }
 
         // Overlay: Modal dialog
         if ($this->activeModal !== null) {
             $this->activeModal->setFocused(true);
-            $this->activeModal->render($renderer, 0, 0, $width, $height);
+            $this->activeModal->render($renderer, $x, $y, $width, $height);
         }
     }
 
@@ -154,6 +158,16 @@ final class CommandsScreen implements ScreenInterface
     public function getTitle(): string
     {
         return 'Command Browser';
+    }
+
+    public function getMetadata(): ScreenMetadata
+    {
+        return ScreenMetadata::tools(
+            name: 'command_browser',
+            title: 'Command Browser',
+            description: 'Browse and execute Symfony console commands',
+            priority: 10,
+        );
     }
 
     /**
@@ -220,16 +234,16 @@ final class CommandsScreen implements ScreenInterface
     /**
      * Render executing indicator overlay
      */
-    private function renderExecutingIndicator(Renderer $renderer, int $screenWidth): void
+    private function renderExecutingIndicator(Renderer $renderer, int $x, int $y, int $width): void
     {
         $indicator = ' [EXECUTING...] ';
-        $leftWidth = (int) ($screenWidth * 0.3);
-        $rightWidth = $screenWidth - $leftWidth;
-        $indicatorX = $leftWidth + (int) (($rightWidth - \mb_strlen($indicator)) / 2);
+        $leftWidth = (int) ($width * 0.3);
+        $rightWidth = $width - $leftWidth;
+        $indicatorX = $x + $leftWidth + (int) (($rightWidth - \mb_strlen($indicator)) / 2);
 
         $renderer->writeAt(
             $indicatorX,
-            1,
+            $y,
             $indicator,
             ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
         );
