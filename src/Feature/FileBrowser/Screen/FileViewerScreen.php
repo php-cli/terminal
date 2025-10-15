@@ -10,9 +10,9 @@ use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Container\StackLayout;
 use Butschster\Commander\UI\Component\Container\Direction;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
+use Butschster\Commander\UI\Screen\Attribute\Metadata;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
-use Butschster\Commander\UI\Screen\ScreenMetadata;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -24,6 +24,13 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  * - File metadata header
  * - ESC to close and return to browser
  */
+#[Metadata(
+    name: 'file_viewer',
+    title: 'File Viewer',
+    description: 'View and edit files',
+    category: 'files',
+    priority: 20,
+)]
 final class FileViewerScreen implements ScreenInterface
 {
     private StackLayout $rootLayout;
@@ -100,16 +107,6 @@ final class FileViewerScreen implements ScreenInterface
     public function getFilePath(): string
     {
         return $this->filePath;
-    }
-
-    public function getMetadata(): ScreenMetadata
-    {
-        return ScreenMetadata::files(
-            name: 'file_viewer',
-            title: 'File Viewer',
-            description: 'View and edit files',
-            priority: 20,
-        );
     }
 
     /**

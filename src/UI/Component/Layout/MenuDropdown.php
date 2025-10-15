@@ -55,9 +55,9 @@ final class MenuDropdown extends AbstractComponent
     {
         $this->setBounds($x, $y, $width, $height);
 
-        // Calculate dropdown dimensions (no borders, but add 1 for top separator)
+        // Calculate dropdown dimensions with borders
         $dropdownWidth = $this->calculateWidth();
-        $dropdownHeight = \min(\count($this->items), 15) + 1; // Max 15 items + top separator
+        $dropdownHeight = \min(\count($this->items), 15) + 2; // Max 15 items + top/bottom borders
 
         // Position dropdown below menu bar
         $dropdownX = $this->menuX;
@@ -74,8 +74,8 @@ final class MenuDropdown extends AbstractComponent
         // Draw shadow
         $this->drawShadow($renderer, $dropdownX, $dropdownY, $dropdownWidth, $dropdownHeight);
 
-        // Fill background with cyan and black foreground, with explicit RESET first
-        $dropdownBg = ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_BLACK);
+        // Fill background with cyan and white foreground
+        $dropdownBg = ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_GREEN, ColorScheme::FG_WHITE);
         $renderer->fillRect(
             $dropdownX,
             $dropdownY,
@@ -85,29 +85,23 @@ final class MenuDropdown extends AbstractComponent
             $dropdownBg,
         );
 
-        // Draw top separator line
-        $topSeparator = \str_repeat('─', $dropdownWidth - 2);
-        $renderer->writeAt(
-            $dropdownX + 1,
-            $dropdownY,
-            $topSeparator,
-            ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_GRAY),
-        );
+        // Draw border
+        $this->drawBorder($renderer, $dropdownX, $dropdownY, $dropdownWidth, $dropdownHeight);
 
-        // Render menu items (start below top separator at y + 1)
-        $visibleHeight = $dropdownHeight - 1; // Subtract top separator
+        // Render menu items (inside borders, starting at y + 1)
+        $visibleHeight = $dropdownHeight - 2; // Subtract top/bottom borders
         $startIndex = $this->scrollOffset;
         $endIndex = \min($startIndex + $visibleHeight, \count($this->items));
 
         for ($i = $startIndex; $i < $endIndex; $i++) {
             $item = $this->items[$i];
-            $itemY = $dropdownY + 1 + ($i - $startIndex); // +1 for top separator
+            $itemY = $dropdownY + 1 + ($i - $startIndex); // +1 for top border
             $isSelected = ($i === $this->selectedIndex);
 
             $this->renderItem($renderer, $dropdownX, $itemY, $dropdownWidth, $item, $isSelected);
         }
 
-        // Draw scrollbar if needed (account for top separator)
+        // Draw scrollbar if needed
         if (\count($this->items) > $visibleHeight) {
             $this->drawScrollbar($renderer, $dropdownX, $dropdownY, $dropdownWidth, $dropdownHeight);
         }
@@ -267,7 +261,8 @@ final class MenuDropdown extends AbstractComponent
      */
     private function calculateWidth(): int
     {
-        $maxWidth = 20; // Minimum width
+        $minWidth = 25; // Minimum width (~150px at typical terminal font size)
+        $maxWidth = $minWidth;
 
         foreach ($this->items as $item) {
             if ($item->isSeparator()) {
@@ -283,7 +278,7 @@ final class MenuDropdown extends AbstractComponent
             $maxWidth = \max($maxWidth, $itemWidth);
         }
 
-        return \min($maxWidth, 50); // Max width 50
+        return \min(\max($maxWidth, $minWidth), 50); // Min 25, Max 50
     }
 
     /**
@@ -298,40 +293,43 @@ final class MenuDropdown extends AbstractComponent
         bool $isSelected,
     ): void {
         if ($item->isSeparator()) {
-            // Draw separator line with gray on cyan (with left/right padding)
-            $line = \str_repeat('─', $width - 2);
+            // Draw separator line (horizontal line inside borders)
+            $line = '├' . \str_repeat('─', $width - 2) . '┤';
             $renderer->writeAt(
-                $x + 1,
+                $x,
                 $y,
                 $line,
-                ColorScheme::combine(ColorScheme::BG_CYAN, ColorScheme::FG_GRAY),
+                ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_WHITE),
             );
             return;
         }
 
-        // Selected item: white bg, black fg, bold - with RESET first
-        // Normal item: cyan bg, black fg - with RESET first
+        // Selected item: black bg, white fg, bold
+        // Normal item: cyan bg, white fg
         $color = $isSelected && $this->isFocused()
-            ? ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_WHITE, ColorScheme::FG_BLACK, ColorScheme::BOLD)
-            : ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_BLACK);
+            ? ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_BLACK, ColorScheme::FG_WHITE, ColorScheme::BOLD)
+            : ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_WHITE);
 
-        // Clear line (full width for background)
-        $renderer->fillRect($x, $y, $width, 1, ' ', $color);
+        // Clear line (inside borders, so width - 2)
+        $renderer->fillRect($x + 1, $y, $width - 2, 1, ' ', $color);
 
-        // Render item label with left padding (1 space from left edge)
+        // Render item label with left padding (2 spaces from left edge for border)
         $label = ' ' . $item->label;
         $renderer->writeAt($x + 1, $y, $label, $color);
 
-        // Render hotkey hint if present (with right padding)
+        // Render hotkey hint if present (right-aligned before right border)
         if ($item->hotkey !== null) {
             $hotkey = \strtoupper($item->hotkey) . ' ';
-            $hotkeyX = $x + $width - \mb_strlen($hotkey) - 1;
+            $hotkeyX = $x + $width - \mb_strlen($hotkey) - 1; // -1 for border
 
-            // Hotkey color: with RESET first for clean state
-            // Selected: white bg, black fg
-            // Normal: cyan bg, yellow fg
+            // Hotkey color: same background as item, but yellow text when not selected
             $hotkeyColor = $isSelected && $this->isFocused()
-                ? ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_WHITE, ColorScheme::FG_BLACK)
+                ? ColorScheme::combine(
+                    ColorScheme::RESET,
+                    ColorScheme::BG_BLACK,
+                    ColorScheme::FG_WHITE,
+                    ColorScheme::BOLD,
+                )
                 : ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_YELLOW);
 
             $renderer->writeAt(
@@ -342,10 +340,30 @@ final class MenuDropdown extends AbstractComponent
             );
         }
 
-        // Render submenu indicator if present (with right padding)
+        // Render submenu indicator if present
         if ($item->isSubmenu()) {
             $renderer->writeAt($x + $width - 2, $y, '►', $color);
         }
+    }
+
+    /**
+     * Draw border around dropdown
+     */
+    private function drawBorder(Renderer $renderer, int $x, int $y, int $width, int $height): void
+    {
+        $borderColor = ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_WHITE);
+
+        // Top border
+        $renderer->writeAt($x, $y, '┌' . \str_repeat('─', $width - 2) . '┐', $borderColor);
+
+        // Side borders
+        for ($i = 1; $i < $height - 1; $i++) {
+            $renderer->writeAt($x, $y + $i, '│', $borderColor);
+            $renderer->writeAt($x + $width - 1, $y + $i, '│', $borderColor);
+        }
+
+        // Bottom border
+        $renderer->writeAt($x, $y + $height - 1, '└' . \str_repeat('─', $width - 2) . '┘', $borderColor);
     }
 
     /**
@@ -374,8 +392,8 @@ final class MenuDropdown extends AbstractComponent
      */
     private function drawScrollbar(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
-        $scrollbarX = $x + $width - 1;
-        $contentHeight = $height - 1; // Subtract top separator
+        $scrollbarX = $x + $width - 2; // -2 for border
+        $contentHeight = $height - 2; // Subtract top/bottom borders
         $totalItems = \count($this->items);
 
         // Calculate thumb size and position
@@ -386,9 +404,9 @@ final class MenuDropdown extends AbstractComponent
             $char = ($i >= $thumbPos && $i < $thumbPos + $thumbSize) ? '█' : '│';
             $renderer->writeAt(
                 $scrollbarX,
-                $y + 1 + $i, // +1 to start below top separator
+                $y + 1 + $i, // +1 to start below top border
                 $char,
-                ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_BLACK),
+                ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_WHITE),
             );
         }
     }

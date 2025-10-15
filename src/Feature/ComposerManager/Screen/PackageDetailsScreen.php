@@ -15,8 +15,8 @@ use Butschster\Commander\UI\Component\Display\TableComponent;
 use Butschster\Commander\UI\Component\Display\TextDisplay;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
+use Butschster\Commander\UI\Screen\Attribute\Metadata;
 use Butschster\Commander\UI\Screen\ScreenInterface;
-use Butschster\Commander\UI\Screen\ScreenMetadata;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -32,6 +32,12 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  * - Support links
  * - Suggestions
  */
+#[Metadata(
+    name: 'composer_package_details',
+    title: 'Package Details',
+    description: 'Shows detailed information about a Composer package',
+    category: 'system',
+)]
 final class PackageDetailsScreen implements ScreenInterface
 {
     private const int TAB_INFO = 0;
@@ -105,15 +111,6 @@ final class PackageDetailsScreen implements ScreenInterface
     public function getTitle(): string
     {
         return "Package Details: {$this->packageName}";
-    }
-
-    public function getMetadata(): ScreenMetadata
-    {
-        return ScreenMetadata::system(
-            name: 'composer_package_details',
-            title: 'Package Details',
-            description: 'Shows detailed information about a Composer package',
-        );
     }
 
     private function initializeComponents(): void

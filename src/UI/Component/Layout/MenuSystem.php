@@ -165,8 +165,8 @@ final class MenuSystem extends AbstractComponent
      */
     private function renderMenuBar(Renderer $renderer, int $x, int $y, int $width): void
     {
-        // Fill background with cyan on black (explicit both colors for consistency)
-        $menuBg = ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_BLACK);
+        // Fill background with cyan
+        $menuBg = ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_WHITE);
         $renderer->fillRect($x, $y, $width, 1, ' ', $menuBg);
 
         // Separate quit menu from other menus
@@ -184,7 +184,7 @@ final class MenuSystem extends AbstractComponent
         }
 
         // Render left-side menu items
-        $currentX = $x + 1;
+        $currentX = $x + 1; // Start with 1 space from left edge
 
         foreach ($leftMenus as $key => $menu) {
             if ($currentX >= $x + $width - 20) { // Leave space for quit menu
@@ -193,39 +193,87 @@ final class MenuSystem extends AbstractComponent
 
             $isActive = ($key === $this->activeMenuKey);
 
-            // Always use cyan background with black text for menu items
-            $textColor = ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_BLACK);
-            $hotkeyColor = ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_YELLOW);
+            // Active menu item: black background with bold white text
+            // Inactive menu item: cyan background with bold white F-keys and normal white text
+            if ($isActive) {
+                $textColor = ColorScheme::combine(
+                    ColorScheme::RESET,
+                    ColorScheme::BG_BLACK,
+                    ColorScheme::FG_WHITE,
+                    ColorScheme::BOLD,
+                );
+            } else {
+                // Inactive: cyan bg, bold white fg for F-keys, normal white for text
+                $textColor = ColorScheme::combine(
+                    ColorScheme::RESET,
+                    ColorScheme::BG_CYAN,
+                    ColorScheme::FG_WHITE,
+                    ColorScheme::BOLD,
+                );
+            }
 
-            // Render F-key if present (yellow on cyan)
+            // Render leading space (always)
+            $renderer->writeAt($currentX, $y, ' ', $textColor);
+            $currentX += 1;
+
+            // Render F-key if present (bold white on cyan/black)
             if ($menu->fkey !== null) {
-                $renderer->writeAt($currentX, $y, $menu->fkey, $hotkeyColor);
+                $renderer->writeAt($currentX, $y, $menu->fkey, $textColor);
                 $currentX += \mb_strlen($menu->fkey);
             }
 
-            // Render menu label (black on cyan)
-            $label = ' ' . $menu->label . ' ';
+            // Space between F-key and label
+            $renderer->writeAt($currentX, $y, ' ', $textColor);
+            $currentX += 1;
+
+            // Render menu label (white on cyan/black)
+            $label = $menu->label;
             $renderer->writeAt($currentX, $y, $label, $textColor);
-            $currentX += \mb_strlen($label) + 1;
+            $currentX += \mb_strlen($label);
+
+            // Render trailing space (always)
+            $renderer->writeAt($currentX, $y, ' ', $textColor);
+            $currentX += 1;
+
+            // Padding between menu items (~15px = ~3 spaces at typical terminal width)
+            $currentX += 3;
         }
 
         // Render Quit menu on the right side
         if ($quitMenu !== null) {
-            $textColor = ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_BLACK);
-            $hotkeyColor = ColorScheme::combine(ColorScheme::RESET, ColorScheme::BG_CYAN, ColorScheme::FG_YELLOW);
+            // Quit menu is never active (executes immediately)
+            $textColor = ColorScheme::combine(
+                ColorScheme::RESET,
+                ColorScheme::BG_CYAN,
+                ColorScheme::FG_WHITE,
+                ColorScheme::BOLD,
+            );
 
-            $label = ' ' . $quitMenu->label . ' ';
-            $quitWidth = \mb_strlen($quitMenu->fkey ?? '') + \mb_strlen($label);
-            $quitX = $x + $width - $quitWidth - 1; // Position from right edge
+            $label = $quitMenu->label;
+            // Calculate total width: leading space + F-key + space + label + trailing space
+            $quitWidth = 1 + \mb_strlen($quitMenu->fkey ?? '') + 1 + \mb_strlen($label) + 1;
+            $quitX = $x + $width - $quitWidth - 1; // Position from right edge with 1 space padding
+
+            // Render leading space
+            $renderer->writeAt($quitX, $y, ' ', $textColor);
+            $quitX += 1;
 
             // Render F-key (F10)
             if ($quitMenu->fkey !== null) {
-                $renderer->writeAt($quitX, $y, $quitMenu->fkey, $hotkeyColor);
+                $renderer->writeAt($quitX, $y, $quitMenu->fkey, $textColor);
                 $quitX += \mb_strlen($quitMenu->fkey);
             }
 
+            // Space between F-key and label
+            $renderer->writeAt($quitX, $y, ' ', $textColor);
+            $quitX += 1;
+
             // Render label
             $renderer->writeAt($quitX, $y, $label, $textColor);
+            $quitX += \mb_strlen($label);
+
+            // Render trailing space
+            $renderer->writeAt($quitX, $y, ' ', $textColor);
         }
     }
 
