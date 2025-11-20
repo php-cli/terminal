@@ -5,10 +5,6 @@
   Create fullscreen, keyboard-driven interfaces with double-buffered rendering.
 </p>
 
-<p align="center">
-  <img src="docs/screenshot.png" alt="Commander Screenshot" width="800">
-</p>
-
 ---
 
 ## 🚀 Why Commander?
