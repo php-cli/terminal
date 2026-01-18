@@ -356,6 +356,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         $this->assertInstanceOf(ActionMenuItem::class, $submenu->items[1]);
     }
 
+    #[\Override]
     protected function setUp(): void
     {
         parent::setUp();
