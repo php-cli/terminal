@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\E2E\Scenario;
 
 use Butschster\Commander\Infrastructure\Keyboard\KeyCombination;
-use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Layout\MenuDropdown;
 use Butschster\Commander\UI\Menu\ActionMenuItem;
 use Butschster\Commander\UI\Menu\MenuDefinition;
@@ -13,7 +12,6 @@ use Butschster\Commander\UI\Menu\MenuItemInterface;
 use Butschster\Commander\UI\Menu\ScreenMenuItem;
 use Butschster\Commander\UI\Menu\SeparatorMenuItem;
 use Butschster\Commander\UI\Menu\SubmenuMenuItem;
-use Butschster\Commander\UI\Screen\ScreenInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TerminalTestCase;
@@ -34,13 +32,6 @@ final class MenuSystemScenarioTest extends TerminalTestCase
 {
     private bool $actionExecuted = false;
     private string $lastActionLabel = '';
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->actionExecuted = false;
-        $this->lastActionLabel = '';
-    }
 
     // === MenuDropdown with Polymorphic Items ===
 
@@ -69,8 +60,8 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         $this->terminal()->setSize(80, 24);
 
         $items = [
-            ActionMenuItem::create('Run Task', fn() => null, 'r'),
-            ActionMenuItem::create('Stop Task', fn() => null, 't'),
+            ActionMenuItem::create('Run Task', static fn() => null, 'r'),
+            ActionMenuItem::create('Stop Task', static fn() => null, 't'),
         ];
 
         $dropdown = new MenuDropdown($items, 5, 2);
@@ -88,9 +79,9 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         $this->terminal()->setSize(80, 24);
 
         $items = [
-            ActionMenuItem::create('Item Before', fn() => null),
+            ActionMenuItem::create('Item Before', static fn() => null),
             SeparatorMenuItem::create(),
-            ActionMenuItem::create('Item After', fn() => null),
+            ActionMenuItem::create('Item After', static fn() => null),
         ];
 
         $dropdown = new MenuDropdown($items, 5, 2);
@@ -139,7 +130,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         $dropdown = new MenuDropdown($items, 5, 2);
 
         $receivedItem = null;
-        $dropdown->onSelect(function (MenuItemInterface $item) use (&$receivedItem): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$receivedItem): void {
             $receivedItem = $item;
             if ($item instanceof ActionMenuItem) {
                 ($item->action)();
@@ -163,7 +154,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         $dropdown = new MenuDropdown($items, 5, 2);
 
         $selectedScreenName = null;
-        $dropdown->onSelect(function (MenuItemInterface $item) use (&$selectedScreenName): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$selectedScreenName): void {
             if ($item instanceof ScreenMenuItem) {
                 $selectedScreenName = $item->screenName;
             }
@@ -179,15 +170,15 @@ final class MenuSystemScenarioTest extends TerminalTestCase
     public function separator_is_skipped_during_arrow_navigation(): void
     {
         $items = [
-            ActionMenuItem::create('First', fn() => null),
+            ActionMenuItem::create('First', static fn() => null),
             SeparatorMenuItem::create(),
-            ActionMenuItem::create('Third', fn() => null),
+            ActionMenuItem::create('Third', static fn() => null),
         ];
 
         $dropdown = new MenuDropdown($items, 5, 2);
 
         $receivedItem = null;
-        $dropdown->onSelect(function (MenuItemInterface $item) use (&$receivedItem): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$receivedItem): void {
             $receivedItem = $item;
         });
 
@@ -213,7 +204,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         ];
 
         $dropdown = new MenuDropdown($items, 5, 2);
-        $dropdown->onSelect(function (MenuItemInterface $item): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item): void {
             if ($item instanceof ActionMenuItem) {
                 ($item->action)();
             }
@@ -237,7 +228,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         ];
 
         $dropdown = new MenuDropdown($items, 5, 2);
-        $dropdown->onSelect(function (MenuItemInterface $item): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item): void {
             if ($item instanceof ActionMenuItem) {
                 ($item->action)();
             }
@@ -259,7 +250,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
             SeparatorMenuItem::create(),
             SeparatorMenuItem::create(),
             ScreenMenuItem::create('First Real', 'screen.first'),
-            ActionMenuItem::create('Second', fn() => null),
+            ActionMenuItem::create('Second', static fn() => null),
         ];
 
         $menu = new MenuDefinition('Test', null, $items);
@@ -316,10 +307,10 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         $items = [
             ScreenMenuItem::create('Navigate', 'screen.nav'),
             SeparatorMenuItem::create(),
-            ActionMenuItem::create('Execute', fn() => null),
+            ActionMenuItem::create('Execute', static fn() => null),
             SeparatorMenuItem::create(),
             SubmenuMenuItem::create('More', [
-                ActionMenuItem::create('Sub Action', fn() => null),
+                ActionMenuItem::create('Sub Action', static fn() => null),
             ]),
         ];
 
@@ -328,7 +319,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
 
         // Navigate through all selectable items
         $labels = [];
-        $dropdown->onSelect(function (MenuItemInterface $item) use (&$labels): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$labels): void {
             $labels[] = $item->getLabel();
         });
 
@@ -338,7 +329,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         // Reset and navigate to second selectable (Execute)
         $dropdown = new MenuDropdown($items, 5, 2);
         $dropdown->setFocused(true);
-        $dropdown->onSelect(function (MenuItemInterface $item) use (&$labels): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$labels): void {
             $labels[] = $item->getLabel();
         });
         $dropdown->handleInput('DOWN'); // Skip separator
@@ -353,7 +344,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
     {
         $subItems = [
             ScreenMenuItem::create('Sub Item 1', 'sub.1'),
-            ActionMenuItem::create('Sub Item 2', fn() => null),
+            ActionMenuItem::create('Sub Item 2', static fn() => null),
         ];
 
         $submenu = SubmenuMenuItem::create('Parent Menu', $subItems, 'p');
@@ -363,6 +354,13 @@ final class MenuSystemScenarioTest extends TerminalTestCase
         $this->assertCount(2, $submenu->items);
         $this->assertInstanceOf(ScreenMenuItem::class, $submenu->items[0]);
         $this->assertInstanceOf(ActionMenuItem::class, $submenu->items[1]);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->actionExecuted = false;
+        $this->lastActionLabel = '';
     }
 
     // === Helper Methods ===
