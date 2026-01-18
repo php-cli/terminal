@@ -12,6 +12,9 @@ use Butschster\Commander\UI\Menu\MenuDefinition;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
 use Butschster\Commander\UI\Screen\ScreenRegistry;
+use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\ThemeContext;
+use Butschster\Commander\UI\Theme\ThemeManager;
 
 /**
  * Main MC-style console application
@@ -28,6 +31,7 @@ final class Application
     private readonly Renderer $renderer;
     private readonly KeyboardHandler $keyboard;
     private readonly ScreenManager $screenManager;
+    private readonly ThemeContext $themeContext;
 
     /** @var array<string, callable> Global function key shortcuts */
     private array $globalShortcuts = [];
@@ -45,9 +49,16 @@ final class Application
     {
         $this->frameTime = 1.0 / $this->targetFps;
 
+        // Initialize theme context from current theme
+        $theme = ThemeManager::getCurrentTheme();
+        $this->themeContext = new ThemeContext($theme);
+
+        // Apply theme to ColorScheme for backward compatibility
+        ColorScheme::applyTheme($theme);
+
         // Initialize services
         $this->terminal = new TerminalManager();
-        $this->renderer = new Renderer($this->terminal);
+        $this->renderer = new Renderer($this->terminal, $this->themeContext);
         $this->keyboard = new KeyboardHandler();
         $this->screenManager = new ScreenManager();
 

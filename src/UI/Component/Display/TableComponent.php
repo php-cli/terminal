@@ -7,6 +7,7 @@ namespace Butschster\Commander\UI\Component\Display;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\ThemeContext;
 
 /**
  * Generic table component with configurable columns
@@ -150,6 +151,7 @@ final class TableComponent extends AbstractComponent
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
+        $theme = $renderer->getThemeContext();
 
         // Check if scrollbar is needed
         $needsScrollbar = \count($this->rows) > ($this->showHeader ? $height - 2 : $height);
@@ -166,12 +168,12 @@ final class TableComponent extends AbstractComponent
 
         // Render header if enabled
         if ($this->showHeader) {
-            $this->renderHeader($renderer, $x, $currentY, $contentWidth);
+            $this->renderHeader($renderer, $x, $currentY, $contentWidth, $theme);
             $currentY += 1;
 
             // Render separator line
             $separator = \str_repeat('─', $contentWidth);
-            $renderer->writeAt($x, $currentY, $separator, ColorScheme::$INACTIVE_BORDER);
+            $renderer->writeAt($x, $currentY, $separator, $theme->getInactiveBorder());
             $currentY += 1;
 
             // Adjust visible rows to account for header
@@ -182,7 +184,7 @@ final class TableComponent extends AbstractComponent
 
         if (empty($this->rows)) {
             // Show empty state
-            $this->renderEmptyState($renderer, $x, $currentY, $contentWidth, $this->visibleRows);
+            $this->renderEmptyState($renderer, $x, $currentY, $contentWidth, $this->visibleRows, $theme);
             return;
         }
 
@@ -199,12 +201,12 @@ final class TableComponent extends AbstractComponent
             $row = $this->rows[$i];
             $selected = ($i === $this->selectedIndex);
 
-            $this->renderRow($renderer, $x, $rowY, $contentWidth, $row, $selected);
+            $this->renderRow($renderer, $x, $rowY, $contentWidth, $row, $selected, $theme);
         }
 
         // Draw scrollbar if needed
         if ($needsScrollbar) {
-            $this->drawScrollbar($renderer, $x + $contentWidth, $currentY, $this->visibleRows);
+            $this->drawScrollbar($renderer, $x + $contentWidth, $currentY, $this->visibleRows, $theme);
         }
     }
 
@@ -328,7 +330,7 @@ final class TableComponent extends AbstractComponent
     /**
      * Render header row
      */
-    private function renderHeader(Renderer $renderer, int $x, int $y, int $width): void
+    private function renderHeader(Renderer $renderer, int $x, int $y, int $width, ThemeContext $theme): void
     {
         $headerParts = [];
         $currentX = 0;
@@ -351,7 +353,7 @@ final class TableComponent extends AbstractComponent
             $x,
             $y,
             $headerLine,
-            ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
+            $theme->getNormalColors()->withStyle(ColorScheme::FG_YELLOW . ColorScheme::BOLD),
         );
     }
 
@@ -367,13 +369,14 @@ final class TableComponent extends AbstractComponent
         int $width,
         array $row,
         bool $selected,
+        ThemeContext $theme,
     ): void {
         $currentX = $x;
 
         // Default color
         $defaultColor = $selected && $this->isFocused()
-            ? ColorScheme::$SELECTED_TEXT
-            : ColorScheme::$NORMAL_TEXT;
+            ? $theme->getSelectedText()
+            : $theme->getNormalText();
 
         foreach ($this->columns as $index => $column) {
             $colWidth = $this->calculatedWidths[$index] ?? 10;
@@ -400,13 +403,13 @@ final class TableComponent extends AbstractComponent
     /**
      * Render empty state message
      */
-    private function renderEmptyState(Renderer $renderer, int $x, int $y, int $width, int $height): void
+    private function renderEmptyState(Renderer $renderer, int $x, int $y, int $width, int $height, ThemeContext $theme): void
     {
         $emptyText = '(No data)';
         $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
         $emptyY = $y + (int) ($height / 2);
 
-        $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::$NORMAL_TEXT);
+        $renderer->writeAt($emptyX, $emptyY, $emptyText, $theme->getNormalText());
     }
 
     /**
@@ -449,7 +452,7 @@ final class TableComponent extends AbstractComponent
     /**
      * Draw scrollbar indicator
      */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
+    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height, ThemeContext $theme): void
     {
         $totalItems = \count($this->rows);
 
@@ -459,7 +462,7 @@ final class TableComponent extends AbstractComponent
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
+            $renderer->writeAt($x, $y + $i, $char, $theme->getScrollbar());
         }
     }
 }

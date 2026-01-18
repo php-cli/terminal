@@ -6,7 +6,7 @@ namespace Butschster\Commander\UI\Component\Display;
 
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
-use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\ThemeContext;
 
 /**
  * Text display component with scrolling support
@@ -108,6 +108,7 @@ final class TextDisplay extends AbstractComponent
     {
         $this->setBounds($x, $y, $width, $height);
         $this->visibleLines = $height;
+        $theme = $renderer->getThemeContext();
 
         if (empty($this->lines)) {
             return;
@@ -140,7 +141,7 @@ final class TextDisplay extends AbstractComponent
                     $x,
                     $rowY,
                     $wrappedLine,
-                    ColorScheme::$NORMAL_TEXT,
+                    $theme->getNormalText(),
                 );
 
                 $rowY++;
@@ -149,7 +150,7 @@ final class TextDisplay extends AbstractComponent
 
         // Draw scrollbar if needed
         if ($needsScrollbar) {
-            $this->drawScrollbar($renderer, $x + $contentWidth, $y, $height);
+            $this->drawScrollbar($renderer, $x + $contentWidth, $y, $height, $theme);
         }
     }
 
@@ -232,7 +233,7 @@ final class TextDisplay extends AbstractComponent
     /**
      * Draw scrollbar indicator
      */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
+    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height, ThemeContext $theme): void
     {
         $totalLines = \count($this->lines);
 
@@ -246,7 +247,7 @@ final class TextDisplay extends AbstractComponent
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
+            $renderer->writeAt($x, $y + $i, $char, $theme->getScrollbar());
         }
     }
 }

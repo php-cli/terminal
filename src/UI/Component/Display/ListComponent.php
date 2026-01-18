@@ -6,7 +6,7 @@ namespace Butschster\Commander\UI\Component\Display;
 
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
-use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\ThemeContext;
 
 /**
  * Scrollable list component with keyboard navigation
@@ -85,6 +85,7 @@ final class ListComponent extends AbstractComponent
     {
         $this->setBounds($x, $y, $width, $height);
         $this->visibleRows = $height;
+        $theme = $renderer->getThemeContext();
 
         if (empty($this->items)) {
             // Show empty state
@@ -92,7 +93,7 @@ final class ListComponent extends AbstractComponent
             $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
             $emptyY = $y + (int) ($height / 2);
 
-            $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::$NORMAL_TEXT);
+            $renderer->writeAt($emptyX, $emptyY, $emptyText, $theme->getNormalText());
             return;
         }
 
@@ -121,21 +122,21 @@ final class ListComponent extends AbstractComponent
                     $x,
                     $rowY,
                     $displayText,
-                    ColorScheme::$SELECTED_TEXT,
+                    $theme->getSelectedText(),
                 );
             } else {
                 $renderer->writeAt(
                     $x,
                     $rowY,
                     $displayText,
-                    ColorScheme::$NORMAL_TEXT,
+                    $theme->getNormalText(),
                 );
             }
         }
 
         // Draw scrollbar if needed
         if ($needsScrollbar) {
-            $this->drawScrollbar($renderer, $x + $contentWidth, $y, $height);
+            $this->drawScrollbar($renderer, $x + $contentWidth, $y, $height, $theme);
         }
     }
 
@@ -226,7 +227,7 @@ final class ListComponent extends AbstractComponent
     /**
      * Draw scrollbar indicator
      */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
+    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height, ThemeContext $theme): void
     {
         $totalItems = \count($this->items);
 
@@ -236,7 +237,7 @@ final class ListComponent extends AbstractComponent
 
         for ($i = 0; $i < $height; $i++) {
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
+            $renderer->writeAt($x, $y + $i, $char, $theme->getScrollbar());
         }
     }
 }
