@@ -5,19 +5,11 @@ declare(strict_types=1);
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Butschster\Commander\Application;
 use Butschster\Commander\ExceptionRenderer;
-use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
-use Butschster\Commander\Feature\ComposerManager\Screen\ComposerManagerScreen;
-use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
-use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
-use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
-use Butschster\Commander\Infrastructure\Keyboard\DefaultKeyBindings;
-use Butschster\Commander\UI\Menu\MenuBuilder;
-use Butschster\Commander\UI\Screen\ScreenRegistry;
-use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\Module\CommandBrowser\CommandBrowserModule;
+use Butschster\Commander\Module\ComposerManager\ComposerModule;
+use Butschster\Commander\Module\FileBrowser\FileBrowserModule;
+use Butschster\Commander\SDK\Builder\ApplicationBuilder;
 use Butschster\Commander\UI\Theme\MidnightTheme;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
@@ -27,42 +19,23 @@ $symfonyApp = new SymfonyApplication('My Console Application', '1.0.0');
 // Add more commands here as needed
 // $symfonyApp->add(new AnotherCommand());
 
-// Initialize theme
-ColorScheme::applyTheme(new MidnightTheme());
-// ColorScheme::applyTheme(new DarkTheme());
-
-// Create and run the MC-style application
 try {
-    $app = new Application();
-    $app->setTargetFps(30);
+    $app = ApplicationBuilder::create()
+        // Register modules
+        ->withModule(new CommandBrowserModule($symfonyApp))
+        ->withModule(new FileBrowserModule((string) getcwd()))
+        ->withModule(new ComposerModule(__DIR__))
 
-    // 1. Create screen registry
-    $registry = new ScreenRegistry($app->getScreenManager());
-    $app->setScreenRegistry($registry);
+        // Configuration
+        ->withTheme(new MidnightTheme())
+        ->withFps(30)
 
-    // 2. Create and register screen instances
-    //    Each screen now self-registers with its metadata
-    $commandDiscovery = new CommandDiscovery($symfonyApp);
-    $commandExecutor = new CommandExecutor($symfonyApp);
-    $fileSystem = new FileSystemService();
+        // Start with command browser
+        ->withInitialScreen('command_browser')
 
-    $registry->register(new CommandsScreen($commandDiscovery, $commandExecutor));
-    $registry->register(new FileBrowserScreen($fileSystem, $app->getScreenManager(), getcwd()));
-    $registry->register(new ComposerManagerScreen(new ComposerService(__DIR__)));
+        ->build();
 
-    // 3. Build menu system from registered screens
-    //    Automatically groups screens by category and assigns F-keys
-    $keyBindings = DefaultKeyBindings::createRegistry();
-    $menuBuilder = new MenuBuilder($registry, $keyBindings);
-    $app->setMenuSystem($menuBuilder->build());
-
-    // 4. Start with first registered screen
-    $firstScreen = $registry->getScreen('command_browser');
-    if ($firstScreen === null) {
-        throw new \RuntimeException('No screens registered');
-    }
-
-    $app->run($firstScreen);
+    $app->run();
 } catch (\Throwable $e) {
     echo (new ExceptionRenderer())->render($e, true);
 

@@ -21,6 +21,7 @@
             <errorLevel type="suppress">
                 <directory name="src/Infrastructure/Terminal" />
                 <directory name="src/Feature/ComposerManager/Service" />
+                <directory name="src/Module/ComposerManager/Service" />
             </errorLevel>
         </ForbiddenCode>
         <MissingOverrideAttribute errorLevel="suppress" />
