@@ -26,6 +26,9 @@ final class ComposerService
     private ?array $installedPackagesCache = null;
     private ?array $outdatedPackagesCache = null;
 
+    /** @var array<string, array<string>>|null Package name => array of packages that depend on it */
+    private ?array $dependencyGraph = null;
+
     public function __construct(
         private readonly string $workingDirectory = '.',
     ) {}
@@ -122,30 +125,49 @@ final class ComposerService
 
     /**
      * Get packages that depend on this package (reverse dependencies)
+     * Uses pre-built dependency graph for O(1) lookup.
      *
      * @return array<string> Package names
      */
     public function getReverseDependencies(string $packageName): array
     {
-        $composer = $this->getComposer();
-        if ($composer === null) {
-            return [];
+        $graph = $this->buildDependencyGraph();
+        $dependents = $graph[$packageName] ?? [];
+        \sort($dependents);
+        return $dependents;
+    }
+
+    /**
+     * Build dependency graph once for efficient reverse lookups.
+     *
+     * @return array<string, array<string>> Package name => array of packages that depend on it
+     */
+    public function buildDependencyGraph(): array
+    {
+        if ($this->dependencyGraph !== null) {
+            return $this->dependencyGraph;
         }
 
         $installedRepo = $this->getInstalledRepository();
-        $dependents = [];
+
+        if ($installedRepo === null) {
+            return [];
+        }
+
+        $graph = [];
 
         foreach ($installedRepo->getPackages() as $package) {
             foreach ($package->getRequires() as $link) {
-                if ($link->getTarget() === $packageName) {
-                    $dependents[] = $package->getName();
-                    break;
+                $target = $link->getTarget();
+                if (!isset($graph[$target])) {
+                    $graph[$target] = [];
                 }
+                $graph[$target][] = $package->getName();
             }
         }
 
-        \sort($dependents);
-        return $dependents;
+        $this->dependencyGraph = $graph;
+        return $graph;
     }
 
     /**
@@ -423,6 +445,7 @@ final class ComposerService
     {
         $this->installedPackagesCache = null;
         $this->outdatedPackagesCache = null;
+        $this->dependencyGraph = null;
         $this->composer = null;
         $this->installedRepo = null;
     }
@@ -682,31 +705,6 @@ final class ComposerService
      */
     private function findComposerBinary(): ?string
     {
-        // Try common locations
-        $candidates = [
-            'composer',           // In PATH
-            'composer.phar',      // Local phar
-            '/usr/local/bin/composer',
-            '/usr/bin/composer',
-            $_SERVER['HOME'] . '/.composer/composer.phar',
-        ];
-
-        foreach ($candidates as $candidate) {
-            if ($this->isExecutable($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Check if a file is executable
-     */
-    private function isExecutable(string $file): bool
-    {
-        // Try to execute with --version
-        $output = @\shell_exec(\escapeshellarg($file) . ' --version 2>&1');
-        return $output !== null && \stripos($output, 'composer') !== false;
+        return ComposerBinaryLocator::find();
     }
 }

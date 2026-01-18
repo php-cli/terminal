@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Feature\ComposerManager\Tab;
 
+use Butschster\Commander\Feature\ComposerManager\Component\LoadingState;
+use Butschster\Commander\Feature\ComposerManager\Component\SearchFilter;
+use Butschster\Commander\Feature\ComposerManager\Component\UpdateProgressModal;
+use Butschster\Commander\Feature\ComposerManager\Service\ComposerBinaryLocator;
 use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Feature\ComposerManager\Service\OutdatedPackageInfo;
 use Butschster\Commander\Infrastructure\Keyboard\Key;
@@ -15,8 +19,10 @@ use Butschster\Commander\UI\Component\Decorator\Padding;
 use Butschster\Commander\UI\Component\Display\TableColumn;
 use Butschster\Commander\UI\Component\Display\TableComponent;
 use Butschster\Commander\UI\Component\Display\TextDisplay;
+use Butschster\Commander\UI\Component\Layout\Modal;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Theme\ColorScheme;
+use Symfony\Component\Process\Process;
 
 /**
  * Outdated Packages Tab
@@ -32,13 +38,21 @@ final class OutdatedPackagesTab extends AbstractTab
     private TableComponent $table;
     private TextDisplay $detailsDisplay;
     private array $packages = [];
+    private array $allPackages = [];
+    private array $filteredPackages = [];
     private ?string $selectedPackageName = null;
     private int $focusedPanelIndex = 0;
     private bool $dataLoaded = false;
+    private LoadingState $loadingState;
+    private SearchFilter $searchFilter;
+    private ?Modal $confirmModal = null;
+    private ?UpdateProgressModal $updateModal = null;
 
     public function __construct(
         private readonly ComposerService $composerService,
     ) {
+        $this->loadingState = new LoadingState();
+        $this->searchFilter = new SearchFilter($this->applyFilter(...));
         $this->initializeComponents();
     }
 
@@ -51,29 +65,124 @@ final class OutdatedPackagesTab extends AbstractTab
     #[\Override]
     public function getShortcuts(): array
     {
-        return [
+        if ($this->updateModal !== null) {
+            return [
+                'Ctrl+C' => 'Cancel',
+                'Enter' => 'Close',
+            ];
+        }
+
+        if ($this->searchFilter->isActive()) {
+            return [
+                'Enter' => 'Confirm',
+                'Esc' => 'Cancel',
+                'Ctrl+U' => 'Clear',
+            ];
+        }
+
+        $shortcuts = [
+            '/' => 'Search',
             'Tab' => 'Switch Panel',
-            'Enter' => 'Update',
+            'Enter' => 'Details',
+            'U' => 'Update Package',
+            'F5' => 'Update All',
             'Ctrl+R' => 'Refresh',
         ];
+
+        if ($this->searchFilter->hasFilter()) {
+            $shortcuts['Esc'] = 'Clear Filter';
+        }
+
+        return $shortcuts;
     }
 
     #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
-        $this->layout->render($renderer, $x, $y, $width, $height);
+
+        // Reserve space for search filter
+        $searchHeight = 1;
+        $contentHeight = $height - $searchHeight;
+
+        // Render search filter at top
+        $this->searchFilter->render($renderer, $x, $y, $width, 1);
+
+        // Render layout below
+        $this->layout->render($renderer, $x, $y + $searchHeight, $width, $contentHeight);
+
+        // Render loading overlay if active
+        if ($this->loadingState->isLoading()) {
+            $this->loadingState->render($renderer, $x, $y + $searchHeight, $width, $contentHeight);
+        }
+
+        // Render confirm modal if active
+        if ($this->confirmModal !== null) {
+            $this->confirmModal->render($renderer, $x, $y, $width, $height);
+        }
+
+        // Render update progress modal if active
+        if ($this->updateModal !== null) {
+            $this->updateModal->render($renderer, $x, $y, $width, $height);
+        }
     }
 
     #[\Override]
     public function handleInput(string $key): bool
     {
+        // Handle update modal input first
+        if ($this->updateModal !== null) {
+            return $this->updateModal->handleInput($key);
+        }
+
+        // Handle confirm modal input
+        if ($this->confirmModal !== null) {
+            return $this->confirmModal->handleInput($key);
+        }
+
+        // Handle search filter input first if active
+        if ($this->searchFilter->isActive()) {
+            return $this->searchFilter->handleInput($key);
+        }
+
+        // Block input during loading
+        if ($this->loadingState->isLoading()) {
+            return true;
+        }
+
         $input = KeyInput::from($key);
+
+        // Activate search with / or Ctrl+F
+        if ($key === '/' || $input->isCtrl(Key::F)) {
+            $this->searchFilter->activate();
+            return true;
+        }
+
+        // Clear filter with Escape when filter is active but not in input mode
+        if ($input->is(Key::ESCAPE) && $this->searchFilter->hasFilter()) {
+            $this->searchFilter->clear();
+            return true;
+        }
 
         // Refresh data (Ctrl+R)
         if ($input->isCtrl(Key::R)) {
             $this->composerService->clearCache();
+            $this->searchFilter->clear();
+            $this->dataLoaded = false;
             $this->loadData();
+            $this->dataLoaded = true;
+            return true;
+        }
+
+        // Update selected package (U)
+        if ($input->isKey('u') || $input->isKey('U')) {
+            $this->promptUpdateSelectedPackage();
+            return true;
+        }
+
+        // Update all packages (F5)
+        if ($input->is(Key::F5)) {
+            $this->promptUpdateAllPackages();
             return true;
         }
 
@@ -90,6 +199,18 @@ final class OutdatedPackagesTab extends AbstractTab
         }
 
         return $this->rightPanel->handleInput($key);
+    }
+
+    #[\Override]
+    public function update(): void
+    {
+        parent::update();
+        $this->loadingState->update();
+
+        // Update the update modal if active
+        if ($this->updateModal !== null) {
+            $this->updateModal->update();
+        }
     }
 
     #[\Override]
@@ -189,30 +310,66 @@ final class OutdatedPackagesTab extends AbstractTab
         return $table;
     }
 
+    private function applyFilter(string $query): void
+    {
+        if ($query === '') {
+            $this->filteredPackages = $this->allPackages;
+        } else {
+            $query = \mb_strtolower($query);
+            $this->filteredPackages = \array_filter(
+                $this->allPackages,
+                static fn(array $pkg) => \str_contains(\mb_strtolower($pkg['name']), $query)
+                    || \str_contains(\mb_strtolower($pkg['description'] ?? ''), $query),
+            );
+            $this->filteredPackages = \array_values($this->filteredPackages);
+        }
+
+        $this->packages = $this->filteredPackages;
+        $this->table->setRows($this->filteredPackages);
+        $this->updatePanelTitle();
+    }
+
+    private function updatePanelTitle(): void
+    {
+        $total = \count($this->allPackages);
+        $filtered = \count($this->filteredPackages);
+
+        if ($this->searchFilter->hasFilter()) {
+            $this->leftPanel->setTitle("Outdated Packages ({$filtered}/{$total} shown)");
+        } else {
+            $this->leftPanel->setTitle("Outdated Packages ({$total})");
+        }
+    }
+
     private function loadData(): void
     {
-        $this->packages = \array_map(static fn(OutdatedPackageInfo $pkg)
-            => [
-                'name' => $pkg->name,
-                'current' => $pkg->currentVersion,
-                'latest' => $pkg->latestVersion,
-                'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
-                'description' => $pkg->description,
-                'warning' => $pkg->warning,
-            ], $this->composerService->getOutdatedPackages());
+        $this->loadingState->start('Checking for outdated packages...');
 
-        $this->table->setRows($this->packages);
+        try {
+            $this->allPackages = \array_map(static fn(OutdatedPackageInfo $pkg)
+                => [
+                    'name' => $pkg->name,
+                    'current' => $pkg->currentVersion,
+                    'latest' => $pkg->latestVersion,
+                    'type' => $pkg->isMajorUpdate() ? 'major' : ($pkg->isMinorUpdate() ? 'minor' : 'patch'),
+                    'description' => $pkg->description,
+                    'warning' => $pkg->warning,
+                ], $this->composerService->getOutdatedPackages());
 
-        // Update panel title
-        $count = \count($this->packages);
-        $this->leftPanel->setTitle("Outdated Packages ($count)");
+            $this->filteredPackages = $this->allPackages;
+            $this->packages = $this->filteredPackages;
+            $this->table->setRows($this->filteredPackages);
+            $this->updatePanelTitle();
 
-        // Show first package or empty state
-        if (!empty($this->packages)) {
-            $this->selectedPackageName = $this->packages[0]['name'];
-            $this->showPackageDetails($this->packages[0]);
-        } else {
-            $this->detailsDisplay->setText("[OK] All packages are up to date!");
+            // Show first package or empty state
+            if (!empty($this->packages)) {
+                $this->selectedPackageName = $this->packages[0]['name'];
+                $this->showPackageDetails($this->packages[0]);
+            } else {
+                $this->detailsDisplay->setText("[OK] All packages are up to date!");
+            }
+        } finally {
+            $this->loadingState->stop();
         }
     }
 
@@ -240,10 +397,116 @@ final class OutdatedPackagesTab extends AbstractTab
         }
 
         $lines[] = "";
-        $lines[] = "Press Enter to update this package";
+        $lines[] = "Press U to update this package";
 
         $this->detailsDisplay->setText(\implode("\n", $lines));
         $this->rightPanel->setTitle("Outdated: {$package['name']}");
+    }
+
+    private function promptUpdateSelectedPackage(): void
+    {
+        if ($this->selectedPackageName === null || empty($this->packages)) {
+            return;
+        }
+
+        $packageName = $this->selectedPackageName;
+        $this->confirmModal = Modal::confirm(
+            'Update Package',
+            "Are you sure you want to update '{$packageName}'?\n\n" .
+            "This will run 'composer update {$packageName} --with-dependencies'.",
+        );
+
+        $this->confirmModal->onClose(function ($confirmed) use ($packageName): void {
+            $this->confirmModal = null;
+            if ($confirmed) {
+                $this->startPackageUpdate($packageName);
+            }
+        });
+    }
+
+    private function promptUpdateAllPackages(): void
+    {
+        if (empty($this->packages)) {
+            return;
+        }
+
+        $count = \count($this->packages);
+        $this->confirmModal = Modal::confirm(
+            'Update All Packages',
+            "Are you sure you want to update all {$count} outdated packages?\n\n" .
+            "This will run 'composer update'.",
+        );
+
+        $this->confirmModal->onClose(function ($confirmed): void {
+            $this->confirmModal = null;
+            if ($confirmed) {
+                $this->startUpdateAll();
+            }
+        });
+    }
+
+    private function startPackageUpdate(string $packageName): void
+    {
+        $composerBinary = ComposerBinaryLocator::find();
+        if ($composerBinary === null) {
+            return;
+        }
+
+        $this->updateModal = new UpdateProgressModal($packageName);
+        $this->updateModal->onClose(function (): void {
+            $exitCode = $this->updateModal?->getExitCode();
+            $this->updateModal = null;
+
+            // Refresh data after successful update
+            if ($exitCode === 0) {
+                $this->composerService->clearCache();
+                $this->dataLoaded = false;
+                $this->loadData();
+                $this->dataLoaded = true;
+            }
+        });
+
+        $process = new Process(
+            [$composerBinary, 'update', $packageName, '--with-dependencies'],
+            \getcwd(),
+            null,
+            null,
+            null, // No timeout
+        );
+
+        $this->updateModal->startProcess($process);
+    }
+
+    private function startUpdateAll(): void
+    {
+        $composerBinary = ComposerBinaryLocator::find();
+        if ($composerBinary === null) {
+            return;
+        }
+
+        $this->updateModal = new UpdateProgressModal();
+        $this->updateModal->onClose(function (): void {
+            $exitCode = $this->updateModal?->getExitCode();
+            $this->updateModal = null;
+
+            // Refresh data after successful update
+            if ($exitCode === 0) {
+                $this->composerService->clearCache();
+                $this->dataLoaded = false;
+                $this->loadData();
+                $this->dataLoaded = true;
+            }
+        });
+
+        $process = new Process(
+            [$composerBinary, 'update'],
+            \getcwd(),
+            null,
+            null,
+            null, // No timeout
+        );
+
+        $this->updateModal->startProcess($process);
     }
 
     private function updateFocus(): void

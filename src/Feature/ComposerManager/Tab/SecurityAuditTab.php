@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Feature\ComposerManager\Tab;
 
+use Butschster\Commander\Feature\ComposerManager\Component\LoadingState;
 use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Feature\ComposerManager\Service\SecurityAdvisory;
 use Butschster\Commander\Infrastructure\Keyboard\Key;
@@ -35,10 +36,12 @@ final class SecurityAuditTab extends AbstractTab
     private array $auditSummary = [];
     private int $focusedPanelIndex = 0;
     private bool $dataLoaded = false;
+    private LoadingState $loadingState;
 
     public function __construct(
         private readonly ComposerService $composerService,
     ) {
+        $this->loadingState = new LoadingState();
         $this->initializeComponents();
     }
 
@@ -63,11 +66,21 @@ final class SecurityAuditTab extends AbstractTab
     {
         $this->setBounds($x, $y, $width, $height);
         $this->layout->render($renderer, $x, $y, $width, $height);
+
+        // Render loading overlay if active
+        if ($this->loadingState->isLoading()) {
+            $this->loadingState->render($renderer, $x, $y, $width, $height);
+        }
     }
 
     #[\Override]
     public function handleInput(string $key): bool
     {
+        // Block input during loading
+        if ($this->loadingState->isLoading()) {
+            return true;
+        }
+
         $input = KeyInput::from($key);
 
         // Refresh data (Ctrl+R)
@@ -90,6 +103,13 @@ final class SecurityAuditTab extends AbstractTab
         }
 
         return $this->rightPanel->handleInput($key);
+    }
+
+    #[\Override]
+    public function update(): void
+    {
+        parent::update();
+        $this->loadingState->update();
     }
 
     #[\Override]
@@ -172,35 +192,41 @@ final class SecurityAuditTab extends AbstractTab
 
     private function loadData(): void
     {
-        $auditResult = $this->composerService->runAudit();
-        $this->auditSummary = $auditResult['summary'];
+        $this->loadingState->start('Running security audit...');
 
-        $this->advisories = \array_map(static fn(SecurityAdvisory $advisory)
-            => [
-                'severity' => $advisory->severity,
-                'package' => $advisory->packageName,
-                'title' => $advisory->title,
-                'cve' => $advisory->cve ?: 'N/A',
-                'affectedVersions' => $advisory->affectedVersions,
-                'link' => $advisory->link,
-            ], $auditResult['advisories']);
+        try {
+            $auditResult = $this->composerService->runAudit();
+            $this->auditSummary = $auditResult['summary'];
 
-        $this->table->setRows($this->advisories);
+            $this->advisories = \array_map(static fn(SecurityAdvisory $advisory)
+                => [
+                    'severity' => $advisory->severity,
+                    'package' => $advisory->packageName,
+                    'title' => $advisory->title,
+                    'cve' => $advisory->cve ?: 'N/A',
+                    'affectedVersions' => $advisory->affectedVersions,
+                    'link' => $advisory->link,
+                ], $auditResult['advisories']);
 
-        // Update panel title
-        $count = \count($this->advisories);
-        $critical = $this->auditSummary['high'] ?? 0;
-        $title = "Security Audit ($count)";
-        if ($critical > 0) {
-            $title .= " - [!!] $critical Critical/High";
-        }
-        $this->leftPanel->setTitle($title);
+            $this->table->setRows($this->advisories);
 
-        // Show first advisory or empty state
-        if (!empty($this->advisories)) {
-            $this->showAdvisoryDetails($this->advisories[0]);
-        } else {
-            $this->detailsDisplay->setText("[OK] No security vulnerabilities found!");
+            // Update panel title
+            $count = \count($this->advisories);
+            $critical = $this->auditSummary['high'] ?? 0;
+            $title = "Security Audit ($count)";
+            if ($critical > 0) {
+                $title .= " - [!!] $critical Critical/High";
+            }
+            $this->leftPanel->setTitle($title);
+
+            // Show first advisory or empty state
+            if (!empty($this->advisories)) {
+                $this->showAdvisoryDetails($this->advisories[0]);
+            } else {
+                $this->detailsDisplay->setText("[OK] No security vulnerabilities found!");
+            }
+        } finally {
+            $this->loadingState->stop();
         }
     }
 

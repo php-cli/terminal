@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Feature\ComposerManager\Tab;
 
+use Butschster\Commander\Feature\ComposerManager\Service\ComposerBinaryLocator;
 use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Infrastructure\Keyboard\Key;
 use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
@@ -33,6 +34,21 @@ use Symfony\Component\Process\Process;
  */
 final class ScriptsTab extends AbstractTab
 {
+    /** @var array<string> Patterns that indicate potentially destructive scripts */
+    private const array DESTRUCTIVE_SCRIPT_PATTERNS = [
+        'post-',
+        'pre-',
+        'deploy',
+        'migrate',
+        'db:',
+        'database',
+        'drop',
+        'delete',
+        'remove',
+        'clean',
+        'purge',
+    ];
+
     private GridLayout $layout;
     private Panel $leftPanel;
     private Panel $rightPanel;
@@ -338,7 +354,34 @@ final class ScriptsTab extends AbstractTab
             return;
         }
 
-        $this->performScriptExecution($scriptName);
+        if ($this->isDestructiveScript($scriptName)) {
+            $this->activeModal = Modal::confirm(
+                'Run Script',
+                "The script '{$scriptName}' may make changes to your project.\n\nAre you sure you want to run it?",
+            );
+            $this->activeModal->setFocused(true);
+            $this->activeModal->onClose(function (mixed $confirmed) use ($scriptName): void {
+                $this->activeModal = null;
+                if ($confirmed === true) {
+                    $this->performScriptExecution($scriptName);
+                }
+            });
+        } else {
+            $this->performScriptExecution($scriptName);
+        }
+    }
+
+    private function isDestructiveScript(string $scriptName): bool
+    {
+        $lowerName = \strtolower($scriptName);
+
+        foreach (self::DESTRUCTIVE_SCRIPT_PATTERNS as $pattern) {
+            if (\str_contains($lowerName, $pattern)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function performScriptExecution(string $scriptName): void
@@ -547,37 +590,7 @@ final class ScriptsTab extends AbstractTab
      */
     private function findComposerBinary(): ?string
     {
-        // Try common locations
-        $candidates = [
-            'composer',           // In PATH
-            'composer.phar',      // Local phar
-            '/usr/local/bin/composer',
-            '/usr/bin/composer',
-            $_SERVER['HOME'] . '/.composer/composer.phar',
-        ];
-
-        foreach ($candidates as $candidate) {
-            if ($this->isExecutable($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Check if a file is executable
-     */
-    private function isExecutable(string $file): bool
-    {
-        // Try to execute with --version
-        try {
-            $process = new Process([$file, '--version']);
-            $process->run();
-            return $process->isSuccessful() && \stripos($process->getOutput(), 'composer') !== false;
-        } catch (\Throwable) {
-            return false;
-        }
+        return ComposerBinaryLocator::find();
     }
 
     /**
