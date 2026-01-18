@@ -149,6 +149,12 @@ final class FileContentViewer extends AbstractComponent
         };
     }
 
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return ['width' => 40, 'height' => 10];
+    }
+
     /**
      * Scroll left by specified amount
      */
@@ -189,12 +195,6 @@ final class FileContentViewer extends AbstractComponent
     {
         $this->scrollOffset = \max(0, \count($this->lines) - $this->visibleLines);
         return true;
-    }
-
-    #[\Override]
-    public function getMinSize(): array
-    {
-        return ['width' => 40, 'height' => 10];
     }
 
     /**

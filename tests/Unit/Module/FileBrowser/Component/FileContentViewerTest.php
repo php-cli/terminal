@@ -14,14 +14,6 @@ final class FileContentViewerTest extends TestCase
 {
     private FileContentViewer $viewer;
 
-    #[\Override]
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->viewer = new FileContentViewer();
-        $this->viewer->setFocused(true);
-    }
-
     #[Test]
     public function test_set_content_stores_lines(): void
     {
@@ -45,7 +37,7 @@ final class FileContentViewerTest extends TestCase
     #[Test]
     public function test_vertical_scroll_down(): void
     {
-        $content = \implode("\n", \array_map(fn($i) => "Line $i", \range(1, 100)));
+        $content = \implode("\n", \array_map(static fn($i) => "Line $i", \range(1, 100)));
         $this->viewer->setContent($content);
 
         // DOWN should be handled
@@ -55,7 +47,7 @@ final class FileContentViewerTest extends TestCase
     #[Test]
     public function test_vertical_scroll_up(): void
     {
-        $content = \implode("\n", \array_map(fn($i) => "Line $i", \range(1, 100)));
+        $content = \implode("\n", \array_map(static fn($i) => "Line $i", \range(1, 100)));
         $this->viewer->setContent($content);
 
         // Scroll down first
@@ -93,7 +85,7 @@ final class FileContentViewerTest extends TestCase
     #[Test]
     public function test_home_key_resets_position(): void
     {
-        $content = \implode("\n", \array_map(fn($i) => \str_repeat("Line $i ", 30), \range(1, 100)));
+        $content = \implode("\n", \array_map(static fn($i) => \str_repeat("Line $i ", 30), \range(1, 100)));
         $this->viewer->setContent($content);
 
         // Scroll down and right
@@ -109,7 +101,7 @@ final class FileContentViewerTest extends TestCase
     #[Test]
     public function test_end_key_goes_to_bottom(): void
     {
-        $content = \implode("\n", \array_map(fn($i) => "Line $i", \range(1, 100)));
+        $content = \implode("\n", \array_map(static fn($i) => "Line $i", \range(1, 100)));
         $this->viewer->setContent($content);
 
         // END should go to end
@@ -119,7 +111,7 @@ final class FileContentViewerTest extends TestCase
     #[Test]
     public function test_page_down(): void
     {
-        $content = \implode("\n", \array_map(fn($i) => "Line $i", \range(1, 100)));
+        $content = \implode("\n", \array_map(static fn($i) => "Line $i", \range(1, 100)));
         $this->viewer->setContent($content);
 
         $this->assertTrue($this->viewer->handleInput('PAGE_DOWN'));
@@ -128,7 +120,7 @@ final class FileContentViewerTest extends TestCase
     #[Test]
     public function test_page_up(): void
     {
-        $content = \implode("\n", \array_map(fn($i) => "Line $i", \range(1, 100)));
+        $content = \implode("\n", \array_map(static fn($i) => "Line $i", \range(1, 100)));
         $this->viewer->setContent($content);
 
         // Go down first
@@ -141,7 +133,7 @@ final class FileContentViewerTest extends TestCase
     public function test_unfocused_viewer_ignores_input(): void
     {
         $this->viewer->setFocused(false);
-        $content = \implode("\n", \array_map(fn($i) => "Line $i", \range(1, 100)));
+        $content = \implode("\n", \array_map(static fn($i) => "Line $i", \range(1, 100)));
         $this->viewer->setContent($content);
 
         $this->assertFalse($this->viewer->handleInput('DOWN'));
@@ -186,5 +178,13 @@ final class FileContentViewerTest extends TestCase
         $this->assertArrayHasKey('height', $minSize);
         $this->assertSame(40, $minSize['width']);
         $this->assertSame(10, $minSize['height']);
+    }
+
+    #[\Override]
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->viewer = new FileContentViewer();
+        $this->viewer->setFocused(true);
     }
 }
