@@ -182,6 +182,13 @@ final class Application
      */
     public function run(ScreenInterface $initialScreen): void
     {
+        // Register shutdown handler as last-resort cleanup
+        \register_shutdown_function(function (): void {
+            if ($this->running) {
+                $this->cleanup();
+            }
+        });
+
         try {
             // Initialize terminal
             $this->terminal->initialize();
@@ -379,6 +386,11 @@ final class Application
             return;
         }
 
+        // Enable async signals so they work during blocking operations
+        if (\function_exists('pcntl_async_signals')) {
+            \pcntl_async_signals(true);
+        }
+
         // Handle SIGINT (Ctrl+C)
         \pcntl_signal(SIGINT, function (): void {
             $this->stop();
@@ -400,6 +412,9 @@ final class Application
      */
     private function cleanup(): void
     {
+        // Prevent double cleanup via shutdown handler
+        $this->running = false;
+
         $this->keyboard->disableNonBlocking();
         $this->terminal->cleanup();
     }
