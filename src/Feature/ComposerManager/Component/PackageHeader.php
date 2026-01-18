@@ -38,6 +38,7 @@ final class PackageHeader extends TextComponent
         return $this;
     }
 
+    #[\Override]
     protected function render(): string
     {
         $innerWidth = $this->width - 4; // Account for corners and padding

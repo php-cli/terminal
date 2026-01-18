@@ -55,6 +55,7 @@ final class FileBrowserScreen implements ScreenInterface
         $this->initializeComponents();
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = 120, ?int $height = 64): void
     {
         // Get actual size if not provided
@@ -78,6 +79,7 @@ final class FileBrowserScreen implements ScreenInterface
         );
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         $input = KeyInput::from($key);
@@ -120,17 +122,20 @@ final class FileBrowserScreen implements ScreenInterface
         return $this->filePreview->handleInput($key);
     }
 
+    #[\Override]
     public function onActivate(): void
     {
         // Refresh directory listing when screen becomes active
         $this->fileList->setDirectory($this->currentPath);
     }
 
+    #[\Override]
     public function onDeactivate(): void
     {
         // Nothing to do on deactivate
     }
 
+    #[\Override]
     public function update(): void
     {
         // Update components if needed
@@ -138,6 +143,7 @@ final class FileBrowserScreen implements ScreenInterface
         $this->filePreview->update();
     }
 
+    #[\Override]
     public function getTitle(): string
     {
         return 'File Browser';

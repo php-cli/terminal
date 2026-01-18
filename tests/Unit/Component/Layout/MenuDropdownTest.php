@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Unit\Component\Layout;
 
 use Butschster\Commander\UI\Component\Layout\MenuDropdown;
-use Butschster\Commander\UI\Menu\MenuItem;
+use Butschster\Commander\UI\Menu\ActionMenuItem;
+use Butschster\Commander\UI\Menu\MenuItemInterface;
+use Butschster\Commander\UI\Menu\SeparatorMenuItem;
 use Tests\TerminalTestCase;
 
 final class MenuDropdownTest extends TerminalTestCase
@@ -48,15 +50,15 @@ final class MenuDropdownTest extends TerminalTestCase
     public function testOnSelectCallbackIsInvoked(): void
     {
         $items = [
-            MenuItem::action('Item 1', static fn() => null, 'a'),
-            MenuItem::action('Item 2', static fn() => null, 'b'),
+            ActionMenuItem::create('Item 1', static fn() => null, 'a'),
+            ActionMenuItem::create('Item 2', static fn() => null, 'b'),
         ];
         $dropdown = new MenuDropdown($items, 0, 1);
 
         $called = false;
         $receivedItem = null;
 
-        $dropdown->onSelect(static function (MenuItem $item) use (&$called, &$receivedItem): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$called, &$receivedItem): void {
             $called = true;
             $receivedItem = $item;
         });
@@ -65,20 +67,20 @@ final class MenuDropdownTest extends TerminalTestCase
         $dropdown->handleInput('ENTER');
 
         $this->assertTrue($called);
-        $this->assertSame('Item 1', $receivedItem->label);
+        $this->assertSame('Item 1', $receivedItem->getLabel());
     }
 
     public function testOnSelectCallbackReceivesNavigatedItem(): void
     {
         $items = [
-            MenuItem::action('First', static fn() => null),
-            MenuItem::action('Second', static fn() => null),
-            MenuItem::action('Third', static fn() => null),
+            ActionMenuItem::create('First', static fn() => null),
+            ActionMenuItem::create('Second', static fn() => null),
+            ActionMenuItem::create('Third', static fn() => null),
         ];
         $dropdown = new MenuDropdown($items, 0, 1);
 
         $receivedItem = null;
-        $dropdown->onSelect(static function (MenuItem $item) use (&$receivedItem): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$receivedItem): void {
             $receivedItem = $item;
         });
 
@@ -87,7 +89,7 @@ final class MenuDropdownTest extends TerminalTestCase
         $dropdown->handleInput('DOWN');
         $dropdown->handleInput('ENTER');
 
-        $this->assertSame('Third', $receivedItem->label);
+        $this->assertSame('Third', $receivedItem->getLabel());
     }
 
     public function testOnCloseCallbackIsInvoked(): void
@@ -107,7 +109,7 @@ final class MenuDropdownTest extends TerminalTestCase
 
     public function testOnCloseCalledAfterItemSelection(): void
     {
-        $items = [MenuItem::action('Test', static fn() => null)];
+        $items = [ActionMenuItem::create('Test', static fn() => null)];
         $dropdown = new MenuDropdown($items, 0, 1);
 
         $closeCalled = false;
@@ -125,7 +127,7 @@ final class MenuDropdownTest extends TerminalTestCase
 
     public function testBothCallbacksCanBeSetIndependently(): void
     {
-        $items = [MenuItem::action('Test', static fn() => null)];
+        $items = [ActionMenuItem::create('Test', static fn() => null)];
         $dropdown = new MenuDropdown($items, 0, 1);
 
         $selectCalled = false;
@@ -163,7 +165,7 @@ final class MenuDropdownTest extends TerminalTestCase
         $dropdown = $this->createDropdown();
 
         $handler = new class {
-            public function handleSelect(MenuItem $item): void {}
+            public function handleSelect(MenuItemInterface $item): void {}
 
             public function handleClose(): void {}
         };
@@ -179,13 +181,13 @@ final class MenuDropdownTest extends TerminalTestCase
     public function testNavigateDownMovesSelection(): void
     {
         $items = [
-            MenuItem::action('First', static fn() => null),
-            MenuItem::action('Second', static fn() => null),
+            ActionMenuItem::create('First', static fn() => null),
+            ActionMenuItem::create('Second', static fn() => null),
         ];
         $dropdown = new MenuDropdown($items, 0, 1);
 
         $receivedItem = null;
-        $dropdown->onSelect(static function (MenuItem $item) use (&$receivedItem): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$receivedItem): void {
             $receivedItem = $item;
         });
 
@@ -193,20 +195,20 @@ final class MenuDropdownTest extends TerminalTestCase
         $dropdown->handleInput('DOWN');
         $dropdown->handleInput('ENTER');
 
-        $this->assertSame('Second', $receivedItem->label);
+        $this->assertSame('Second', $receivedItem->getLabel());
     }
 
     public function testNavigateSkipsSeparators(): void
     {
         $items = [
-            MenuItem::action('First', static fn() => null),
-            MenuItem::separator(),
-            MenuItem::action('Third', static fn() => null),
+            ActionMenuItem::create('First', static fn() => null),
+            SeparatorMenuItem::create(),
+            ActionMenuItem::create('Third', static fn() => null),
         ];
         $dropdown = new MenuDropdown($items, 0, 1);
 
         $receivedItem = null;
-        $dropdown->onSelect(static function (MenuItem $item) use (&$receivedItem): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$receivedItem): void {
             $receivedItem = $item;
         });
 
@@ -214,26 +216,26 @@ final class MenuDropdownTest extends TerminalTestCase
         $dropdown->handleInput('DOWN');
         $dropdown->handleInput('ENTER');
 
-        $this->assertSame('Third', $receivedItem->label);
+        $this->assertSame('Third', $receivedItem->getLabel());
     }
 
     public function testHotkeySelectsItem(): void
     {
         $items = [
-            MenuItem::action('Copy', static fn() => null, 'c'),
-            MenuItem::action('Paste', static fn() => null, 'p'),
+            ActionMenuItem::create('Copy', static fn() => null, 'c'),
+            ActionMenuItem::create('Paste', static fn() => null, 'p'),
         ];
         $dropdown = new MenuDropdown($items, 0, 1);
 
         $receivedItem = null;
-        $dropdown->onSelect(static function (MenuItem $item) use (&$receivedItem): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$receivedItem): void {
             $receivedItem = $item;
         });
 
         $dropdown->setFocused(true);
         $dropdown->handleInput('p');
 
-        $this->assertSame('Paste', $receivedItem->label);
+        $this->assertSame('Paste', $receivedItem->getLabel());
     }
 
     // === Edge Cases ===
@@ -241,13 +243,13 @@ final class MenuDropdownTest extends TerminalTestCase
     public function testSeparatorCannotBeSelected(): void
     {
         $items = [
-            MenuItem::separator(),
-            MenuItem::action('Action', static fn() => null),
+            SeparatorMenuItem::create(),
+            ActionMenuItem::create('Action', static fn() => null),
         ];
         $dropdown = new MenuDropdown($items, 0, 1);
 
         $receivedItem = null;
-        $dropdown->onSelect(static function (MenuItem $item) use (&$receivedItem): void {
+        $dropdown->onSelect(static function (MenuItemInterface $item) use (&$receivedItem): void {
             $receivedItem = $item;
         });
 
@@ -255,12 +257,12 @@ final class MenuDropdownTest extends TerminalTestCase
         $dropdown->handleInput('ENTER');
 
         // Should select the action, not the separator
-        $this->assertSame('Action', $receivedItem->label);
+        $this->assertSame('Action', $receivedItem->getLabel());
     }
 
     public function testSpaceKeySelectsItem(): void
     {
-        $items = [MenuItem::action('Test', static fn() => null)];
+        $items = [ActionMenuItem::create('Test', static fn() => null)];
         $dropdown = new MenuDropdown($items, 0, 1);
 
         $called = false;
@@ -279,9 +281,9 @@ final class MenuDropdownTest extends TerminalTestCase
     private function createDropdown(): MenuDropdown
     {
         return new MenuDropdown([
-            MenuItem::action('Option 1', static fn() => null, '1'),
-            MenuItem::action('Option 2', static fn() => null, '2'),
-            MenuItem::action('Option 3', static fn() => null, '3'),
+            ActionMenuItem::create('Option 1', static fn() => null, '1'),
+            ActionMenuItem::create('Option 2', static fn() => null, '2'),
+            ActionMenuItem::create('Option 3', static fn() => null, '3'),
         ], 0, 1);
     }
 }

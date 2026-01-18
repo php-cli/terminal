@@ -156,6 +156,7 @@ readonly class KeyCombination implements \Stringable
     /**
      * Get a human-readable representation like "Ctrl+C", "F12", "Ctrl+Shift+A".
      */
+    #[\Override]
     public function __toString(): string
     {
         $parts = [];

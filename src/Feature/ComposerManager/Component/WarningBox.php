@@ -37,6 +37,7 @@ final class WarningBox extends TextComponent
         return $this;
     }
 
+    #[\Override]
     protected function render(): string
     {
         $lines = [

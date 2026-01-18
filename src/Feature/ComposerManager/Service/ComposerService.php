@@ -301,7 +301,7 @@ final class ComposerService
      * Update a specific package
      *
      * @param callable(string): void $outputCallback Called with each line of output
-     * @return array{exitCode: int, error: string}
+     * @return array{exitCode: int, output: string, error: string}
      */
     public function updatePackage(string $packageName, callable $outputCallback): array
     {
@@ -312,7 +312,7 @@ final class ComposerService
      * Update all packages
      *
      * @param callable(string): void $outputCallback Called with each line of output
-     * @return array{exitCode: int, error: string}
+     * @return array{exitCode: int, output: string, error: string}
      */
     public function updateAll(callable $outputCallback): array
     {
@@ -323,7 +323,7 @@ final class ComposerService
      * Remove a package
      *
      * @param callable(string): void $outputCallback Called with each line of output
-     * @return array{exitCode: int, error: string}
+     * @return array{exitCode: int, output: string, error: string}
      */
     public function removePackage(string $packageName, callable $outputCallback): array
     {
@@ -334,7 +334,7 @@ final class ComposerService
      * Require a package
      *
      * @param callable(string): void $outputCallback Called with each line of output
-     * @return array{exitCode: int, error: string}
+     * @return array{exitCode: int, output: string, error: string}
      */
     public function requirePackage(string $packageName, bool $dev, callable $outputCallback): array
     {
@@ -397,6 +397,7 @@ final class ComposerService
         }
 
         $rootPackage = $composer->getPackage();
+        /** @psalm-suppress TypeDoesNotContainType RootPackage typically implements CompletePackageInterface at runtime */
         if (!$rootPackage instanceof CompletePackageInterface) {
             return [];
         }
@@ -408,7 +409,7 @@ final class ComposerService
      * Run a composer script
      *
      * @param callable(string): void $outputCallback Called with each line of output
-     * @return array{exitCode: int, error: string}
+     * @return array{exitCode: int, output: string, error: string}
      */
     public function runScript(string $scriptName, callable $outputCallback): array
     {
@@ -498,12 +499,14 @@ final class ComposerService
         $support = [];
         $suggests = [];
         $binaries = [];
+        $description = '';
 
         // CompletePackageInterface has additional metadata
         if ($package instanceof CompletePackageInterface) {
             $abandoned = $package->isAbandoned();
             $homepage = $package->getHomepage();
             $keywords = $package->getKeywords();
+            $description = $package->getDescription() ?? '';
             $authors = \array_map(static fn($author)
                 => [
                     'name' => $author['name'] ?? null,
@@ -541,7 +544,7 @@ final class ComposerService
         return new PackageInfo(
             name: $package->getName(),
             version: $package->getPrettyVersion(),
-            description: $package->getDescription() ?? '',
+            description: $description,
             type: $package->getType(),
             source: $source,
             homepage: $homepage,

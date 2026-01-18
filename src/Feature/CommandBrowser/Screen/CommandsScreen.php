@@ -84,6 +84,7 @@ final class CommandsScreen implements ScreenInterface
     /**
      * Render the entire screen
      */
+    #[\Override]
     public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
         // Get actual size if not provided
@@ -121,6 +122,7 @@ final class CommandsScreen implements ScreenInterface
     /**
      * Handle keyboard input
      */
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // Priority 1: Modal (if active)
@@ -149,21 +151,25 @@ final class CommandsScreen implements ScreenInterface
 
     // ScreenInterface implementation
 
+    #[\Override]
     public function onActivate(): void
     {
         // Screen activated
     }
 
+    #[\Override]
     public function onDeactivate(): void
     {
         // Screen deactivated
     }
 
+    #[\Override]
     public function update(): void
     {
         // Update frame (currently unused)
     }
 
+    #[\Override]
     public function getTitle(): string
     {
         return 'Command Browser';
@@ -236,7 +242,7 @@ final class CommandsScreen implements ScreenInterface
     private function renderExecutingIndicator(Renderer $renderer, int $x, int $y, int $width): void
     {
         $indicator = ' [EXECUTING...] ';
-        $leftWidth = (int) ($width * 0.3);
+        $leftWidth = (int) ((float) $width * 0.3);
         $rightWidth = $width - $leftWidth;
         $indicatorX = $x + $leftWidth + (int) (($rightWidth - \mb_strlen($indicator)) / 2);
 
@@ -255,11 +261,17 @@ final class CommandsScreen implements ScreenInterface
     {
         $input = KeyInput::from($key);
 
-        return match (true) {
-            $input->is(Key::F1) => $this->showHelpModal() ?? true,
-            $input->isCtrl(Key::E) => $this->handleExecuteCommand() ?? true,
-            default => false,
-        };
+        if ($input->is(Key::F1)) {
+            $this->showHelpModal();
+            return true;
+        }
+
+        if ($input->isCtrl(Key::E)) {
+            $this->handleExecuteCommand();
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -269,11 +281,17 @@ final class CommandsScreen implements ScreenInterface
     {
         $input = KeyInput::from($key);
 
-        return match (true) {
-            $input->is(Key::TAB) => $this->switchPanel() ?? true,
-            $input->is(Key::ESCAPE) => $this->focusedPanelIndex === 1 ? ($this->switchToLeftPanel() ?? true) : false,
-            default => false,
-        };
+        if ($input->is(Key::TAB)) {
+            $this->switchPanel();
+            return true;
+        }
+
+        if ($input->is(Key::ESCAPE) && $this->focusedPanelIndex === 1) {
+            $this->switchToLeftPanel();
+            return true;
+        }
+
+        return false;
     }
 
     /**

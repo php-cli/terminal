@@ -73,6 +73,7 @@ final class Alert implements ComponentInterface
         $this->type = $type;
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->x = $x;
@@ -106,22 +107,26 @@ final class Alert implements ComponentInterface
         $renderer->writeAt($x, $y, $centeredMessage, $colorScheme);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // Alerts don't handle input
         return false;
     }
 
+    #[\Override]
     public function setFocused(bool $focused): void
     {
         $this->focused = $focused;
     }
 
+    #[\Override]
     public function isFocused(): bool
     {
         return $this->focused;
     }
 
+    #[\Override]
     public function update(): void
     {
         // Auto-hide timer is checked externally via isExpired()
@@ -155,6 +160,7 @@ final class Alert implements ComponentInterface
         $this->autoHideAfter = $seconds;
     }
 
+    #[\Override]
     public function getMinSize(): array
     {
         // Alert needs minimum width for message + icon + padding

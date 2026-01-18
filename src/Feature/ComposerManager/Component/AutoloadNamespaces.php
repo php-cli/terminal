@@ -39,6 +39,7 @@ final class AutoloadNamespaces extends TextComponent
         return $this;
     }
 
+    #[\Override]
     protected function render(): string
     {
         if (empty($this->namespaces)) {
@@ -56,9 +57,7 @@ final class AutoloadNamespaces extends TextComponent
         }
 
         // Remove last empty line
-        if (!empty($lines)) {
-            \array_pop($lines);
-        }
+        \array_pop($lines);
 
         return \implode("\n", $lines);
     }

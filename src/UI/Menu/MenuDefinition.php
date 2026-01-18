@@ -14,7 +14,7 @@ final readonly class MenuDefinition
     /**
      * @param string $label Menu label (e.g., "Files", "Tools")
      * @param KeyCombination|null $fkey Function key to activate
-     * @param array<MenuItem> $items Dropdown menu items
+     * @param array<MenuItemInterface> $items Dropdown menu items
      * @param int $priority Sort order (lower = further left)
      */
     public function __construct(
@@ -27,7 +27,7 @@ final readonly class MenuDefinition
     /**
      * Get first non-separator item
      */
-    public function getFirstItem(): ?MenuItem
+    public function getFirstItem(): ?MenuItemInterface
     {
         foreach ($this->items as $item) {
             if (!$item->isSeparator()) {

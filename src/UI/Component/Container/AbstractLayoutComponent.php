@@ -31,6 +31,7 @@ abstract class AbstractLayoutComponent extends AbstractComponent implements Layo
     /**
      * Render component - orchestrates measure/layout/draw cycle
      */
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -48,6 +49,7 @@ abstract class AbstractLayoutComponent extends AbstractComponent implements Layo
     /**
      * Default implementation: store allocated dimensions
      */
+    #[\Override]
     public function layout(int $width, int $height): void
     {
         $this->allocatedWidth = $width;
@@ -57,6 +59,7 @@ abstract class AbstractLayoutComponent extends AbstractComponent implements Layo
     /**
      * Default implementation: request all available space
      */
+    #[\Override]
     public function measure(int $availableWidth, int $availableHeight): array
     {
         $this->measuredWidth = $availableWidth;

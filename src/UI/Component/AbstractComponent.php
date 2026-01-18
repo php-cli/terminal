@@ -22,6 +22,7 @@ abstract class AbstractComponent implements ComponentInterface
     protected int $width = 0;
     protected int $height = 0;
 
+    #[\Override]
     public function setFocused(bool $focused): void
     {
         $this->focused = $focused;
@@ -34,11 +35,13 @@ abstract class AbstractComponent implements ComponentInterface
         }
     }
 
+    #[\Override]
     public function isFocused(): bool
     {
         return $this->focused;
     }
 
+    #[\Override]
     public function update(): void
     {
         // Update all children
@@ -107,6 +110,7 @@ abstract class AbstractComponent implements ComponentInterface
         ];
     }
 
+    #[\Override]
     public function getMinSize(): array
     {
         return ['width' => 10, 'height' => 3];
@@ -115,6 +119,7 @@ abstract class AbstractComponent implements ComponentInterface
     /**
      * Default implementation: propagate input to focused child
      */
+    #[\Override]
     public function handleInput(string $key): bool
     {
         foreach ($this->children as $child) {

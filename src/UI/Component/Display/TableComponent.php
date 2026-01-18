@@ -159,6 +159,7 @@ final class TableComponent extends AbstractComponent
         $this->onChange = $callback(...);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -301,7 +302,7 @@ final class TableComponent extends AbstractComponent
             } elseif (\str_ends_with($width, '%')) {
                 // Percentage width
                 $percentage = (float) \rtrim($width, '%');
-                $calculatedWidth = (int) ($totalWidth * $percentage / 100);
+                $calculatedWidth = (int) ((float) $totalWidth * $percentage / 100.0);
                 $this->calculatedWidths[$index] = \min($calculatedWidth, $remainingWidth);
                 $remainingWidth -= $this->calculatedWidths[$index];
             } elseif ($width === '*') {

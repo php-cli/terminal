@@ -19,6 +19,7 @@ final class PackageInfoSection extends TextComponent
         private readonly PackageInfo $package,
     ) {}
 
+    #[\Override]
     protected function render(): string
     {
         $content = Container::create([

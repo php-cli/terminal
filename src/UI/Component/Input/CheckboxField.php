@@ -23,6 +23,7 @@ final class CheckboxField extends FormField
         parent::__construct($name, $label, $default, $description);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, bool $focused): int
     {
         $currentY = $y;
@@ -64,6 +65,7 @@ final class CheckboxField extends FormField
         return ($this->description !== '' ? 3 : 2);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         $input = KeyInput::from($key);

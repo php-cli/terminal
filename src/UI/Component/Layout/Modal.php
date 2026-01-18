@@ -136,6 +136,7 @@ final class Modal extends AbstractComponent
         $this->onClose = $callback(...);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -196,22 +197,38 @@ final class Modal extends AbstractComponent
         $input = KeyInput::from($key);
         $buttonLabels = \array_keys($this->buttons);
 
-        return match (true) {
-            // Handle navigation
-            $input->is(Key::LEFT) => $this->selectedButtonIndex > 0
-                ? (--$this->selectedButtonIndex !== null)
-                : true,
-            $input->is(Key::RIGHT), $input->is(Key::TAB) => $this->selectedButtonIndex < \count($this->buttons) - 1
-                ? (++$this->selectedButtonIndex !== null)
-                : true,
-            // Handle selection (Enter or Space)
-            $input->is(Key::ENTER), $input->isSpace() => $this->activateButton($buttonLabels),
-            // Handle escape
-            $input->is(Key::ESCAPE) => $this->activateLastButton($buttonLabels),
-            // Quick access keys (1-9 for button indices)
-            $input->isDigit() => $this->handleDigitKey($input, $buttonLabels),
-            default => false,
-        };
+        // Handle navigation left
+        if ($input->is(Key::LEFT)) {
+            if ($this->selectedButtonIndex > 0) {
+                --$this->selectedButtonIndex;
+            }
+            return true;
+        }
+
+        // Handle navigation right/tab
+        if ($input->is(Key::RIGHT) || $input->is(Key::TAB)) {
+            if ($this->selectedButtonIndex < \count($this->buttons) - 1) {
+                ++$this->selectedButtonIndex;
+            }
+            return true;
+        }
+
+        // Handle selection (Enter or Space)
+        if ($input->is(Key::ENTER) || $input->isSpace()) {
+            return $this->activateButton($buttonLabels);
+        }
+
+        // Handle escape
+        if ($input->is(Key::ESCAPE)) {
+            return $this->activateLastButton($buttonLabels);
+        }
+
+        // Quick access keys (1-9 for button indices)
+        if ($input->isDigit()) {
+            return $this->handleDigitKey($input, $buttonLabels);
+        }
+
+        return false;
     }
 
     #[\Override]

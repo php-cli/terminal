@@ -37,6 +37,7 @@ final class TextInfoComponent extends AbstractComponent
         $this->lines = [];
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);

@@ -55,6 +55,7 @@ final class ScriptsTab extends AbstractTab
         $this->initializeComponents();
     }
 
+    #[\Override]
     public function getTitle(): string
     {
         return 'Scripts';
@@ -76,6 +77,7 @@ final class ScriptsTab extends AbstractTab
         ];
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -90,7 +92,7 @@ final class ScriptsTab extends AbstractTab
 
         // Overlay: Status alert at top of viewport (error, success, or executing)
         if ($this->statusAlert !== null) {
-            $leftWidth = (int) ($width * 0.4);
+            $leftWidth = (int) ((float) $width * 0.4);
             $rightWidth = $width - $leftWidth;
             // Render at top of viewport (y position), positioned on right side
             $this->statusAlert->render($renderer, $x + $leftWidth, $y, $rightWidth, 1);
@@ -499,13 +501,13 @@ final class ScriptsTab extends AbstractTab
     private function stripAnsiCodes(string $output): string
     {
         // Remove ANSI escape sequences (colors, cursor movements, etc.)
-        $output = \preg_replace('/\x1b\[[0-9;]*[a-zA-Z]/', '', $output);
+        $output = (string) \preg_replace('/\x1b\[[0-9;]*[a-zA-Z]/', '', $output);
 
         // Remove ANSI OSC sequences (e.g., setting terminal title)
-        $output = \preg_replace('/\x1b\][^\x07]*\x07/', '', (string) $output);
+        $output = (string) \preg_replace('/\x1b\][^\x07]*\x07/', '', $output);
 
         // Remove other control sequences
-        $output = \preg_replace('/\x1b[><=]/', '', (string) $output);
+        $output = (string) \preg_replace('/\x1b[><=]/', '', $output);
 
         return $output;
     }

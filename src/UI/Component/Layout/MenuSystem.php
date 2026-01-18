@@ -6,8 +6,11 @@ namespace Butschster\Commander\UI\Component\Layout;
 
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
+use Butschster\Commander\UI\Menu\ActionMenuItem;
 use Butschster\Commander\UI\Menu\MenuDefinition;
-use Butschster\Commander\UI\Menu\MenuItem;
+use Butschster\Commander\UI\Menu\MenuItemInterface;
+use Butschster\Commander\UI\Menu\ScreenMenuItem;
+use Butschster\Commander\UI\Menu\SubmenuMenuItem;
 use Butschster\Commander\UI\Screen\ScreenManager;
 use Butschster\Commander\UI\Screen\ScreenRegistry;
 use Butschster\Commander\UI\Theme\ColorScheme;
@@ -58,6 +61,7 @@ final class MenuSystem extends AbstractComponent
         $this->onQuit = $callback(...);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -103,7 +107,7 @@ final class MenuSystem extends AbstractComponent
                 $menu = $this->menus[$menuKey] ?? null;
                 if ($menu !== null) {
                     $firstItem = $menu->getFirstItem();
-                    if ($firstItem !== null && $firstItem->isAction()) {
+                    if ($firstItem instanceof ActionMenuItem) {
                         $this->handleMenuItemSelected($firstItem);
                         return true;
                     }
@@ -309,7 +313,7 @@ final class MenuSystem extends AbstractComponent
         $this->addChild($this->activeDropdown);
 
         // Set callbacks
-        $this->activeDropdown->onSelect(function (MenuItem $item): void {
+        $this->activeDropdown->onSelect(function (MenuItemInterface $item): void {
             $this->handleMenuItemSelected($item);
         });
 
@@ -347,21 +351,29 @@ final class MenuSystem extends AbstractComponent
     /**
      * Handle menu item selection
      */
-    private function handleMenuItemSelected(MenuItem $item): void
+    private function handleMenuItemSelected(MenuItemInterface $item): void
     {
         // Close dropdown first
         $this->closeDropdown();
 
-        // Execute item action based on type
-        if ($item->isScreen()) {
-            $this->navigateToScreen($item->screenName);
-        } elseif ($item->isAction()) {
-            // Check if this is the Quit action
-            if ($item->label === 'Quit') {
-                ($this->onQuit)();
-            } elseif ($item->action !== null) {
-                ($item->action)();
-            }
+        // Execute item action based on type using pattern matching
+        match (true) {
+            $item instanceof ScreenMenuItem => $this->navigateToScreen($item->screenName),
+            $item instanceof ActionMenuItem => $this->executeAction($item),
+            $item instanceof SubmenuMenuItem => null, // TODO: Handle submenu opening
+            default => null,
+        };
+    }
+
+    /**
+     * Execute action menu item
+     */
+    private function executeAction(ActionMenuItem $item): void
+    {
+        if ($item->getLabel() === 'Quit') {
+            ($this->onQuit)();
+        } else {
+            ($item->action)();
         }
     }
 

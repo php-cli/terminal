@@ -32,7 +32,7 @@ final class DirectoryInfoSection
      *     mimeType: string,
      *     lines: int
      * } $metadata Directory metadata
-     * @param array<array{name: string, path: string, type: string, size: int, modified: int, isDir: bool}> $items Directory contents
+     * @param array<array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool}> $items Directory contents
      */
     public static function create(string $path, array $metadata, array $items, FileSystemService $fileSystem): Container
     {
@@ -68,7 +68,7 @@ final class DirectoryInfoSection
     /**
      * Calculate directory statistics
      *
-     * @param array<array{name: string, path: string, type: string, size: int, modified: int, isDir: bool}> $items
+     * @param array<array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool}> $items
      * @return array{dirCount: int, fileCount: int, totalSize: int}
      */
     private static function calculateStats(array $items): array

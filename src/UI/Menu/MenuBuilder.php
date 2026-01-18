@@ -46,7 +46,7 @@ final class MenuBuilder
             // Create menu items from screens
             $items = [];
             foreach ($screens as $metadata) {
-                $items[] = MenuItem::screen(
+                $items[] = ScreenMenuItem::create(
                     $metadata->getDisplayText(),
                     $metadata->name,
                 );
@@ -68,7 +68,7 @@ final class MenuBuilder
             'Quit',
             $quitBinding?->combination,
             [
-                MenuItem::action('Quit', static function (): void {
+                ActionMenuItem::create('Quit', static function (): void {
                     // This is a marker action that MenuSystem will recognize
                     // It will be handled by Application to actually stop
                 }, 'q'),
@@ -83,9 +83,9 @@ final class MenuBuilder
      * Add custom menu item to category
      *
      * @param string $category Category name
-     * @param MenuItem $item Menu item to add
+     * @param MenuItemInterface $item Menu item to add
      */
-    public function addItem(string $category, MenuItem $item): self
+    public function addItem(string $category, MenuItemInterface $item): self
     {
         if (!isset($this->menus[$category])) {
             throw new \RuntimeException("Category not found: {$category}");
@@ -112,6 +112,6 @@ final class MenuBuilder
      */
     public function addSeparator(string $category): self
     {
-        return $this->addItem($category, MenuItem::separator());
+        return $this->addItem($category, SeparatorMenuItem::create());
     }
 }

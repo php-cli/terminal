@@ -42,6 +42,7 @@ final class OutdatedPackagesTab extends AbstractTab
         $this->initializeComponents();
     }
 
+    #[\Override]
     public function getTitle(): string
     {
         return 'Outdated';
@@ -57,6 +58,7 @@ final class OutdatedPackagesTab extends AbstractTab
         ];
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);

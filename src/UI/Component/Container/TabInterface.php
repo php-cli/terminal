@@ -40,11 +40,13 @@ interface TabInterface extends ComponentInterface
     /**
      * Update tab state (called every frame)
      */
+    #[\Override]
     public function update(): void;
 
     /**
      * Render tab content
      */
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void;
 
     /**
@@ -52,15 +54,18 @@ interface TabInterface extends ComponentInterface
      *
      * @return bool True if input was handled
      */
+    #[\Override]
     public function handleInput(string $key): bool;
 
     /**
      * Set focus state
      */
+    #[\Override]
     public function setFocused(bool $focused): void;
 
     /**
      * Check if tab is focused
      */
+    #[\Override]
     public function isFocused(): bool;
 }

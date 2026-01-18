@@ -21,15 +21,15 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  */
 final class FileListComponent extends AbstractComponent
 {
-    /** @var array<array{name: string, path: string, type: string, size: int, modified: int, isDir: bool}> */
+    /** @var array<array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool}> */
     private array $items = [];
 
     private readonly TableComponent $table;
 
-    /** @var \Closure(array{name: string, path: string, type: string, size: int, modified: int, isDir: bool}): void */
+    /** @var \Closure(array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool}): void */
     private \Closure $onSelect;
 
-    /** @var \Closure(array{name: string, path: string, type: string, size: int, modified: int, isDir: bool}): void */
+    /** @var \Closure(array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool}): void */
     private \Closure $onChange;
 
     public function __construct(
@@ -90,7 +90,7 @@ final class FileListComponent extends AbstractComponent
     /**
      * Get selected item
      *
-     * @return array{name: string, path: string, type: string, size: int, modified: int, isDir: bool}|null
+     * @return array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool}|null
      */
     public function getSelectedItem(): ?array
     {
@@ -125,6 +125,7 @@ final class FileListComponent extends AbstractComponent
         $this->onChange = $callback(...);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -156,7 +157,7 @@ final class FileListComponent extends AbstractComponent
     /**
      * Format name column with icon
      *
-     * @param array{name: string, path: string, type: string, size: int, modified: int, isDir: bool} $row
+     * @param array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool} $row
      */
     private function formatName(array $row): string
     {
@@ -167,7 +168,7 @@ final class FileListComponent extends AbstractComponent
     /**
      * Format size column
      *
-     * @param array{name: string, path: string, type: string, size: int, modified: int, isDir: bool} $row
+     * @param array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool} $row
      */
     private function formatSize(array $row): string
     {
@@ -177,7 +178,7 @@ final class FileListComponent extends AbstractComponent
     /**
      * Get color for name column based on file type
      *
-     * @param array{name: string, path: string, type: string, size: int, modified: int, isDir: bool} $row
+     * @param array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool} $row
      */
     private function getNameColor(array $row, bool $selected): string
     {
@@ -197,7 +198,7 @@ final class FileListComponent extends AbstractComponent
     /**
      * Get ASCII icon for item (reliable single-column character)
      *
-     * @param array{name: string, path: string, type: string, size: int, modified: int, isDir: bool} $row
+     * @param array{name: string, path: string, type: string, size: int, modified: int, isDir: bool, readable: bool, writable: bool} $row
      */
     private function getAsciiIcon(array $row): string
     {

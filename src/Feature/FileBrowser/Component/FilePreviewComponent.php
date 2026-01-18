@@ -68,6 +68,7 @@ final class FilePreviewComponent extends AbstractComponent
         }
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);

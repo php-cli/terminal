@@ -22,6 +22,7 @@ final class AutoloadSection extends TextComponent
         private readonly array $autoload,
     ) {}
 
+    #[\Override]
     protected function render(): string
     {
         $hasPsr4 = !empty($this->autoload['psr4']);

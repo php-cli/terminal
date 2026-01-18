@@ -205,7 +205,7 @@ final class FileSystemService
         $power = \floor(\log($bytes, 1024));
         $power = \min($power, \count($units) - 1);
 
-        return \round($bytes / (1024 ** $power), 2) . ' ' . $units[$power];
+        return (string) \round((float) $bytes / (1024.0 ** (float) $power), 2) . ' ' . $units[(int) $power];
     }
 
     /**

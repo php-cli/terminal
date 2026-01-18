@@ -15,11 +15,13 @@ final class KeyBindingRegistry implements KeyBindingRegistryInterface
     /** @var array<KeyBinding> */
     private array $bindings = [];
 
+    #[\Override]
     public function register(KeyBinding $binding): void
     {
         $this->bindings[] = $binding;
     }
 
+    #[\Override]
     public function match(string $rawKey): ?KeyBinding
     {
         foreach ($this->bindings as $binding) {
@@ -31,6 +33,7 @@ final class KeyBindingRegistry implements KeyBindingRegistryInterface
         return null;
     }
 
+    #[\Override]
     public function getByActionId(string $actionId): array
     {
         return \array_values(\array_filter(
@@ -39,6 +42,7 @@ final class KeyBindingRegistry implements KeyBindingRegistryInterface
         ));
     }
 
+    #[\Override]
     public function getPrimaryByActionId(string $actionId): ?KeyBinding
     {
         foreach ($this->bindings as $binding) {
@@ -50,6 +54,7 @@ final class KeyBindingRegistry implements KeyBindingRegistryInterface
         return null;
     }
 
+    #[\Override]
     public function getByCategory(string $category): array
     {
         $filtered = \array_filter(
@@ -62,6 +67,7 @@ final class KeyBindingRegistry implements KeyBindingRegistryInterface
         return $filtered;
     }
 
+    #[\Override]
     public function all(): array
     {
         return $this->bindings;

@@ -23,6 +23,7 @@ final class RealTerminalDriver implements TerminalDriverInterface
         $this->stdin = STDIN;
     }
 
+    #[\Override]
     public function getSize(): array
     {
         // Try stty first
@@ -43,6 +44,7 @@ final class RealTerminalDriver implements TerminalDriverInterface
         return ['width' => $width, 'height' => $height];
     }
 
+    #[\Override]
     public function readInput(): ?string
     {
         if (!$this->nonBlockingEnabled) {
@@ -59,6 +61,7 @@ final class RealTerminalDriver implements TerminalDriverInterface
         return $char;
     }
 
+    #[\Override]
     public function hasInput(): bool
     {
         $read = [$this->stdin];
@@ -68,12 +71,14 @@ final class RealTerminalDriver implements TerminalDriverInterface
         return \stream_select($read, $write, $except, 0, 0) > 0;
     }
 
+    #[\Override]
     public function write(string $output): void
     {
         echo $output;
         \flush();
     }
 
+    #[\Override]
     public function initialize(): void
     {
         $this->enableRawMode();
@@ -82,6 +87,7 @@ final class RealTerminalDriver implements TerminalDriverInterface
         $this->write("\033[2J\033[H"); // Clear screen
     }
 
+    #[\Override]
     public function cleanup(): void
     {
         $this->write("\033[0m");     // Reset attributes
@@ -90,6 +96,7 @@ final class RealTerminalDriver implements TerminalDriverInterface
         $this->disableRawMode();
     }
 
+    #[\Override]
     public function isInteractive(): bool
     {
         return \function_exists('posix_isatty') && \posix_isatty($this->stdin);

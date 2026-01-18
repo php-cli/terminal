@@ -49,6 +49,7 @@ final class FileViewerScreen implements ScreenInterface
         $this->loadFile();
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
         $size = $renderer->getSize();
@@ -68,6 +69,7 @@ final class FileViewerScreen implements ScreenInterface
         $this->statusBar->render($renderer, 0, $height - 1, $width, 1);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         $input = KeyInput::from($key);
@@ -82,21 +84,25 @@ final class FileViewerScreen implements ScreenInterface
         return $this->contentViewer->handleInput($key);
     }
 
+    #[\Override]
     public function onActivate(): void
     {
         $this->contentViewer->setFocused(true);
     }
 
+    #[\Override]
     public function onDeactivate(): void
     {
         $this->contentViewer->setFocused(false);
     }
 
+    #[\Override]
     public function update(): void
     {
         // Nothing to update
     }
 
+    #[\Override]
     public function getTitle(): string
     {
         return 'File Viewer';

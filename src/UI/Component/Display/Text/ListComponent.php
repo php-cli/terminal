@@ -37,6 +37,7 @@ class ListComponent extends TextComponent
         return $this;
     }
 
+    #[\Override]
     protected function render(): string
     {
         if (empty($this->items)) {

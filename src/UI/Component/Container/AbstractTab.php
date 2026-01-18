@@ -19,11 +19,13 @@ abstract class AbstractTab extends AbstractComponent implements TabInterface
     /**
      * Get tab title
      */
+    #[\Override]
     abstract public function getTitle(): string;
 
     /**
      * Get tab-specific shortcuts
      */
+    #[\Override]
     public function getShortcuts(): array
     {
         return [];
@@ -32,6 +34,7 @@ abstract class AbstractTab extends AbstractComponent implements TabInterface
     /**
      * Called when tab becomes active
      */
+    #[\Override]
     public function onActivate(): void
     {
         $this->isActive = true;
@@ -41,6 +44,7 @@ abstract class AbstractTab extends AbstractComponent implements TabInterface
     /**
      * Called when tab is deactivated
      */
+    #[\Override]
     public function onDeactivate(): void
     {
         $this->isActive = false;
@@ -67,6 +71,7 @@ abstract class AbstractTab extends AbstractComponent implements TabInterface
     /**
      * Render tab content
      */
+    #[\Override]
     abstract public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void;
 
     /**

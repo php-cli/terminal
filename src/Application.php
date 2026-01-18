@@ -56,7 +56,7 @@ final class Application
         ?KeyBindingRegistryInterface $keyBindings = null,
         private readonly ?TerminalDriverInterface $driver = null,
     ) {
-        $this->frameTime = 1.0 / $this->targetFps;
+        $this->frameTime = 1.0 / (float) $this->targetFps;
 
         // Initialize theme context from current theme
         $theme = ThemeManager::getCurrentTheme();
@@ -87,7 +87,7 @@ final class Application
     public function setTargetFps(int $fps): void
     {
         $this->targetFps = \max(1, \min(60, $fps));
-        $this->frameTime = 1.0 / $this->targetFps;
+        $this->frameTime = 1.0 / (float) $this->targetFps;
     }
 
     /**
@@ -252,7 +252,7 @@ final class Application
 
             // Sleep to maintain target FPS
             if ($frameDuration < $this->frameTime) {
-                \usleep((int) (($this->frameTime - $frameDuration) * 1000000));
+                \usleep((int) (($this->frameTime - $frameDuration) * 1000000.0));
             }
 
             $lastFrameTime = $frameEnd;

@@ -42,6 +42,7 @@ final class SecurityAuditTab extends AbstractTab
         $this->initializeComponents();
     }
 
+    #[\Override]
     public function getTitle(): string
     {
         return 'Security';
@@ -57,6 +58,7 @@ final class SecurityAuditTab extends AbstractTab
         ];
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);

@@ -44,6 +44,7 @@ final class ComposerManagerScreen implements ScreenInterface, ScreenManagerAware
         private readonly ComposerService $composerService,
     ) {}
 
+    #[\Override]
     public function setScreenManager(ScreenManager $screenManager): void
     {
         // Create tabs
@@ -70,6 +71,7 @@ final class ComposerManagerScreen implements ScreenInterface, ScreenManagerAware
 
     // ScreenInterface implementation
 
+    #[\Override]
     public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
     {
         // Get actual size if not provided
@@ -83,6 +85,7 @@ final class ComposerManagerScreen implements ScreenInterface, ScreenManagerAware
         $this->tabContainer->render($renderer, $x, $y, $width, $height);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         // Delegate all input to tab container
@@ -90,16 +93,19 @@ final class ComposerManagerScreen implements ScreenInterface, ScreenManagerAware
         return $this->tabContainer->handleInput($key);
     }
 
+    #[\Override]
     public function onActivate(): void
     {
         $this->tabContainer->setFocused(true);
     }
 
+    #[\Override]
     public function onDeactivate(): void
     {
         $this->tabContainer->setFocused(false);
     }
 
+    #[\Override]
     public function update(): void
     {
         // Update active tab
@@ -109,6 +115,7 @@ final class ComposerManagerScreen implements ScreenInterface, ScreenManagerAware
         }
     }
 
+    #[\Override]
     public function getTitle(): string
     {
         return 'Composer Manager';

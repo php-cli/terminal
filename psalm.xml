@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="4"
+    resolveFromConfigFile="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+    findUnusedBaselineEntry="true"
+    findUnusedCode="false"
+>
+    <projectFiles>
+        <directory name="src" />
+        <ignoreFiles>
+            <directory name="vendor" />
+        </ignoreFiles>
+    </projectFiles>
+
+    <issueHandlers>
+        <!-- shell_exec is required for terminal operations (stty, etc.) -->
+        <ForbiddenCode>
+            <errorLevel type="suppress">
+                <directory name="src/Infrastructure/Terminal" />
+                <directory name="src/Feature/ComposerManager/Service" />
+            </errorLevel>
+        </ForbiddenCode>
+        <MissingOverrideAttribute errorLevel="suppress" />
+    </issueHandlers>
+    <forbiddenFunctions>
+        <function name="var_dump"/>
+        <function name="dd"/>
+        <function name="dump"/>
+        <function name="trap"/>
+        <function name="tr"/>
+        <function name="td"/>
+    </forbiddenFunctions>
+</psalm>

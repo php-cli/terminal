@@ -8,7 +8,8 @@ use Butschster\Commander\Infrastructure\Keyboard\Key;
 use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
-use Butschster\Commander\UI\Menu\MenuItem;
+use Butschster\Commander\UI\Menu\MenuItemInterface;
+use Butschster\Commander\UI\Menu\SubmenuMenuItem;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -19,14 +20,14 @@ final class MenuDropdown extends AbstractComponent
     private int $selectedIndex = 0;
     private int $scrollOffset = 0;
 
-    /** @var \Closure(MenuItem): void */
+    /** @var \Closure(MenuItemInterface): void */
     private \Closure $onSelect;
 
     /** @var \Closure(): void */
     private \Closure $onClose;
 
     /**
-     * @param array<MenuItem> $items Menu items to display
+     * @param array<MenuItemInterface> $items Menu items to display
      */
     public function __construct(
         private readonly array $items,
@@ -35,7 +36,7 @@ final class MenuDropdown extends AbstractComponent
     ) {
         // Skip separators when initializing
         $this->selectedIndex = $this->findNextSelectableItem(0, 1);
-        $this->onSelect = static fn(MenuItem $item) => null;
+        $this->onSelect = static fn(MenuItemInterface $item) => null;
         $this->onClose = static fn() => null;
     }
 
@@ -55,6 +56,7 @@ final class MenuDropdown extends AbstractComponent
         $this->onClose = $callback(...);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -116,15 +118,36 @@ final class MenuDropdown extends AbstractComponent
     {
         $input = KeyInput::from($key);
 
-        return match (true) {
-            $input->is(Key::UP) => $this->moveSelection(-1) ?? true,
-            $input->is(Key::DOWN) => $this->moveSelection(1) ?? true,
-            $input->is(Key::ENTER) => $this->selectCurrentItem() ?? true,
-            $input->is(Key::ESCAPE) => $this->close() ?? true,
-            $input->isSpace() => $this->selectCurrentItem() ?? true,
-            $input->isPrintable() => $this->handleHotkey(\mb_strtolower($input->raw)),
-            default => false,
-        };
+        if ($input->is(Key::UP)) {
+            $this->moveSelection(-1);
+            return true;
+        }
+
+        if ($input->is(Key::DOWN)) {
+            $this->moveSelection(1);
+            return true;
+        }
+
+        if ($input->is(Key::ENTER)) {
+            $this->selectCurrentItem();
+            return true;
+        }
+
+        if ($input->is(Key::ESCAPE)) {
+            $this->close();
+            return true;
+        }
+
+        if ($input->isSpace()) {
+            $this->selectCurrentItem();
+            return true;
+        }
+
+        if ($input->isPrintable()) {
+            return $this->handleHotkey(\mb_strtolower($input->raw));
+        }
+
+        return false;
     }
 
     #[\Override]
@@ -255,9 +278,9 @@ final class MenuDropdown extends AbstractComponent
                 continue;
             }
 
-            $itemWidth = \mb_strlen($item->label) + 4; // Add padding
+            $itemWidth = \mb_strlen($item->getLabel()) + 4; // Add padding
 
-            if ($item->hotkey !== null) {
+            if ($item->getHotkey() !== null) {
                 $itemWidth += 4; // Space for hotkey hint
             }
 
@@ -275,7 +298,7 @@ final class MenuDropdown extends AbstractComponent
         int $x,
         int $y,
         int $width,
-        MenuItem $item,
+        MenuItemInterface $item,
         bool $isSelected,
     ): void {
         if ($item->isSeparator()) {
@@ -300,13 +323,14 @@ final class MenuDropdown extends AbstractComponent
         $renderer->fillRect($x + 1, $y, $width - 2, 1, ' ', $color);
 
         // Render item label with left padding (2 spaces from left edge for border)
-        $label = ' ' . $item->label;
+        $label = ' ' . $item->getLabel();
         $renderer->writeAt($x + 1, $y, $label, $color);
 
         // Render hotkey hint if present (right-aligned before right border)
-        if ($item->hotkey !== null) {
-            $hotkey = \strtoupper($item->hotkey) . ' ';
-            $hotkeyX = $x + $width - \mb_strlen($hotkey) - 1; // -1 for border
+        $hotkey = $item->getHotkey();
+        if ($hotkey !== null) {
+            $hotkeyText = \strtoupper($hotkey) . ' ';
+            $hotkeyX = $x + $width - \mb_strlen($hotkeyText) - 1; // -1 for border
 
             // Hotkey color: same background as item, but yellow text when not selected
             $hotkeyColor = $isSelected && $this->isFocused()
@@ -321,13 +345,13 @@ final class MenuDropdown extends AbstractComponent
             $renderer->writeAt(
                 $hotkeyX,
                 $y,
-                $hotkey,
+                $hotkeyText,
                 $hotkeyColor,
             );
         }
 
         // Render submenu indicator if present
-        if ($item->isSubmenu()) {
+        if ($item instanceof SubmenuMenuItem) {
             $renderer->writeAt($x + $width - 2, $y, '►', $color);
         }
     }

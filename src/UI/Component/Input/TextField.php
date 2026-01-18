@@ -32,6 +32,7 @@ class TextField extends FormField
         return $this->required;
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, bool $focused): int
     {
         $currentY = $y;
@@ -106,6 +107,7 @@ class TextField extends FormField
         return ($this->description !== '' ? 4 : 3);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
         $input = KeyInput::from($key);

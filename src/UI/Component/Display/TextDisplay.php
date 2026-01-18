@@ -108,6 +108,7 @@ final class TextDisplay extends AbstractComponent
         }
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -177,22 +178,45 @@ final class TextDisplay extends AbstractComponent
         $input = KeyInput::from($key);
         $maxOffset = \max(0, \count($this->lines) - $this->visibleLines);
 
-        return match (true) {
-            $input->is(Key::UP) => $this->scrollOffset > 0
-                ? (--$this->scrollOffset !== null) && ($this->autoScroll = false) === false
-                : true,
-            $input->is(Key::DOWN) => $this->scrollOffset < $maxOffset
-                ? ++$this->scrollOffset !== null
-                : true,
-            $input->is(Key::PAGE_UP) => ($this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines)) !== null
-                && ($this->autoScroll = false) === false,
-            $input->is(Key::PAGE_DOWN) => ($this->scrollOffset = \min($maxOffset, $this->scrollOffset + $this->visibleLines)) !== null,
-            $input->is(Key::HOME) => ($this->scrollOffset = 0) !== null
-                && ($this->autoScroll = false) === false,
-            $input->is(Key::END) => $this->scrollToBottom() === null
-                && ($this->autoScroll = true),
-            default => false,
-        };
+        if ($input->is(Key::UP)) {
+            if ($this->scrollOffset > 0) {
+                --$this->scrollOffset;
+                $this->autoScroll = false;
+            }
+            return true;
+        }
+
+        if ($input->is(Key::DOWN)) {
+            if ($this->scrollOffset < $maxOffset) {
+                ++$this->scrollOffset;
+            }
+            return true;
+        }
+
+        if ($input->is(Key::PAGE_UP)) {
+            $this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines);
+            $this->autoScroll = false;
+            return true;
+        }
+
+        if ($input->is(Key::PAGE_DOWN)) {
+            $this->scrollOffset = \min($maxOffset, $this->scrollOffset + $this->visibleLines);
+            return true;
+        }
+
+        if ($input->is(Key::HOME)) {
+            $this->scrollOffset = 0;
+            $this->autoScroll = false;
+            return true;
+        }
+
+        if ($input->is(Key::END)) {
+            $this->scrollToBottom();
+            $this->autoScroll = true;
+            return true;
+        }
+
+        return false;
     }
 
     #[\Override]

@@ -197,6 +197,7 @@ final class GridLayout extends AbstractLayoutComponent
             : ['width' => $maxCrossAxis, 'height' => $totalMainAxis];
     }
 
+    #[\Override]
     protected function draw(Renderer $renderer, int $x, int $y): void
     {
         $currentPos = 0;
@@ -289,7 +290,7 @@ final class GridLayout extends AbstractLayoutComponent
         $remainingSpace = \max(0, $remainingSpace - $percentageTotal);
 
         // Calculate fractional unit value
-        $fractionUnit = $flexTotal > 0 ? $remainingSpace / $flexTotal : 0;
+        $fractionUnit = $flexTotal > 0 ? (float) $remainingSpace / $flexTotal : 0.0;
 
         // Calculate final sizes
         $sizes = [];

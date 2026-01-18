@@ -16,6 +16,8 @@ abstract class TextComponent implements \Stringable
 
     /**
      * Static factory method for fluent API
+     *
+     * @psalm-suppress TooManyArguments Arguments are forwarded to child constructors
      */
     public static function create(mixed ...$args): static
     {
@@ -52,6 +54,7 @@ abstract class TextComponent implements \Stringable
     /**
      * Convert component to string
      */
+    #[\Override]
     final public function __toString(): string
     {
         if (!$this->shouldDisplay) {

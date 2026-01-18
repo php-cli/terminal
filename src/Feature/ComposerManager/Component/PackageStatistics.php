@@ -26,6 +26,7 @@ final class PackageStatistics extends TextComponent
         private readonly ?int $namespacesCount = null,
     ) {}
 
+    #[\Override]
     protected function render(): string
     {
         $lines = [

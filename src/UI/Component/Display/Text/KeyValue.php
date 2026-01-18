@@ -35,6 +35,7 @@ final class KeyValue extends TextComponent
         return $this;
     }
 
+    #[\Override]
     protected function render(): string
     {
         return $this->key . $this->separator . $this->value;

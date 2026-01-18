@@ -111,6 +111,7 @@ final class FormComponent extends AbstractComponent
         return $errors;
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -158,17 +159,31 @@ final class FormComponent extends AbstractComponent
 
         $input = KeyInput::from($key);
 
-        return match (true) {
-            $input->is(Key::UP) => $this->focusedFieldIndex > 0
-                ? (--$this->focusedFieldIndex !== null) && $this->adjustScroll() === null
-                : true,
-            $input->is(Key::DOWN), $input->is(Key::TAB) => $this->focusedFieldIndex < \count($this->fields) - 1
-                ? (++$this->focusedFieldIndex !== null) && $this->adjustScroll() === null
-                : true,
-            $input->is(Key::ENTER) => $this->handleSubmit(),
-            $input->is(Key::ESCAPE) => $this->handleCancel(),
-            default => $this->fields[$this->focusedFieldIndex]->handleInput($key),
-        };
+        if ($input->is(Key::UP)) {
+            if ($this->focusedFieldIndex > 0) {
+                --$this->focusedFieldIndex;
+                $this->adjustScroll();
+            }
+            return true;
+        }
+
+        if ($input->is(Key::DOWN) || $input->is(Key::TAB)) {
+            if ($this->focusedFieldIndex < \count($this->fields) - 1) {
+                ++$this->focusedFieldIndex;
+                $this->adjustScroll();
+            }
+            return true;
+        }
+
+        if ($input->is(Key::ENTER)) {
+            return $this->handleSubmit();
+        }
+
+        if ($input->is(Key::ESCAPE)) {
+            return $this->handleCancel();
+        }
+
+        return $this->fields[$this->focusedFieldIndex]->handleInput($key);
     }
 
     #[\Override]
