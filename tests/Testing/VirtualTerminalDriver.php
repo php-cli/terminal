@@ -22,9 +22,7 @@ final class VirtualTerminalDriver implements TerminalDriverInterface
     /** Whether initialize() was called */
     private bool $initialized = false;
 
-    public function __construct(private int $width = 80, private int $height = 24)
-    {
-    }
+    public function __construct(private int $width = 80, private int $height = 24) {}
 
     public function setSize(int $width, int $height): void
     {

@@ -5,47 +5,83 @@
 The `Spinner` class has `render()` and `update()` methods but doesn't implement `ComponentInterface`, making it
 incompatible with the component hierarchy. This creates confusion and prevents using Spinner in layout components.
 
+**Problem**: Current `render(string $prefix, string $suffix): string` conflicts with
+`ComponentInterface::render(Renderer, x, y, width, height): void`
+
+**Solution**: Extend `AbstractComponent`, rename old `render()` to `getFormattedText()`, implement proper component
+rendering.
+
 ## Stage Dependencies
 
 ```
-Stage 1 (Refactor Spinner) → Stage 2 (Update Usages)
+Stage 1 (Refactor Spinner) → Stage 2 (Unit Tests) → Stage 3 (E2E Tests)
 ```
 
 ## Development Progress
 
 ### Stage 1: Refactor Spinner to Implement ComponentInterface
 
-- [ ] Substep 1.1: Make Spinner extend AbstractComponent
-- [ ] Substep 1.2: Implement proper `render(Renderer, x, y, width, height)` method
-- [ ] Substep 1.3: Keep existing utility methods (`getCurrentFrame()`, `start()`, `stop()`)
-- [ ] Substep 1.4: Add `getMinSize()` returning appropriate dimensions
-- [ ] Substep 1.5: Ensure `handleInput()` returns false (spinners don't handle input)
+See: [stage-01.md](stage-01.md)
 
-**Notes**:
-**Status**: Not Started
-**Completed**:
+- [x] Substep 1.1: Make Spinner extend AbstractComponent
+- [x] Substep 1.2: Implement proper `render(Renderer, x, y, width, height)` method
+- [x] Substep 1.3: Rename old `render()` to `getFormattedText()` with deprecated alias
+- [x] Substep 1.4: Add `setPrefix()`, `setSuffix()`, `setColor()` fluent setters
+- [x] Substep 1.5: Add `getMinSize()` returning frame width + prefix/suffix
+- [x] Substep 1.6: Override `handleInput()` to return false (spinners don't handle input)
+- [x] Substep 1.7: Override `update()` to call parent and advance frame
+
+**Notes**: Also added getPrefix(), getSuffix(), getColor() getters for completeness.
+**Status**: Complete
+**Completed**: All substeps
 
 ---
 
 ### Stage 2: Update Existing Usages and Add Tests
 
-- [ ] Substep 2.1: Search codebase for Spinner usages
-- [ ] Substep 2.2: Update any direct `render()` calls to use component pattern
-- [ ] Substep 2.3: Create `SpinnerTest.php` with rendering and state tests
-- [ ] Substep 2.4: Document Spinner usage in layouts
+See: [stage-02.md](stage-02.md)
 
-**Notes**:
-**Status**: Not Started
-**Completed**:
+- [x] Substep 2.1: Review ScriptsTab.php usage (uses `getCurrentFrame()` - no changes needed)
+- [x] Substep 2.2: Create `tests/Unit/Component/Display/SpinnerTest.php`
+- [x] Substep 2.3: Test state methods (start/stop/reset/isRunning)
+- [x] Substep 2.4: Test frame methods (getCurrentFrame/getFrame/getFrameCount)
+- [x] Substep 2.5: Test animation timing (update advances frame after interval)
+- [x] Substep 2.6: Test all spinner styles (braille, dots, line, arrow, circle, square, clock)
+- [x] Substep 2.7: Test ComponentInterface methods (render, handleInput, getMinSize)
+- [x] Substep 2.8: Test legacy API (getFormattedText)
+
+**Notes**: 61 unit tests created covering all functionality including edge cases, fluent setters, AbstractComponent inheritance, animation cycles, and interval edge cases.
+**Status**: Complete
+**Completed**: All substeps
+
+---
+
+### Stage 3: E2E Tests - Spinner in Real Application Workflows
+
+See: [stage-03.md](stage-03.md)
+
+- [x] Substep 3.1: Create `tests/E2E/Scenario/SpinnerWorkflowScenarioTest.php`
+- [x] Substep 3.2: Test spinner animation during loading (frame changes over time)
+- [x] Substep 3.3: Test spinner stops after async operation completes
+- [x] Substep 3.4: Test spinner renders in horizontal stack layout
+- [x] Substep 3.5: Test spinner with custom color
+- [x] Substep 3.6: Test start/stop/reset state cycle
+- [x] Substep 3.7: Test all 8 spinner styles render correctly (data provider)
+
+**Notes**: 24 E2E tests created covering animation workflows, multiple spinners, different screen sizes, progress simulation, visibility toggle, error states, and all 8 spinner styles (via data provider).
+**Status**: Complete
+**Completed**: All substeps
 
 ---
 
 ## Codebase References
 
-- `src/UI/Component/Display/Spinner.php:1-150` - Current implementation
-- `src/UI/Component/AbstractComponent.php` - Base class to extend
-- `src/UI/Component/ComponentInterface.php` - Interface to implement
-- `docs/SpinnerComponent.md` - Existing documentation
+- `src/UI/Component/Display/Spinner.php:1-296` - Refactored implementation (extends AbstractComponent)
+- `src/UI/Component/AbstractComponent.php:1-155` - Base class
+- `src/UI/Component/ComponentInterface.php:1-56` - Interface
+- `src/Feature/ComposerManager/Tab/ScriptsTab.php:54,85-86,162-167` - Usage (uses getCurrentFrame - unchanged)
+- `tests/Unit/Component/Display/SpinnerTest.php` - 61 unit tests
+- `tests/E2E/Scenario/SpinnerWorkflowScenarioTest.php` - 24 E2E tests
 
 ## Current vs Proposed Implementation
 
