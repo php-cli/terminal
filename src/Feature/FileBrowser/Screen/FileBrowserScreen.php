@@ -120,38 +120,6 @@ final class FileBrowserScreen implements ScreenInterface
         return $this->filePreview->handleInput($key);
     }
 
-    private function handleEscape(): bool
-    {
-        // If right panel (preview) is focused, return focus to left panel
-        if (!$this->leftPanelFocused) {
-            $this->leftPanelFocused = true;
-            $this->leftPanel->setFocused(true);
-            $this->fileList->setFocused(true);
-            $this->rightPanel->setFocused(false);
-            $this->filePreview->setFocused(false);
-            $this->updateStatusBar();
-            return true;
-        }
-
-        // If left panel is focused, navigate up or exit
-        // Go back (if not at root)
-        if ($this->currentPath !== '/' && \dirname($this->currentPath) !== $this->currentPath) {
-            $this->currentPath = \dirname($this->currentPath);
-            $this->fileList->setDirectory($this->currentPath);
-            $this->leftPanel->setTitle($this->getCurrentPathDisplay());
-
-            $selectedItem = $this->fileList->getSelectedItem();
-            if ($selectedItem !== null) {
-                $this->filePreview->setFileInfo($selectedItem['path']);
-            }
-            return true;
-        }
-
-        // If at root, exit screen
-        $this->screenManager->popScreen();
-        return true;
-    }
-
     public function onActivate(): void
     {
         // Refresh directory listing when screen becomes active
@@ -198,6 +166,38 @@ final class FileBrowserScreen implements ScreenInterface
                 $this->filePreview->setFileInfo($selectedItem['path']);
             }
         }
+    }
+
+    private function handleEscape(): bool
+    {
+        // If right panel (preview) is focused, return focus to left panel
+        if (!$this->leftPanelFocused) {
+            $this->leftPanelFocused = true;
+            $this->leftPanel->setFocused(true);
+            $this->fileList->setFocused(true);
+            $this->rightPanel->setFocused(false);
+            $this->filePreview->setFocused(false);
+            $this->updateStatusBar();
+            return true;
+        }
+
+        // If left panel is focused, navigate up or exit
+        // Go back (if not at root)
+        if ($this->currentPath !== '/' && \dirname($this->currentPath) !== $this->currentPath) {
+            $this->currentPath = \dirname($this->currentPath);
+            $this->fileList->setDirectory($this->currentPath);
+            $this->leftPanel->setTitle($this->getCurrentPathDisplay());
+
+            $selectedItem = $this->fileList->getSelectedItem();
+            if ($selectedItem !== null) {
+                $this->filePreview->setFileInfo($selectedItem['path']);
+            }
+            return true;
+        }
+
+        // If at root, exit screen
+        $this->screenManager->popScreen();
+        return true;
     }
 
     /**

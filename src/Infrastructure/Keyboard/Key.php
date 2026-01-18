@@ -85,6 +85,25 @@ enum Key: string
     case D9 = '9';
 
     /**
+     * Try to create a Key from a raw KeyboardHandler string.
+     */
+    public static function tryFromRaw(string $rawKey): ?self
+    {
+        // Handle CTRL_ prefixed keys - extract the letter
+        if (\str_starts_with($rawKey, 'CTRL_')) {
+            $letter = \substr($rawKey, 5);
+            if (\strlen($letter) === 1 && \ctype_alpha($letter)) {
+                return self::tryFrom(\strtoupper($letter));
+            }
+            // Handle CTRL_UP, CTRL_DOWN, etc.
+            return self::tryFrom($letter);
+        }
+
+        // Direct mapping for most keys
+        return self::tryFrom($rawKey);
+    }
+
+    /**
      * Check if this is a navigation key (arrows, home, end, page up/down).
      */
     public function isNavigation(): bool
@@ -132,24 +151,5 @@ enum Key: string
             self::D5, self::D6, self::D7, self::D8, self::D9 => true,
             default => false,
         };
-    }
-
-    /**
-     * Try to create a Key from a raw KeyboardHandler string.
-     */
-    public static function tryFromRaw(string $rawKey): ?self
-    {
-        // Handle CTRL_ prefixed keys - extract the letter
-        if (\str_starts_with($rawKey, 'CTRL_')) {
-            $letter = \substr($rawKey, 5);
-            if (\strlen($letter) === 1 && \ctype_alpha($letter)) {
-                return self::tryFrom(\strtoupper($letter));
-            }
-            // Handle CTRL_UP, CTRL_DOWN, etc.
-            return self::tryFrom($letter);
-        }
-
-        // Direct mapping for most keys
-        return self::tryFrom($rawKey);
     }
 }

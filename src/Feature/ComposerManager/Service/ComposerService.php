@@ -586,7 +586,7 @@ final class ComposerService
 
         // Build command
         $command = \array_merge([$composerBinary], $args);
-        $commandString = \implode(' ', \array_map('escapeshellarg', $command));
+        $commandString = \implode(' ', \array_map(escapeshellarg(...), $command));
 
         // Execute command
         $descriptors = [

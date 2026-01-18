@@ -165,6 +165,12 @@ final class FormComponent extends AbstractComponent
         };
     }
 
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return ['width' => 40, 'height' => 10];
+    }
+
     private function handleSubmit(): bool
     {
         $errors = $this->validate();
@@ -180,12 +186,6 @@ final class FormComponent extends AbstractComponent
             ($this->onCancel)();
         }
         return true;
-    }
-
-    #[\Override]
-    public function getMinSize(): array
-    {
-        return ['width' => 40, 'height' => 10];
     }
 
     private function renderButtons(Renderer $renderer, int $x, int $y, int $width): void

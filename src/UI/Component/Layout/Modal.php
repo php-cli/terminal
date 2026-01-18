@@ -213,6 +213,15 @@ final class Modal extends AbstractComponent
         };
     }
 
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return [
+            'width' => $this->modalWidth + 10,  // Add margin around modal
+            'height' => $this->modalHeight + 6, // Add margin around modal
+        ];
+    }
+
     private function activateButton(array $buttonLabels): bool
     {
         $selectedLabel = $buttonLabels[$this->selectedButtonIndex];
@@ -240,15 +249,6 @@ final class Modal extends AbstractComponent
         return false;
     }
 
-    #[\Override]
-    public function getMinSize(): array
-    {
-        return [
-            'width' => $this->modalWidth + 10,  // Add margin around modal
-            'height' => $this->modalHeight + 6, // Add margin around modal
-        ];
-    }
-
     /**
      * Setup default buttons based on modal type
      */
@@ -260,7 +260,7 @@ final class Modal extends AbstractComponent
                 'No' => fn() => $this->close(false),
             ],
             default => [
-                'OK' => fn() => $this->close(),
+                'OK' => $this->close(...),
             ],
         };
     }

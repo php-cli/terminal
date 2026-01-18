@@ -42,6 +42,8 @@ final class TableComponent extends AbstractComponent
 {
     use HandlesInput;
 
+    private readonly Scrollbar $scrollbar;
+
     /** @var array<int, array<string, mixed>> */
     private array $rows = [];
 
@@ -62,7 +64,10 @@ final class TableComponent extends AbstractComponent
      * @param array<TableColumn> $columns Column definitions
      * @param bool $showHeader Whether to show header row
      */
-    public function __construct(private array $columns = [], private bool $showHeader = true) {}
+    public function __construct(private array $columns = [], private bool $showHeader = true)
+    {
+        $this->scrollbar = new Scrollbar();
+    }
 
     /**
      * Set table columns
@@ -158,8 +163,11 @@ final class TableComponent extends AbstractComponent
         $this->setBounds($x, $y, $width, $height);
         $theme = $renderer->getThemeContext();
 
+        // Calculate visible rows accounting for header
+        $this->visibleRows = $this->showHeader ? $height - 2 : $height;
+
         // Check if scrollbar is needed
-        $needsScrollbar = \count($this->rows) > ($this->showHeader ? $height - 2 : $height);
+        $needsScrollbar = Scrollbar::needsScrollbar(\count($this->rows), $this->visibleRows);
 
         // Reserve space for scrollbar if needed
         $contentWidth = $needsScrollbar ? $width - 1 : $width;
@@ -180,11 +188,6 @@ final class TableComponent extends AbstractComponent
             $separator = \str_repeat('─', $contentWidth);
             $renderer->writeAt($x, $currentY, $separator, $theme->getInactiveBorder());
             $currentY += 1;
-
-            // Adjust visible rows to account for header
-            $this->visibleRows = $height - 2;
-        } else {
-            $this->visibleRows = $height;
         }
 
         if (empty($this->rows)) {
@@ -211,7 +214,16 @@ final class TableComponent extends AbstractComponent
 
         // Draw scrollbar if needed
         if ($needsScrollbar) {
-            $this->drawScrollbar($renderer, $x + $contentWidth, $currentY, $this->visibleRows, $theme);
+            $this->scrollbar->render(
+                $renderer,
+                x: $x + $contentWidth,
+                y: $currentY,
+                height: $this->visibleRows,
+                theme: $theme,
+                totalItems: \count($this->rows),
+                visibleItems: $this->visibleRows,
+                scrollOffset: $this->scrollOffset,
+            );
         }
     }
 
@@ -249,14 +261,6 @@ final class TableComponent extends AbstractComponent
         return false;
     }
 
-    private function handleEnter(): bool
-    {
-        if ($this->onSelect !== null) {
-            ($this->onSelect)($this->rows[$this->selectedIndex], $this->selectedIndex);
-        }
-        return true;
-    }
-
     #[\Override]
     public function getMinSize(): array
     {
@@ -268,6 +272,14 @@ final class TableComponent extends AbstractComponent
         );
 
         return ['width' => \max($minWidth, 60), 'height' => 10];
+    }
+
+    private function handleEnter(): bool
+    {
+        if ($this->onSelect !== null) {
+            ($this->onSelect)($this->rows[$this->selectedIndex], $this->selectedIndex);
+        }
+        return true;
     }
 
     /**
@@ -428,23 +440,6 @@ final class TableComponent extends AbstractComponent
             $this->scrollOffset = $this->selectedIndex;
         } elseif ($this->selectedIndex >= $this->scrollOffset + $this->visibleRows) {
             $this->scrollOffset = $this->selectedIndex - $this->visibleRows + 1;
-        }
-    }
-
-    /**
-     * Draw scrollbar indicator
-     */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height, ThemeContext $theme): void
-    {
-        $totalItems = \count($this->rows);
-
-        // Calculate thumb size and position
-        $thumbHeight = \max(1, (int) ($height * $this->visibleRows / $totalItems));
-        $thumbPosition = (int) ($height * $this->scrollOffset / $totalItems);
-
-        for ($i = 0; $i < $height; $i++) {
-            $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, $theme->getScrollbar());
         }
     }
 }

@@ -234,7 +234,7 @@ final class ScriptsTab extends AbstractTab
                 formatter: static function ($value, $row) {
                     if (\is_array($value)) {
                         // Multiple commands
-                        return \implode(' && ', \array_map(static fn($cmd) => self::truncateCommand($cmd), $value));
+                        return \implode(' && ', \array_map(self::truncateCommand(...), $value));
                     }
                     return self::truncateCommand((string) $value);
                 },

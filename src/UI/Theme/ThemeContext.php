@@ -7,18 +7,18 @@ namespace Butschster\Commander\UI\Theme;
 /**
  * Injectable theme context - replaces static ColorScheme properties
  */
-final class ThemeContext
+final readonly class ThemeContext
 {
-    private readonly ColorSet $normal;
-    private readonly ColorSet $menu;
-    private readonly ColorSet $status;
-    private readonly ColorSet $selected;
-    private readonly ColorSet $input;
-    private readonly BorderColorSet $borders;
-    private readonly SemanticColorSet $semantic;
+    private ColorSet $normal;
+    private ColorSet $menu;
+    private ColorSet $status;
+    private ColorSet $selected;
+    private ColorSet $input;
+    private BorderColorSet $borders;
+    private SemanticColorSet $semantic;
 
     public function __construct(
-        private readonly ThemeInterface $theme,
+        private ThemeInterface $theme,
     ) {
         // Pre-compute color sets for efficiency
         $this->normal = new ColorSet($theme->getNormalBg(), $theme->getNormalFg());

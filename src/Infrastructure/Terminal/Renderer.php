@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Infrastructure\Terminal;
 
-use Butschster\Commander\UI\Theme\ColorScheme;
 use Butschster\Commander\UI\Theme\ThemeContext;
 
 /**
@@ -15,7 +14,6 @@ use Butschster\Commander\UI\Theme\ThemeContext;
  */
 final class Renderer
 {
-    private ThemeContext $themeContext;
     /** @var array<int, array<int, array{char: string, color: string}>> Back buffer */
     private array $backBuffer = [];
 
@@ -38,9 +36,8 @@ final class Renderer
 
     public function __construct(
         private readonly TerminalManager $terminal,
-        ThemeContext $themeContext,
+        private readonly ThemeContext $themeContext,
     ) {
-        $this->themeContext = $themeContext;
         $size = $terminal->getSize();
         $this->width = $size['width'];
         $this->height = $size['height'];

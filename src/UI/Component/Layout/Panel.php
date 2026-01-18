@@ -7,7 +7,6 @@ namespace Butschster\Commander\UI\Component\Layout;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Component\ComponentInterface;
-use Butschster\Commander\UI\Theme\ThemeContext;
 
 /**
  * Panel component with border and title

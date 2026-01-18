@@ -9,7 +9,6 @@ use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Component\Concerns\HandlesInput;
-use Butschster\Commander\UI\Theme\ThemeContext;
 
 /**
  * Scrollable list component with keyboard navigation
@@ -28,10 +27,15 @@ final class ListComponent extends AbstractComponent
     /** @var callable|null Callback when selection changes */
     private $onChange = null;
 
+    private readonly Scrollbar $scrollbar;
+
     /**
      * @param array<string> $items
      */
-    public function __construct(private array $items = []) {}
+    public function __construct(private array $items = [])
+    {
+        $this->scrollbar = new Scrollbar();
+    }
 
     /**
      * Set list items
@@ -103,7 +107,7 @@ final class ListComponent extends AbstractComponent
         }
 
         // Check if scrollbar is needed and reserve space for it
-        $needsScrollbar = \count($this->items) > $this->visibleRows;
+        $needsScrollbar = Scrollbar::needsScrollbar(\count($this->items), $this->visibleRows);
         $contentWidth = $needsScrollbar ? $width - 1 : $width;
 
         // Calculate visible range
@@ -141,7 +145,16 @@ final class ListComponent extends AbstractComponent
 
         // Draw scrollbar if needed
         if ($needsScrollbar) {
-            $this->drawScrollbar($renderer, $x + $contentWidth, $y, $height, $theme);
+            $this->scrollbar->render(
+                $renderer,
+                x: $x + $contentWidth,
+                y: $y,
+                height: $height,
+                theme: $theme,
+                totalItems: \count($this->items),
+                visibleItems: $this->visibleRows,
+                scrollOffset: $this->scrollOffset,
+            );
         }
     }
 
@@ -175,6 +188,12 @@ final class ListComponent extends AbstractComponent
         return false;
     }
 
+    #[\Override]
+    public function getMinSize(): array
+    {
+        return ['width' => 20, 'height' => 5];
+    }
+
     private function handleEnter(): bool
     {
         if ($this->onSelect !== null) {
@@ -184,12 +203,6 @@ final class ListComponent extends AbstractComponent
             }
         }
         return true;
-    }
-
-    #[\Override]
-    public function getMinSize(): array
-    {
-        return ['width' => 20, 'height' => 5];
     }
 
     /**
@@ -203,23 +216,6 @@ final class ListComponent extends AbstractComponent
         } // Scroll down if selected item is below visible area
         elseif ($this->selectedIndex >= $this->scrollOffset + $this->visibleRows) {
             $this->scrollOffset = $this->selectedIndex - $this->visibleRows + 1;
-        }
-    }
-
-    /**
-     * Draw scrollbar indicator
-     */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height, ThemeContext $theme): void
-    {
-        $totalItems = \count($this->items);
-
-        // Calculate thumb size and position
-        $thumbHeight = \max(1, (int) ($height * $this->visibleRows / $totalItems));
-        $thumbPosition = (int) ($height * $this->scrollOffset / $totalItems);
-
-        for ($i = 0; $i < $height; $i++) {
-            $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, $theme->getScrollbar());
         }
     }
 }

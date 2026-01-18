@@ -78,7 +78,7 @@ readonly class KeyCombination implements \Stringable
             throw new \InvalidArgumentException('Key combination string cannot be empty');
         }
 
-        $parts = \array_map('trim', \explode('+', $combo));
+        $parts = \array_map(trim(...), \explode('+', $combo));
         $ctrl = false;
         $alt = false;
         $shift = false;
@@ -176,34 +176,6 @@ readonly class KeyCombination implements \Stringable
     }
 
     /**
-     * Format the key for human-readable display.
-     */
-    private function formatKeyForDisplay(): string
-    {
-        // Function keys stay as-is
-        if ($this->key->isFunctionKey()) {
-            return $this->key->value;
-        }
-
-        // Single letters stay as-is
-        if ($this->key->isLetter()) {
-            return $this->key->value;
-        }
-
-        // Digits - just the number
-        if ($this->key->isDigit()) {
-            return $this->key->value;
-        }
-
-        // Special keys - title case
-        return match ($this->key) {
-            Key::PAGE_UP => 'Page Up',
-            Key::PAGE_DOWN => 'Page Down',
-            default => \ucfirst(\strtolower($this->key->value)),
-        };
-    }
-
-    /**
      * Try to resolve a key part string to a Key enum.
      */
     private static function resolveKey(string $keyPart): ?Key
@@ -235,6 +207,34 @@ readonly class KeyCombination implements \Stringable
             'BS' => Key::BACKSPACE,
             'RETURN' => Key::ENTER,
             default => null,
+        };
+    }
+
+    /**
+     * Format the key for human-readable display.
+     */
+    private function formatKeyForDisplay(): string
+    {
+        // Function keys stay as-is
+        if ($this->key->isFunctionKey()) {
+            return $this->key->value;
+        }
+
+        // Single letters stay as-is
+        if ($this->key->isLetter()) {
+            return $this->key->value;
+        }
+
+        // Digits - just the number
+        if ($this->key->isDigit()) {
+            return $this->key->value;
+        }
+
+        // Special keys - title case
+        return match ($this->key) {
+            Key::PAGE_UP => 'Page Up',
+            Key::PAGE_DOWN => 'Page Down',
+            default => \ucfirst(\strtolower($this->key->value)),
         };
     }
 }

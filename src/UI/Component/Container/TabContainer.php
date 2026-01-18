@@ -8,7 +8,6 @@ use Butschster\Commander\Infrastructure\Keyboard\Key;
 use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
-use Butschster\Commander\UI\Component\Concerns\HandlesInput;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
@@ -180,11 +179,6 @@ final class TabContainer extends AbstractComponent
         return $this->getActiveTab()?->handleInput($key) ?? false;
     }
 
-    private function delegateToActiveTab(string $key): bool
-    {
-        return $this->getActiveTab()?->handleInput($key) ?? false;
-    }
-
     #[\Override]
     public function setFocused(bool $focused): void
     {
@@ -195,6 +189,11 @@ final class TabContainer extends AbstractComponent
         if ($activeTab !== null) {
             $activeTab->setFocused($focused);
         }
+    }
+
+    private function delegateToActiveTab(string $key): bool
+    {
+        return $this->getActiveTab()?->handleInput($key) ?? false;
     }
 
     /**
