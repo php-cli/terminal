@@ -16,7 +16,7 @@ final class ActionMenuItemTest extends TestCase
     public function it_creates_with_closure(): void
     {
         $executed = false;
-        $item = new ActionMenuItem('Save', function () use (&$executed): void {
+        $item = new ActionMenuItem('Save', static function () use (&$executed): void {
             $executed = true;
         });
 
