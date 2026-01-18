@@ -19,11 +19,11 @@ final class MenuDropdown extends AbstractComponent
     private int $selectedIndex = 0;
     private int $scrollOffset = 0;
 
-    /** @var callable|null Callback when item is selected */
-    private $onSelect = null;
+    /** @var \Closure(MenuItem): void */
+    private \Closure $onSelect;
 
-    /** @var callable|null Callback when menu is closed */
-    private $onClose = null;
+    /** @var \Closure(): void */
+    private \Closure $onClose;
 
     /**
      * @param array<MenuItem> $items Menu items to display
@@ -35,6 +35,8 @@ final class MenuDropdown extends AbstractComponent
     ) {
         // Skip separators when initializing
         $this->selectedIndex = $this->findNextSelectableItem(0, 1);
+        $this->onSelect = static fn(MenuItem $item) => null;
+        $this->onClose = static fn() => null;
     }
 
     /**
@@ -42,7 +44,7 @@ final class MenuDropdown extends AbstractComponent
      */
     public function onSelect(callable $callback): void
     {
-        $this->onSelect = $callback;
+        $this->onSelect = $callback(...);
     }
 
     /**
@@ -50,7 +52,7 @@ final class MenuDropdown extends AbstractComponent
      */
     public function onClose(callable $callback): void
     {
-        $this->onClose = $callback;
+        $this->onClose = $callback(...);
     }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
@@ -211,9 +213,7 @@ final class MenuDropdown extends AbstractComponent
             return;
         }
 
-        if ($this->onSelect !== null) {
-            ($this->onSelect)($item);
-        }
+        ($this->onSelect)($item);
 
         $this->close();
     }
@@ -239,9 +239,7 @@ final class MenuDropdown extends AbstractComponent
      */
     private function close(): void
     {
-        if ($this->onClose !== null) {
-            ($this->onClose)();
-        }
+        ($this->onClose)();
     }
 
     /**

@@ -21,11 +21,17 @@ final class FormComponent extends AbstractComponent
     private int $focusedFieldIndex = 0;
     private int $scrollOffset = 0;
 
-    /** @var callable|null Callback when form is submitted */
-    private $onSubmit = null;
+    /** @var \Closure(array<string, mixed>): void */
+    private \Closure $onSubmit;
 
-    /** @var callable|null Callback when form is cancelled */
-    private $onCancel = null;
+    /** @var \Closure(): void */
+    private \Closure $onCancel;
+
+    public function __construct()
+    {
+        $this->onSubmit = static fn(array $values) => null;
+        $this->onCancel = static fn() => null;
+    }
 
     /**
      * Add a text input field
@@ -70,11 +76,11 @@ final class FormComponent extends AbstractComponent
     /**
      * Set callback for form submission
      *
-     * @param callable(array): void $callback
+     * @param callable(array<string, mixed>): void $callback
      */
     public function onSubmit(callable $callback): void
     {
-        $this->onSubmit = $callback;
+        $this->onSubmit = $callback(...);
     }
 
     /**
@@ -84,7 +90,7 @@ final class FormComponent extends AbstractComponent
      */
     public function onCancel(callable $callback): void
     {
-        $this->onCancel = $callback;
+        $this->onCancel = $callback(...);
     }
 
     /**
@@ -174,7 +180,7 @@ final class FormComponent extends AbstractComponent
     private function handleSubmit(): bool
     {
         $errors = $this->validate();
-        if (empty($errors) && $this->onSubmit !== null) {
+        if (empty($errors)) {
             ($this->onSubmit)($this->getValues());
         }
         return true;
@@ -182,9 +188,7 @@ final class FormComponent extends AbstractComponent
 
     private function handleCancel(): bool
     {
-        if ($this->onCancel !== null) {
-            ($this->onCancel)();
-        }
+        ($this->onCancel)();
         return true;
     }
 

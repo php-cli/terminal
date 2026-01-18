@@ -26,15 +26,18 @@ final class FileListComponent extends AbstractComponent
 
     private readonly TableComponent $table;
 
-    /** @var callable|null Callback when item is selected (Enter pressed) */
-    private $onSelect = null;
+    /** @var \Closure(array{name: string, path: string, type: string, size: int, modified: int, isDir: bool}): void */
+    private \Closure $onSelect;
 
-    /** @var callable|null Callback when selection changes */
-    private $onChange = null;
+    /** @var \Closure(array{name: string, path: string, type: string, size: int, modified: int, isDir: bool}): void */
+    private \Closure $onChange;
 
     public function __construct(
         private readonly FileSystemService $fileSystem,
     ) {
+        $this->onSelect = static fn(array $item) => null;
+        $this->onChange = static fn(array $item) => null;
+
         // Create table with column definitions
         $this->table = new TableComponent([
             new TableColumn(
@@ -63,17 +66,13 @@ final class FileListComponent extends AbstractComponent
 
         $this->table->setFocused(true);
 
-        // Wire up table callbacks to our callbacks
+        // Wire up table callbacks
         $this->table->onSelect(function (array $row, int $index): void {
-            if ($this->onSelect !== null) {
-                ($this->onSelect)($row);
-            }
+            ($this->onSelect)($row);
         });
 
         $this->table->onChange(function (array $row, int $index): void {
-            if ($this->onChange !== null) {
-                ($this->onChange)($row);
-            }
+            ($this->onChange)($row);
         });
 
         $this->addChild($this->table);
@@ -113,7 +112,7 @@ final class FileListComponent extends AbstractComponent
      */
     public function onSelect(callable $callback): void
     {
-        $this->onSelect = $callback;
+        $this->onSelect = $callback(...);
     }
 
     /**
@@ -123,7 +122,7 @@ final class FileListComponent extends AbstractComponent
      */
     public function onChange(callable $callback): void
     {
-        $this->onChange = $callback;
+        $this->onChange = $callback(...);
     }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void

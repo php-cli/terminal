@@ -21,11 +21,11 @@ final class ListComponent extends AbstractComponent
     private int $scrollOffset = 0;
     private int $visibleRows = 0;
 
-    /** @var callable|null Callback when item is selected */
-    private $onSelect = null;
+    /** @var \Closure(string, int): void */
+    private \Closure $onSelect;
 
-    /** @var callable|null Callback when selection changes */
-    private $onChange = null;
+    /** @var \Closure(string|null, int): void */
+    private \Closure $onChange;
 
     private readonly Scrollbar $scrollbar;
 
@@ -35,6 +35,8 @@ final class ListComponent extends AbstractComponent
     public function __construct(private array $items = [])
     {
         $this->scrollbar = new Scrollbar();
+        $this->onSelect = static fn(string $item, int $index) => null;
+        $this->onChange = static fn(?string $item, int $index) => null;
     }
 
     /**
@@ -48,10 +50,7 @@ final class ListComponent extends AbstractComponent
         $this->selectedIndex = 0;
         $this->scrollOffset = 0;
 
-        // Trigger change callback
-        if ($this->onChange !== null) {
-            ($this->onChange)($this->getSelectedItem(), $this->selectedIndex);
-        }
+        ($this->onChange)($this->getSelectedItem(), $this->selectedIndex);
     }
 
     /**
@@ -77,7 +76,7 @@ final class ListComponent extends AbstractComponent
      */
     public function onSelect(callable $callback): void
     {
-        $this->onSelect = $callback;
+        $this->onSelect = $callback(...);
     }
 
     /**
@@ -87,7 +86,7 @@ final class ListComponent extends AbstractComponent
      */
     public function onChange(callable $callback): void
     {
-        $this->onChange = $callback;
+        $this->onChange = $callback(...);
     }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
@@ -174,7 +173,7 @@ final class ListComponent extends AbstractComponent
 
         if ($handled !== null) {
             $this->adjustScroll();
-            if ($oldIndex !== $this->selectedIndex && $this->onChange !== null) {
+            if ($oldIndex !== $this->selectedIndex) {
                 ($this->onChange)($this->getSelectedItem(), $this->selectedIndex);
             }
             return true;
@@ -196,11 +195,9 @@ final class ListComponent extends AbstractComponent
 
     private function handleEnter(): bool
     {
-        if ($this->onSelect !== null) {
-            $item = $this->getSelectedItem();
-            if ($item !== null) {
-                ($this->onSelect)($item, $this->selectedIndex);
-            }
+        $item = $this->getSelectedItem();
+        if ($item !== null) {
+            ($this->onSelect)($item, $this->selectedIndex);
         }
         return true;
     }

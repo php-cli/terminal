@@ -33,8 +33,8 @@ final class MenuSystem extends AbstractComponent
     private ?MenuDropdown $activeDropdown = null;
     private ?string $activeMenuKey = null;
 
-    /** @var callable|null Callback when quit is requested */
-    private $onQuit = null;
+    /** @var \Closure(): void */
+    private \Closure $onQuit;
 
     /**
      * @param array<string, MenuDefinition> $menus Menu definitions
@@ -46,6 +46,7 @@ final class MenuSystem extends AbstractComponent
         private readonly ScreenRegistry $registry,
         private readonly ScreenManager $screenManager,
     ) {
+        $this->onQuit = static fn() => null;
         $this->initializeMenus();
     }
 
@@ -54,7 +55,7 @@ final class MenuSystem extends AbstractComponent
      */
     public function onQuit(callable $callback): void
     {
-        $this->onQuit = $callback;
+        $this->onQuit = $callback(...);
     }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
@@ -356,7 +357,7 @@ final class MenuSystem extends AbstractComponent
             $this->navigateToScreen($item->screenName);
         } elseif ($item->isAction()) {
             // Check if this is the Quit action
-            if ($item->label === 'Quit' && $this->onQuit !== null) {
+            if ($item->label === 'Quit') {
                 ($this->onQuit)();
             } elseif ($item->action !== null) {
                 ($item->action)();

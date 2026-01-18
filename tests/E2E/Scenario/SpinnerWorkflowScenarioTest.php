@@ -101,7 +101,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
             private int $frameCount = 0;
 
             public function __construct(
-                private Spinner $spinner,
+                private readonly Spinner $spinner,
             ) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
@@ -196,7 +196,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
         $screen = new class($spinner) implements ScreenInterface {
             private int $cycle = 0;
 
-            public function __construct(private Spinner $spinner) {}
+            public function __construct(private readonly Spinner $spinner) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
             {
@@ -302,7 +302,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
         $spinner3 = new Spinner(Spinner::STYLE_DOTS);
         $spinner3->setPrefix('Task 3: ');
 
-        $screen = new class($spinner1, $spinner2, $spinner3) implements ScreenInterface {
+        $screen = new readonly class($spinner1, $spinner2, $spinner3) implements ScreenInterface {
             public function __construct(
                 private Spinner $spinner1,
                 private Spinner $spinner2,
@@ -357,8 +357,8 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
             private int $frames = 0;
 
             public function __construct(
-                private Spinner $running,
-                private Spinner $stopped,
+                private readonly Spinner $running,
+                private readonly Spinner $stopped,
             ) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
@@ -426,7 +426,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
         $spinner->setPrefix('Loading: ')->setSuffix(' please wait...');
 
         // Use a screen with enough width for full content
-        $screen = new class($spinner) implements ScreenInterface {
+        $screen = new readonly class($spinner) implements ScreenInterface {
             public function __construct(private Spinner $spinner) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
@@ -471,7 +471,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
         $screen = new class($spinner) implements ScreenInterface {
             private int $progress = 0;
 
-            public function __construct(private Spinner $spinner) {}
+            public function __construct(private readonly Spinner $spinner) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
             {
@@ -522,7 +522,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
         $screen = new class($spinner) implements ScreenInterface {
             private int $progress = 0;
 
-            public function __construct(private Spinner $spinner) {}
+            public function __construct(private readonly Spinner $spinner) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
             {
@@ -580,7 +580,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
             private bool $visible = true;
             private int $toggleCount = 0;
 
-            public function __construct(private Spinner $spinner) {}
+            public function __construct(private readonly Spinner $spinner) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
             {
@@ -638,7 +638,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
             private bool $hasError = false;
             private int $frames = 0;
 
-            public function __construct(private Spinner $spinner) {}
+            public function __construct(private readonly Spinner $spinner) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
             {
@@ -713,8 +713,8 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
             private int $step = 0;
 
             public function __construct(
-                private Spinner $spinner,
-                private int $loadingSteps,
+                private readonly Spinner $spinner,
+                private readonly int $loadingSteps,
             ) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
@@ -749,7 +749,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
 
     private function createSpinnerOnlyScreen(Spinner $spinner): ScreenInterface
     {
-        return new class($spinner) implements ScreenInterface {
+        return new readonly class($spinner) implements ScreenInterface {
             public function __construct(private Spinner $spinner) {}
 
             public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
@@ -780,7 +780,7 @@ final class SpinnerWorkflowScenarioTest extends TerminalTestCase
 
     private function createStackLayoutScreen(Spinner $spinner, string $text): ScreenInterface
     {
-        return new class($spinner, $text) implements ScreenInterface {
+        return new readonly class($spinner, $text) implements ScreenInterface {
             public function __construct(
                 private Spinner $spinner,
                 private string $text,

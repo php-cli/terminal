@@ -695,7 +695,7 @@ final class SpinnerTest extends TerminalTestCase
 
     private function createSpinnerScreen(Spinner $spinner, int $posX, int $posY): ScreenInterface
     {
-        return new class($spinner, $posX, $posY) implements ScreenInterface {
+        return new readonly class($spinner, $posX, $posY) implements ScreenInterface {
             public function __construct(
                 private Spinner $spinner,
                 private int $posX,
@@ -735,7 +735,7 @@ final class SpinnerTest extends TerminalTestCase
 
     private function createSpinnerScreenWithWidth(Spinner $spinner, int $posX, int $posY, int $width): ScreenInterface
     {
-        return new class($spinner, $posX, $posY, $width) implements ScreenInterface {
+        return new readonly class($spinner, $posX, $posY, $width) implements ScreenInterface {
             public function __construct(
                 private Spinner $spinner,
                 private int $posX,

@@ -34,8 +34,8 @@ final class Modal extends AbstractComponent
     private int $modalWidth = 60;
     private int $modalHeight = 15;
 
-    /** @var callable|null Callback when modal is closed */
-    private $onClose = null;
+    /** @var \Closure(mixed): void */
+    private \Closure $onClose;
 
     /**
      * @param string $title Modal title
@@ -47,6 +47,7 @@ final class Modal extends AbstractComponent
         string $content,
         private readonly string $type = self::TYPE_INFO,
     ) {
+        $this->onClose = static fn(mixed $result = null) => null;
         $this->setContent($content);
         $this->setupDefaultButtons();
     }
@@ -128,11 +129,11 @@ final class Modal extends AbstractComponent
     /**
      * Set callback for when modal is closed
      *
-     * @param callable(): void $callback
+     * @param callable(mixed): void $callback
      */
     public function onClose(callable $callback): void
     {
-        $this->onClose = $callback;
+        $this->onClose = $callback(...);
     }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
@@ -270,9 +271,7 @@ final class Modal extends AbstractComponent
      */
     private function close(mixed $result = null): void
     {
-        if ($this->onClose !== null) {
-            ($this->onClose)($result);
-        }
+        ($this->onClose)($result);
     }
 
     /**

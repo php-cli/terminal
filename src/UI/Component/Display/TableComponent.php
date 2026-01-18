@@ -54,11 +54,11 @@ final class TableComponent extends AbstractComponent
     /** @var array<int, int> Calculated column widths in characters */
     private array $calculatedWidths = [];
 
-    /** @var callable|null Callback when item is selected (Enter pressed) */
-    private $onSelect = null;
+    /** @var \Closure(array<string, mixed>, int): void */
+    private \Closure $onSelect;
 
-    /** @var callable|null Callback when selection changes (arrow keys) */
-    private $onChange = null;
+    /** @var \Closure(array<string, mixed>, int): void */
+    private \Closure $onChange;
 
     /**
      * @param array<TableColumn> $columns Column definitions
@@ -67,6 +67,8 @@ final class TableComponent extends AbstractComponent
     public function __construct(private array $columns = [], private bool $showHeader = true)
     {
         $this->scrollbar = new Scrollbar();
+        $this->onSelect = static fn(array $row, int $index) => null;
+        $this->onChange = static fn(array $row, int $index) => null;
     }
 
     /**
@@ -91,8 +93,7 @@ final class TableComponent extends AbstractComponent
         $this->selectedIndex = 0;
         $this->scrollOffset = 0;
 
-        // Trigger change callback
-        if ($this->onChange !== null && !empty($this->rows)) {
+        if (!empty($this->rows)) {
             ($this->onChange)($this->rows[$this->selectedIndex], $this->selectedIndex);
         }
     }
@@ -132,7 +133,7 @@ final class TableComponent extends AbstractComponent
             $this->selectedIndex = $index;
             $this->adjustScroll();
 
-            if ($this->onChange !== null && !empty($this->rows)) {
+            if (!empty($this->rows)) {
                 ($this->onChange)($this->rows[$this->selectedIndex], $this->selectedIndex);
             }
         }
@@ -145,7 +146,7 @@ final class TableComponent extends AbstractComponent
      */
     public function onSelect(callable $callback): void
     {
-        $this->onSelect = $callback;
+        $this->onSelect = $callback(...);
     }
 
     /**
@@ -155,7 +156,7 @@ final class TableComponent extends AbstractComponent
      */
     public function onChange(callable $callback): void
     {
-        $this->onChange = $callback;
+        $this->onChange = $callback(...);
     }
 
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
@@ -247,7 +248,7 @@ final class TableComponent extends AbstractComponent
 
         if ($handled !== null) {
             $this->adjustScroll();
-            if ($oldIndex !== $this->selectedIndex && $this->onChange !== null) {
+            if ($oldIndex !== $this->selectedIndex) {
                 ($this->onChange)($this->rows[$this->selectedIndex], $this->selectedIndex);
             }
             return true;
@@ -276,9 +277,7 @@ final class TableComponent extends AbstractComponent
 
     private function handleEnter(): bool
     {
-        if ($this->onSelect !== null) {
-            ($this->onSelect)($this->rows[$this->selectedIndex], $this->selectedIndex);
-        }
+        ($this->onSelect)($this->rows[$this->selectedIndex], $this->selectedIndex);
         return true;
     }
 
