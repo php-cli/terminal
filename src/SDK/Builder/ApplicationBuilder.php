@@ -170,8 +170,8 @@ final class ApplicationBuilder
         $keyBindings = new KeyBindingRegistry();
         $this->registerModuleKeyBindings($moduleRegistry, $keyBindings);
 
-        // 9. Create application
-        $app = new Application($keyBindings, $this->driver);
+        // 9. Create application (pass shared screenManager so screens can push to it)
+        $app = new Application($keyBindings, $this->driver, $screenManager);
         $app->setTargetFps($this->fps);
 
         // 10. Create and configure screen registry

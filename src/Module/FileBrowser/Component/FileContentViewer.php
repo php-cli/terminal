@@ -13,7 +13,7 @@ use Butschster\Commander\UI\Theme\ColorScheme;
 /**
  * File content viewer with line numbers and scrolling
  *
- * Now with proper width management to prevent rendering artifacts.
+ * Supports both vertical and horizontal scrolling for files with long lines.
  */
 final class FileContentViewer extends AbstractComponent
 {
@@ -21,7 +21,10 @@ final class FileContentViewer extends AbstractComponent
     private array $lines = [];
 
     private int $scrollOffset = 0;
+    private int $horizontalOffset = 0;
     private int $visibleLines = 0;
+    private int $contentWidth = 0;
+    private int $maxLineLength = 0;
 
     /**
      * Set file content
@@ -32,6 +35,16 @@ final class FileContentViewer extends AbstractComponent
         $normalized = \str_replace(["\r\n", "\r"], "\n", $content);
         $this->lines = \explode("\n", $normalized);
         $this->scrollOffset = 0;
+        $this->horizontalOffset = 0;
+
+        // Calculate max line length for horizontal scrolling
+        $this->maxLineLength = 0;
+        foreach ($this->lines as $line) {
+            $length = \mb_strlen($line);
+            if ($length > $this->maxLineLength) {
+                $this->maxLineLength = $length;
+            }
+        }
     }
 
     /**
@@ -41,31 +54,39 @@ final class FileContentViewer extends AbstractComponent
     {
         $this->lines = [];
         $this->scrollOffset = 0;
+        $this->horizontalOffset = 0;
+        $this->maxLineLength = 0;
     }
 
     #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
-        $this->visibleLines = $height;
 
         if (empty($this->lines)) {
             return;
         }
 
-        // Reserve space for scrollbar if needed
-        $hasScrollbar = \count($this->lines) > $height;
-        $scrollbarWidth = $hasScrollbar ? 1 : 0;
+        // Reserve space for scrollbars if needed
+        $hasVerticalScrollbar = \count($this->lines) > $height;
+        $scrollbarWidth = $hasVerticalScrollbar ? 1 : 0;
 
         // Calculate line number width (e.g., "1234 │ " = 7 chars for 4-digit numbers)
         $maxLineNumber = \count($this->lines);
         $lineNumberWidth = \strlen((string) $maxLineNumber) + 3; // number + " │ "
 
         // Content width = total - line numbers - scrollbar
-        $contentWidth = $width - $lineNumberWidth - $scrollbarWidth;
+        $this->contentWidth = $width - $lineNumberWidth - $scrollbarWidth;
+
+        // Check if horizontal scrolling is needed
+        $hasHorizontalScrollbar = $this->maxLineLength > $this->contentWidth;
+
+        // Reserve space for horizontal scrollbar at bottom
+        $contentHeight = $hasHorizontalScrollbar ? $height - 1 : $height;
+        $this->visibleLines = $contentHeight;
 
         $endIndex = \min(
-            $this->scrollOffset + $height,
+            $this->scrollOffset + $contentHeight,
             \count($this->lines),
         );
 
@@ -77,9 +98,14 @@ final class FileContentViewer extends AbstractComponent
             // Format line number with separator (right-aligned)
             $lineNumber = \str_pad((string) ($i + 1), $lineNumberWidth - 3, ' ', STR_PAD_LEFT) . ' │ ';
 
-            // Truncate content to fit available space
-            $contentText = \mb_substr($line, 0, $contentWidth);
-            $contentText = \str_pad($contentText, $contentWidth);
+            // Apply horizontal offset and truncate to fit available space
+            $lineLength = \mb_strlen($line);
+            if ($this->horizontalOffset < $lineLength) {
+                $contentText = \mb_substr($line, $this->horizontalOffset, $this->contentWidth);
+            } else {
+                $contentText = '';
+            }
+            $contentText = \str_pad($contentText, $this->contentWidth);
 
             // Combine line number and content
             $displayText = $lineNumber . $contentText;
@@ -87,9 +113,14 @@ final class FileContentViewer extends AbstractComponent
             $renderer->writeAt($x, $rowY, $displayText, ColorScheme::$NORMAL_TEXT);
         }
 
-        // Draw scrollbar if needed
-        if ($hasScrollbar) {
-            $this->drawScrollbar($renderer, $x + $width - 1, $y, $height);
+        // Draw vertical scrollbar if needed
+        if ($hasVerticalScrollbar) {
+            $this->drawVerticalScrollbar($renderer, $x + $width - 1, $y, $contentHeight);
+        }
+
+        // Draw horizontal scrollbar if needed
+        if ($hasHorizontalScrollbar) {
+            $this->drawHorizontalScrollbar($renderer, $x + $lineNumberWidth, $y + $contentHeight, $this->contentWidth);
         }
     }
 
@@ -101,16 +132,63 @@ final class FileContentViewer extends AbstractComponent
         }
 
         $input = KeyInput::from($key);
+        $horizontalStep = 10; // Characters to scroll horizontally per keypress
 
         return match (true) {
+            // Vertical scrolling
             $input->is(Key::UP) => $this->scrollOffset > 0 ? --$this->scrollOffset !== null : true,
             $input->is(Key::DOWN) => $this->scrollOffset < \count($this->lines) - $this->visibleLines ? ++$this->scrollOffset !== null : true,
             $input->is(Key::PAGE_UP) => ($this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines)) !== null,
             $input->is(Key::PAGE_DOWN) => ($this->scrollOffset = \min(\max(0, \count($this->lines) - $this->visibleLines), $this->scrollOffset + $this->visibleLines)) !== null,
-            $input->is(Key::HOME) => ($this->scrollOffset = 0) !== null,
-            $input->is(Key::END) => ($this->scrollOffset = \max(0, \count($this->lines) - $this->visibleLines)) !== null,
+            $input->is(Key::HOME) => $this->goToStart(),
+            $input->is(Key::END) => $this->goToEnd(),
+            // Horizontal scrolling
+            $input->is(Key::LEFT) => $this->scrollLeft($horizontalStep),
+            $input->is(Key::RIGHT) => $this->scrollRight($horizontalStep),
             default => false,
         };
+    }
+
+    /**
+     * Scroll left by specified amount
+     */
+    private function scrollLeft(int $amount): bool
+    {
+        if ($this->horizontalOffset > 0) {
+            $this->horizontalOffset = \max(0, $this->horizontalOffset - $amount);
+        }
+        return true;
+    }
+
+    /**
+     * Scroll right by specified amount
+     */
+    private function scrollRight(int $amount): bool
+    {
+        $maxOffset = \max(0, $this->maxLineLength - $this->contentWidth);
+        if ($this->horizontalOffset < $maxOffset) {
+            $this->horizontalOffset = \min($maxOffset, $this->horizontalOffset + $amount);
+        }
+        return true;
+    }
+
+    /**
+     * Go to start (top-left)
+     */
+    private function goToStart(): bool
+    {
+        $this->scrollOffset = 0;
+        $this->horizontalOffset = 0;
+        return true;
+    }
+
+    /**
+     * Go to end (bottom of file)
+     */
+    private function goToEnd(): bool
+    {
+        $this->scrollOffset = \max(0, \count($this->lines) - $this->visibleLines);
+        return true;
     }
 
     #[\Override]
@@ -120,9 +198,9 @@ final class FileContentViewer extends AbstractComponent
     }
 
     /**
-     * Draw scrollbar indicator
+     * Draw vertical scrollbar indicator
      */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
+    private function drawVerticalScrollbar(Renderer $renderer, int $x, int $y, int $height): void
     {
         $totalLines = \count($this->lines);
 
@@ -138,5 +216,27 @@ final class FileContentViewer extends AbstractComponent
             $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
             $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
         }
+    }
+
+    /**
+     * Draw horizontal scrollbar indicator
+     */
+    private function drawHorizontalScrollbar(Renderer $renderer, int $x, int $y, int $width): void
+    {
+        if ($this->maxLineLength <= $this->contentWidth) {
+            return;
+        }
+
+        // Calculate thumb size and position
+        $thumbWidth = \max(1, (int) ($width * $this->contentWidth / $this->maxLineLength));
+        $maxOffset = $this->maxLineLength - $this->contentWidth;
+        $thumbPosition = $maxOffset > 0 ? (int) ($width * $this->horizontalOffset / $this->maxLineLength) : 0;
+
+        $scrollbar = '';
+        for ($i = 0; $i < $width; $i++) {
+            $scrollbar .= ($i >= $thumbPosition && $i < $thumbPosition + $thumbWidth) ? '█' : '░';
+        }
+
+        $renderer->writeAt($x, $y, $scrollbar, ColorScheme::$SCROLLBAR);
     }
 }

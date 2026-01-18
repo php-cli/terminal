@@ -58,7 +58,7 @@ final class FileInfoSection
                 ])->spacing(0),
             ),
             TextBlock::repeat('─', 41),
-            TextBlock::create('Press [Ctrl+R] to view file contents'),
+            TextBlock::create('Press [Enter] to view file contents'),
         ])->spacing(1);
     }
 }

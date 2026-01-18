@@ -128,6 +128,7 @@ final class FileViewerScreen implements ScreenInterface
         // Status bar with viewer shortcuts
         $this->statusBar = new StatusBar([
             '↑↓' => ' Scroll',
+            '←→' => ' H-Scroll',
             'PgUp/Dn' => ' Page',
             'Home/End' => ' Top/Bottom',
             'ESC' => ' Close',

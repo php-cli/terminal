@@ -226,6 +226,187 @@ final class FileBrowserModuleE2ETest extends ModuleTestCase
         $this->assertScreenContainsAll(['readme.txt', 'data.json']);
     }
 
+    #[Test]
+    public function test_ctrl_e_only_works_on_files_not_directories(): void
+    {
+        $this->terminal()->setSize(180, 50);
+
+        // Navigate to 'docs' directory and try Ctrl+E - should do nothing since it's a directory
+        $this->keys()
+            ->down()       // Skip '..' - now on 'docs' (directory)
+            ->frame()
+            ->ctrl('E')    // Try to open viewer - should do nothing for directories
+            ->frame()
+            ->applyTo($this->terminal());
+
+        $app = ApplicationBuilder::create()
+            ->withDriver($this->driver)
+            ->withModule(new FileBrowserModule($this->testDir))
+            ->withInitialScreen('file_browser')
+            ->build();
+
+        $this->runBuiltApp($app);
+
+        // Should still be in file browser (not in viewer)
+        $this->assertScreenContainsAll(['readme.txt', 'data.json', 'docs']);
+        // Should show directory-specific hints, not file viewer
+        $this->assertScreenContains('Navigate');
+    }
+
+    #[Test]
+    public function test_files_menu_definition_does_not_contain_file_viewer(): void
+    {
+        // Test that the module's menu definition only contains File Browser, not File Viewer
+        $module = new FileBrowserModule($this->testDir);
+        $menus = \iterator_to_array($module->menus());
+
+        $this->assertCount(1, $menus);
+        $filesMenu = $menus[0];
+
+        // Menu should be labeled "Files"
+        $this->assertSame('Files', $filesMenu->label);
+
+        // Get menu item labels
+        $itemLabels = \array_map(
+            static fn($item) => $item->getLabel(),
+            $filesMenu->items,
+        );
+
+        // Should contain File Browser
+        $this->assertContains('File Browser', $itemLabels);
+
+        // Should NOT contain File Viewer (it's opened via Ctrl+E, not menu)
+        $this->assertNotContains('File Viewer', $itemLabels);
+    }
+
+    #[Test]
+    public function test_file_preview_shows_enter_hint(): void
+    {
+        $this->terminal()->setSize(180, 50);
+
+        // Navigate to a file (data.json)
+        $this->keys()
+            ->down(2)      // Skip '..' and 'docs' - now on 'data.json'
+            ->frame()
+            ->applyTo($this->terminal());
+
+        $app = ApplicationBuilder::create()
+            ->withDriver($this->driver)
+            ->withModule(new FileBrowserModule($this->testDir))
+            ->withInitialScreen('file_browser')
+            ->build();
+
+        $this->runBuiltApp($app);
+
+        // File preview panel should show the hint for viewing file contents
+        $this->assertScreenContains('Press [Enter] to view file contents');
+        // Status bar should show "Enter View" for files
+        $this->assertScreenContains('Enter View');
+    }
+
+    #[Test]
+    public function test_file_viewer_opens_and_shows_file_content(): void
+    {
+        $this->terminal()->setSize(120, 30);
+
+        // Navigate to wide.txt (file with long lines) and open it
+        $this->keys()
+            ->down(4)      // Skip '..' and navigate to 'wide.txt'
+            ->frame()
+            ->enter()      // Open file viewer
+            ->frame()
+            ->applyTo($this->terminal());
+
+        $app = ApplicationBuilder::create()
+            ->withDriver($this->driver)
+            ->withModule(new FileBrowserModule($this->testDir))
+            ->withInitialScreen('file_browser')
+            ->build();
+
+        $this->runBuiltApp($app);
+
+        // Should show the file name in header
+        $this->assertScreenContains('wide.txt');
+        // Should show file metadata
+        $this->assertScreenContains('50 lines');
+    }
+
+    #[Test]
+    public function test_file_viewer_shows_scroll_hints_in_status_bar(): void
+    {
+        $this->terminal()->setSize(120, 30);
+
+        // Navigate to wide.txt and open it
+        $this->keys()
+            ->down(4)      // Navigate to 'wide.txt'
+            ->enter()      // Open file viewer
+            ->frame()
+            ->applyTo($this->terminal());
+
+        $app = ApplicationBuilder::create()
+            ->withDriver($this->driver)
+            ->withModule(new FileBrowserModule($this->testDir))
+            ->withInitialScreen('file_browser')
+            ->build();
+
+        $this->runBuiltApp($app);
+
+        // Should show scroll-related hints (arrows unicode may vary)
+        $this->assertScreenContains('Scroll');
+        $this->assertScreenContains('Page');
+        $this->assertScreenContains('Close');
+    }
+
+    #[Test]
+    public function test_file_viewer_escape_returns_to_browser(): void
+    {
+        $this->terminal()->setSize(120, 30);
+
+        // Open wide.txt then press escape to return
+        $this->keys()
+            ->down(4)      // Navigate to 'wide.txt'
+            ->enter()      // Open file viewer
+            ->frame()
+            ->escape()     // Return to file browser
+            ->frame()
+            ->applyTo($this->terminal());
+
+        $app = ApplicationBuilder::create()
+            ->withDriver($this->driver)
+            ->withModule(new FileBrowserModule($this->testDir))
+            ->withInitialScreen('file_browser')
+            ->build();
+
+        $this->runBuiltApp($app);
+
+        // Should be back in file browser - see the file list
+        $this->assertScreenContainsAll(['readme.txt', 'data.json', 'docs']);
+    }
+
+    #[Test]
+    public function test_file_viewer_displays_line_numbers(): void
+    {
+        $this->terminal()->setSize(120, 30);
+
+        // Navigate to readme.txt (short file without horizontal scroll)
+        $this->keys()
+            ->down(3)      // Navigate to 'readme.txt'
+            ->enter()      // Open file viewer
+            ->frame()
+            ->applyTo($this->terminal());
+
+        $app = ApplicationBuilder::create()
+            ->withDriver($this->driver)
+            ->withModule(new FileBrowserModule($this->testDir))
+            ->withInitialScreen('file_browser')
+            ->build();
+
+        $this->runBuiltApp($app);
+
+        // Should show the file content with line numbers
+        $this->assertScreenContains('Welcome');
+    }
+
     #[\Override]
     protected function setUp(): void
     {
@@ -237,6 +418,11 @@ final class FileBrowserModuleE2ETest extends ModuleTestCase
         \file_put_contents($this->testDir . '/data.json', '{"key": "value"}');
         \mkdir($this->testDir . '/docs');
         \file_put_contents($this->testDir . '/docs/guide.md', '# Guide');
+
+        // Create a file with very long lines for horizontal scroll testing
+        $longLine = 'This is a very long line that extends beyond the normal terminal width and is used for testing horizontal scrolling functionality in the file viewer component.';
+        $wideContent = \implode("\n", \array_fill(0, 50, $longLine));
+        \file_put_contents($this->testDir . '/wide.txt', $wideContent);
     }
 
     #[\Override]

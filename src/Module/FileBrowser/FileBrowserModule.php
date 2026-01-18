@@ -77,7 +77,7 @@ final readonly class FileBrowserModule implements
             initialPath: $this->initialPath ?? \getcwd(),
         );
 
-        // File Viewer Screen (opened via Ctrl+R from browser)
+        // File Viewer Screen (opened via Ctrl+E from browser)
         // Note: FileViewerScreen is typically created dynamically when opening a file
         // We register a "template" instance here for the registry
         yield new FileViewerScreen(
@@ -94,7 +94,7 @@ final readonly class FileBrowserModule implements
             fkey: KeyCombination::fromString('F1'),
             items: [
                 ScreenMenuItem::create('File Browser', 'file_browser', 'b'),
-                ScreenMenuItem::create('File Viewer', 'file_viewer', 'v'),
+                // Note: FileViewerScreen is not in menu - it's opened via Ctrl+E from file browser
             ],
             priority: 10,
         );

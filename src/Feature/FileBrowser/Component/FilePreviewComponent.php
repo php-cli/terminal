@@ -19,7 +19,7 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  * - TextDisplay with feature components (FileInfoSection, DirectoryInfoSection)
  * - Padding decorator for spacing
  *
- * Note: Full file content viewing is handled by FileViewerScreen (Ctrl+R key)
+ * Note: Full file content viewing is handled by FileViewerScreen (Enter key on files)
  */
 final class FilePreviewComponent extends AbstractComponent
 {

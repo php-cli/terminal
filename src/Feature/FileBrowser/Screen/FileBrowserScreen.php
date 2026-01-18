@@ -95,8 +95,8 @@ final class FileBrowserScreen implements ScreenInterface
             return $this->handleEscape();
         }
 
-        // Handle Ctrl+R - View/open file in full-screen viewer
-        if ($input->isCtrl(Key::R)) {
+        // Handle Ctrl+E - View/open file in full-screen viewer
+        if ($input->isCtrl(Key::E)) {
             if ($this->leftPanelFocused) {
                 $selectedItem = $this->fileList->getSelectedItem();
                 if ($selectedItem !== null && !$selectedItem['isDir']) {
@@ -273,15 +273,16 @@ final class FileBrowserScreen implements ScreenInterface
             // Left panel (file list) is focused
             $selectedItem = $this->fileList->getSelectedItem();
             if ($selectedItem !== null && !$selectedItem['isDir']) {
+                // File selected - Enter opens viewer
                 $hints = [
                     '↑↓' => ' Navigate',
-                    'Enter' => ' Open Dir',
-                    'Ctrl+R' => ' View File',
+                    'Enter' => ' View',
                     'Ctrl+G' => ' Home',
                     'Tab' => ' Switch',
                     'ESC' => ' Back',
                 ];
             } else {
+                // Directory selected - Enter opens directory
                 $hints = [
                     '↑↓' => ' Navigate',
                     'Enter' => ' Open',
@@ -333,9 +334,10 @@ final class FileBrowserScreen implements ScreenInterface
             if ($selectedItem !== null) {
                 $this->filePreview->setFileInfo($selectedItem['path']);
             }
+        } else {
+            // Open file in viewer when Enter is pressed on a file
+            $this->openFileViewer($item['path']);
         }
-        // For files, just show metadata (already shown in right panel)
-        // File content viewing is handled by Ctrl+R key
     }
 
     /**
