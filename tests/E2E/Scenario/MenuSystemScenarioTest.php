@@ -35,6 +35,7 @@ final class MenuSystemScenarioTest extends TerminalTestCase
     private bool $actionExecuted = false;
     private string $lastActionLabel = '';
 
+    #[\Override]
     protected function setUp(): void
     {
         parent::setUp();
