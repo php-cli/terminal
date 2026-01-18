@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Feature\FileBrowser\Component;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Theme\ColorScheme;
@@ -97,40 +99,17 @@ final class FileContentViewer extends AbstractComponent
             return false;
         }
 
-        switch ($key) {
-            case 'UP':
-                if ($this->scrollOffset > 0) {
-                    $this->scrollOffset--;
-                }
-                return true;
+        $input = KeyInput::from($key);
 
-            case 'DOWN':
-                if ($this->scrollOffset < \count($this->lines) - $this->visibleLines) {
-                    $this->scrollOffset++;
-                }
-                return true;
-
-            case 'PAGE_UP':
-                $this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines);
-                return true;
-
-            case 'PAGE_DOWN':
-                $this->scrollOffset = \min(
-                    \max(0, \count($this->lines) - $this->visibleLines),
-                    $this->scrollOffset + $this->visibleLines,
-                );
-                return true;
-
-            case 'HOME':
-                $this->scrollOffset = 0;
-                return true;
-
-            case 'END':
-                $this->scrollOffset = \max(0, \count($this->lines) - $this->visibleLines);
-                return true;
-        }
-
-        return false;
+        return match (true) {
+            $input->is(Key::UP) => $this->scrollOffset > 0 ? --$this->scrollOffset !== null : true,
+            $input->is(Key::DOWN) => $this->scrollOffset < \count($this->lines) - $this->visibleLines ? ++$this->scrollOffset !== null : true,
+            $input->is(Key::PAGE_UP) => ($this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines)) !== null,
+            $input->is(Key::PAGE_DOWN) => ($this->scrollOffset = \min(\max(0, \count($this->lines) - $this->visibleLines), $this->scrollOffset + $this->visibleLines)) !== null,
+            $input->is(Key::HOME) => ($this->scrollOffset = 0) !== null,
+            $input->is(Key::END) => ($this->scrollOffset = \max(0, \count($this->lines) - $this->visibleLines)) !== null,
+            default => false,
+        };
     }
 
     #[\Override]

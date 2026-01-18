@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Input;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Theme\ColorScheme;
@@ -148,45 +150,36 @@ final class FormComponent extends AbstractComponent
             return false;
         }
 
-        switch ($key) {
-            case 'UP':
-                if ($this->focusedFieldIndex > 0) {
-                    $this->focusedFieldIndex--;
-                    $this->adjustScroll();
-                }
-                return true;
+        $input = KeyInput::from($key);
 
-            case 'DOWN':
-            case 'TAB':
-                if ($this->focusedFieldIndex < \count($this->fields) - 1) {
-                    $this->focusedFieldIndex++;
-                    $this->adjustScroll();
-                }
-                return true;
+        return match (true) {
+            $input->is(Key::UP) => $this->focusedFieldIndex > 0
+                ? (--$this->focusedFieldIndex !== null) && $this->adjustScroll() === null
+                : true,
+            $input->is(Key::DOWN), $input->is(Key::TAB) => $this->focusedFieldIndex < \count($this->fields) - 1
+                ? (++$this->focusedFieldIndex !== null) && $this->adjustScroll() === null
+                : true,
+            $input->is(Key::ENTER) => $this->handleSubmit(),
+            $input->is(Key::ESCAPE) => $this->handleCancel(),
+            default => $this->fields[$this->focusedFieldIndex]->handleInput($key),
+        };
+    }
 
-            case 'F2':
-            case 'ENTER':
-                // Validate and submit
-                $errors = $this->validate();
-
-                if (empty($errors)) {
-                    if ($this->onSubmit !== null) {
-                        ($this->onSubmit)($this->getValues());
-                    }
-                }
-                return true;
-
-            case 'ESCAPE':
-                if ($this->onCancel !== null) {
-                    ($this->onCancel)();
-                }
-                return true;
-
-            default:
-                // Delegate to focused field
-                $field = $this->fields[$this->focusedFieldIndex];
-                return $field->handleInput($key);
+    private function handleSubmit(): bool
+    {
+        $errors = $this->validate();
+        if (empty($errors) && $this->onSubmit !== null) {
+            ($this->onSubmit)($this->getValues());
         }
+        return true;
+    }
+
+    private function handleCancel(): bool
+    {
+        if ($this->onCancel !== null) {
+            ($this->onCancel)();
+        }
+        return true;
     }
 
     #[\Override]
@@ -197,7 +190,7 @@ final class FormComponent extends AbstractComponent
 
     private function renderButtons(Renderer $renderer, int $x, int $y, int $width): void
     {
-        $buttonsText = '[F2] Execute   [ESC] Cancel';
+        $buttonsText = '[Ctrl+E] Execute   [ESC] Cancel';
         $buttonsX = $x + (int) (($width - \mb_strlen($buttonsText)) / 2);
 
         $renderer->writeAt(

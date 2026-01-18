@@ -27,7 +27,7 @@ final class MenuSystem extends AbstractComponent
     /** @var array<MenuDefinition> Sorted menus for rendering */
     private array $sortedMenus = [];
 
-    /** @var array<string, int> F-key to menu index mapping */
+    /** @var array<string, string> Raw key string to menu key mapping */
     private array $fkeyMap = [];
 
     private ?MenuDropdown $activeDropdown = null;
@@ -93,12 +93,12 @@ final class MenuSystem extends AbstractComponent
             }
         }
 
-        // Handle F-key menu activation
+        // Handle F-key menu activation using raw key matching
         if (isset($this->fkeyMap[$key])) {
             $menuKey = $this->fkeyMap[$key];
 
-            // Special handling for F10 (Quit) - execute immediately without dropdown
-            if ($key === 'F10') {
+            // Special handling for Quit menu - execute immediately without dropdown
+            if ($menuKey === 'quit') {
                 $menu = $this->menus[$menuKey] ?? null;
                 if ($menu !== null) {
                     $firstItem = $menu->getFirstItem();
@@ -152,10 +152,10 @@ final class MenuSystem extends AbstractComponent
         $this->sortedMenus = $this->menus;
         \uasort($this->sortedMenus, static fn($a, $b) => $a->priority <=> $b->priority);
 
-        // Build F-key map - map F-key directly to menu category key
+        // Build F-key map using KeyCombination::toRawKey() for matching
         foreach ($this->sortedMenus as $categoryKey => $menu) {
             if ($menu->fkey !== null) {
-                $this->fkeyMap[$menu->fkey] = $categoryKey;
+                $this->fkeyMap[$menu->fkey->toRawKey()] = $categoryKey;
             }
         }
     }
@@ -216,10 +216,11 @@ final class MenuSystem extends AbstractComponent
             $renderer->writeAt($currentX, $y, ' ', $textColor);
             $currentX += 1;
 
-            // Render F-key if present (bold white on cyan/black)
+            // Render F-key if present using KeyCombination's __toString()
             if ($menu->fkey !== null) {
-                $renderer->writeAt($currentX, $y, $menu->fkey, $textColor);
-                $currentX += \mb_strlen($menu->fkey);
+                $fkeyText = (string) $menu->fkey;
+                $renderer->writeAt($currentX, $y, $fkeyText, $textColor);
+                $currentX += \mb_strlen($fkeyText);
             }
 
             // Space between F-key and label
@@ -250,18 +251,19 @@ final class MenuSystem extends AbstractComponent
             );
 
             $label = $quitMenu->label;
+            $fkeyText = $quitMenu->fkey !== null ? (string) $quitMenu->fkey : '';
             // Calculate total width: leading space + F-key + space + label + trailing space
-            $quitWidth = 1 + \mb_strlen($quitMenu->fkey ?? '') + 1 + \mb_strlen($label) + 1;
+            $quitWidth = 1 + \mb_strlen($fkeyText) + 1 + \mb_strlen($label) + 1;
             $quitX = $x + $width - $quitWidth - 1; // Position from right edge with 1 space padding
 
             // Render leading space
             $renderer->writeAt($quitX, $y, ' ', $textColor);
             $quitX += 1;
 
-            // Render F-key (F10)
+            // Render F-key (F12)
             if ($quitMenu->fkey !== null) {
-                $renderer->writeAt($quitX, $y, $quitMenu->fkey, $textColor);
-                $quitX += \mb_strlen($quitMenu->fkey);
+                $renderer->writeAt($quitX, $y, $fkeyText, $textColor);
+                $quitX += \mb_strlen($fkeyText);
             }
 
             // Space between F-key and label
@@ -329,9 +331,9 @@ final class MenuSystem extends AbstractComponent
                 return $x;
             }
 
-            // Account for F-key width
+            // Account for F-key width using KeyCombination's __toString()
             if ($menu->fkey !== null) {
-                $x += \mb_strlen($menu->fkey);
+                $x += \mb_strlen((string) $menu->fkey);
             }
 
             // Account for label width + spacing

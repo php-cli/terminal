@@ -7,6 +7,8 @@ namespace Butschster\Commander\Feature\FileBrowser\Screen;
 use Butschster\Commander\Feature\FileBrowser\Component\FileListComponent;
 use Butschster\Commander\Feature\FileBrowser\Component\FilePreviewComponent;
 use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Layout\Panel;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
@@ -78,64 +80,36 @@ final class FileBrowserScreen implements ScreenInterface
 
     public function handleInput(string $key): bool
     {
-        // Global shortcuts
-        switch ($key) {
-            case 'F10':
-            case 'CTRL_C':
-                // Quit
-                $this->screenManager->popScreen();
-                return true;
+        $input = KeyInput::from($key);
 
-            case 'CTRL_R':
-                // View/open file in full-screen viewer
-                if ($this->leftPanelFocused) {
-                    $selectedItem = $this->fileList->getSelectedItem();
-                    if ($selectedItem !== null && !$selectedItem['isDir']) {
-                        $this->openFileViewer($selectedItem['path']);
-                    }
+        // Handle Tab - switch panels
+        if ($input->is(Key::TAB)) {
+            $this->switchPanel();
+            return true;
+        }
+
+        // Handle Escape
+        if ($input->is(Key::ESCAPE)) {
+            return $this->handleEscape();
+        }
+
+        // Handle Ctrl+R - View/open file in full-screen viewer
+        if ($input->isCtrl(Key::R)) {
+            if ($this->leftPanelFocused) {
+                $selectedItem = $this->fileList->getSelectedItem();
+                if ($selectedItem !== null && !$selectedItem['isDir']) {
+                    $this->openFileViewer($selectedItem['path']);
                 }
-                return true;
+            }
+            return true;
+        }
 
-            case 'CTRL_G':
-                // Return to initial working directory
-                if ($this->currentPath !== $this->initialPath) {
-                    $this->setCurrentPath($this->initialPath);
-                }
-                return true;
-
-            case 'TAB':
-                // Switch between panels
-                $this->switchPanel();
-                return true;
-
-            case 'ESCAPE':
-                // If right panel (preview) is focused, return focus to left panel
-                if (!$this->leftPanelFocused) {
-                    $this->leftPanelFocused = true;
-                    $this->leftPanel->setFocused(true);
-                    $this->fileList->setFocused(true);
-                    $this->rightPanel->setFocused(false);
-                    $this->filePreview->setFocused(false);
-                    $this->updateStatusBar();
-                    return true;
-                }
-
-                // If left panel is focused, navigate up or exit
-                // Go back (if not at root)
-                if ($this->currentPath !== '/' && \dirname($this->currentPath) !== $this->currentPath) {
-                    $this->currentPath = \dirname($this->currentPath);
-                    $this->fileList->setDirectory($this->currentPath);
-                    $this->leftPanel->setTitle($this->getCurrentPathDisplay());
-
-                    $selectedItem = $this->fileList->getSelectedItem();
-                    if ($selectedItem !== null) {
-                        $this->filePreview->setFileInfo($selectedItem['path']);
-                    }
-                    return true;
-                }
-                // If at root, exit screen
-                $this->screenManager->popScreen();
-                return true;
+        // Handle Ctrl+G - Return to initial working directory
+        if ($input->isCtrl(Key::G)) {
+            if ($this->currentPath !== $this->initialPath) {
+                $this->setCurrentPath($this->initialPath);
+            }
+            return true;
         }
 
         // Delegate to focused panel
@@ -144,6 +118,38 @@ final class FileBrowserScreen implements ScreenInterface
         }
 
         return $this->filePreview->handleInput($key);
+    }
+
+    private function handleEscape(): bool
+    {
+        // If right panel (preview) is focused, return focus to left panel
+        if (!$this->leftPanelFocused) {
+            $this->leftPanelFocused = true;
+            $this->leftPanel->setFocused(true);
+            $this->fileList->setFocused(true);
+            $this->rightPanel->setFocused(false);
+            $this->filePreview->setFocused(false);
+            $this->updateStatusBar();
+            return true;
+        }
+
+        // If left panel is focused, navigate up or exit
+        // Go back (if not at root)
+        if ($this->currentPath !== '/' && \dirname($this->currentPath) !== $this->currentPath) {
+            $this->currentPath = \dirname($this->currentPath);
+            $this->fileList->setDirectory($this->currentPath);
+            $this->leftPanel->setTitle($this->getCurrentPathDisplay());
+
+            $selectedItem = $this->fileList->getSelectedItem();
+            if ($selectedItem !== null) {
+                $this->filePreview->setFileInfo($selectedItem['path']);
+            }
+            return true;
+        }
+
+        // If at root, exit screen
+        $this->screenManager->popScreen();
+        return true;
     }
 
     public function onActivate(): void

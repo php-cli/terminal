@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Display;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Theme\ThemeContext;
@@ -161,44 +163,25 @@ final class TextDisplay extends AbstractComponent
             return false;
         }
 
-        switch ($key) {
-            case 'UP':
-                if ($this->scrollOffset > 0) {
-                    $this->scrollOffset--;
-                    $this->autoScroll = false; // Disable auto-scroll when manually scrolling
-                }
-                return true;
+        $input = KeyInput::from($key);
+        $maxOffset = \max(0, \count($this->lines) - $this->visibleLines);
 
-            case 'DOWN':
-                if ($this->scrollOffset < \count($this->lines) - $this->visibleLines) {
-                    $this->scrollOffset++;
-                }
-                return true;
-
-            case 'PAGE_UP':
-                $this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines);
-                $this->autoScroll = false;
-                return true;
-
-            case 'PAGE_DOWN':
-                $this->scrollOffset = \min(
-                    \count($this->lines) - $this->visibleLines,
-                    $this->scrollOffset + $this->visibleLines,
-                );
-                return true;
-
-            case 'HOME':
-                $this->scrollOffset = 0;
-                $this->autoScroll = false;
-                return true;
-
-            case 'END':
-                $this->scrollToBottom();
-                $this->autoScroll = true;
-                return true;
-        }
-
-        return false;
+        return match (true) {
+            $input->is(Key::UP) => $this->scrollOffset > 0
+                ? (--$this->scrollOffset !== null) && ($this->autoScroll = false) === false
+                : true,
+            $input->is(Key::DOWN) => $this->scrollOffset < $maxOffset
+                ? ++$this->scrollOffset !== null
+                : true,
+            $input->is(Key::PAGE_UP) => ($this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines)) !== null
+                && ($this->autoScroll = false) === false,
+            $input->is(Key::PAGE_DOWN) => ($this->scrollOffset = \min($maxOffset, $this->scrollOffset + $this->visibleLines)) !== null,
+            $input->is(Key::HOME) => ($this->scrollOffset = 0) !== null
+                && ($this->autoScroll = false) === false,
+            $input->is(Key::END) => $this->scrollToBottom() === null
+                && ($this->autoScroll = true),
+            default => false,
+        };
     }
 
     #[\Override]

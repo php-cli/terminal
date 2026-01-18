@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Infrastructure\Terminal;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyCombination;
+use Butschster\Commander\Infrastructure\Keyboard\Mapping\KeyMappingRegistry;
+
 /**
  * Keyboard input handler
  *
@@ -12,97 +16,25 @@ namespace Butschster\Commander\Infrastructure\Terminal;
  */
 final class KeyboardHandler
 {
-    /** Key code mappings */
-    private const array KEY_MAPPINGS = [
-        // Arrow keys
-        "\033[A" => 'UP',
-        "\033[B" => 'DOWN',
-        "\033[C" => 'RIGHT',
-        "\033[D" => 'LEFT',
-
-        // Ctrl + Arrow keys
-        "\033[1;5A" => 'CTRL_UP',
-        "\033[1;5B" => 'CTRL_DOWN',
-        "\033[1;5C" => 'CTRL_RIGHT',
-        "\033[1;5D" => 'CTRL_LEFT',
-
-        // Function keys
-        // F1-F4 can have different sequences depending on terminal
-        "\033OP" => 'F1',    // xterm
-        "\033[11~" => 'F1',  // linux console
-        "\033OQ" => 'F2',    // xterm
-        "\033[12~" => 'F2',  // linux console
-        "\033OR" => 'F3',    // xterm
-        "\033[13~" => 'F3',  // linux console
-        "\033OS" => 'F4',    // xterm
-        "\033[14~" => 'F4',  // linux console
-        "\033[15~" => 'F5',
-        "\033[17~" => 'F6',
-        "\033[18~" => 'F7',
-        "\033[19~" => 'F8',
-        "\033[20~" => 'F9',
-        "\033[21~" => 'F10',
-        "\033[23~" => 'F11',
-        "\033[24~" => 'F12',
-
-        // Special keys
-        "\033[1~" => 'HOME',
-        "\033[4~" => 'END',
-        "\033[5~" => 'PAGE_UP',
-        "\033[6~" => 'PAGE_DOWN',
-        "\033[2~" => 'INSERT',
-        "\033[3~" => 'DELETE',
-
-        // IMPORTANT: Enter keys must be checked BEFORE Ctrl combinations
-        // because \n (line feed) is the same as CTRL_J
-        "\n" => 'ENTER',      // Line feed (LF) - Unix/Mac
-        "\r" => 'ENTER',      // Carriage return (CR) - Old Mac
-        "\r\n" => 'ENTER',    // CRLF - Windows
-
-        // Other special keys
-        "\t" => 'TAB',
-        "\033" => 'ESCAPE',
-        "\177" => 'BACKSPACE',
-        "\010" => 'BACKSPACE',
-
-        // Ctrl combinations (Ctrl+letter sends ASCII code 1-26)
-        // Note: Some overlap with special keys above
-        "\001" => 'CTRL_A',
-        "\002" => 'CTRL_B',
-        "\003" => 'CTRL_C',
-        "\004" => 'CTRL_D',
-        "\005" => 'CTRL_E',
-        "\006" => 'CTRL_F',
-        "\007" => 'CTRL_G',
-        // "\010" => 'CTRL_H', // Commented out - same as backspace
-        // "\011" => 'CTRL_I', // Commented out - same as tab
-        // "\012" => 'CTRL_J', // Commented out - same as line feed (ENTER)
-        "\013" => 'CTRL_K',
-        "\014" => 'CTRL_L',
-        // "\015" => 'CTRL_M', // Commented out - same as carriage return (ENTER)
-        "\016" => 'CTRL_N',
-        "\017" => 'CTRL_O',
-        "\020" => 'CTRL_P',
-        "\021" => 'CTRL_Q',
-        "\022" => 'CTRL_R',
-        "\023" => 'CTRL_S',
-        "\024" => 'CTRL_T',
-        "\025" => 'CTRL_U',
-        "\026" => 'CTRL_V',
-        "\027" => 'CTRL_W',
-        "\030" => 'CTRL_X',
-        "\031" => 'CTRL_Y',
-        "\032" => 'CTRL_Z',
-    ];
-
     /** @var resource */
     private $stdin;
 
     private bool $nonBlockingEnabled = false;
 
-    public function __construct()
-    {
+    public function __construct(
+        private readonly KeyMappingRegistry $mappings = new KeyMappingRegistry(),
+    ) {
         $this->stdin = STDIN;
+    }
+
+    /**
+     * Get the key mapping registry.
+     *
+     * Allows adding custom key mappings for terminal-specific sequences.
+     */
+    public function getMappings(): KeyMappingRegistry
+    {
+        return $this->mappings;
     }
 
     /**
@@ -153,11 +85,10 @@ final class KeyboardHandler
             return $this->readEscapeSequence();
         }
 
-        // Check for known control characters
-        foreach (self::KEY_MAPPINGS as $sequence => $keyName) {
-            if ($char === $sequence) {
-                return $keyName;
-            }
+        // Check for known control characters using registry
+        $mapping = $this->mappings->findBySequence($char);
+        if ($mapping !== null) {
+            return $mapping->toKeyName();
         }
 
         // Return the character as-is for regular keys
@@ -228,6 +159,121 @@ final class KeyboardHandler
     }
 
     /**
+     * Parse raw key string to Key enum.
+     *
+     * @param string $rawKey Raw key from getKey() like 'UP', 'CTRL_C', 'F12'
+     * @return Key|null Key enum or null if not mappable
+     */
+    public function parseToKey(string $rawKey): ?Key
+    {
+        // Direct enum match (UP, DOWN, F1, ENTER, etc.)
+        $key = Key::tryFrom($rawKey);
+        if ($key !== null) {
+            return $key;
+        }
+
+        // Handle CTRL_X format - extract the base key
+        if (\str_starts_with($rawKey, 'CTRL_')) {
+            $keyPart = \substr($rawKey, 5);
+            // Try direct match (CTRL_UP -> UP, CTRL_LEFT -> LEFT)
+            $key = Key::tryFrom($keyPart);
+            if ($key !== null) {
+                return $key;
+            }
+            // Try as single letter (CTRL_C -> C)
+            if (\strlen($keyPart) === 1 && \ctype_alpha($keyPart)) {
+                return Key::tryFrom(\strtoupper($keyPart));
+            }
+        }
+
+        // Handle single letter keys
+        if (\strlen($rawKey) === 1 && \ctype_alpha($rawKey)) {
+            return Key::tryFrom(\strtoupper($rawKey));
+        }
+
+        // Handle single digit keys
+        if (\strlen($rawKey) === 1 && \ctype_digit($rawKey)) {
+            return Key::tryFrom($rawKey);
+        }
+
+        return null;
+    }
+
+    /**
+     * Parse raw key string to KeyCombination.
+     *
+     * @param string $rawKey Raw key from getKey()
+     * @return KeyCombination|null Combination or null if not parseable
+     */
+    public function parseToCombination(string $rawKey): ?KeyCombination
+    {
+        // Handle CTRL_X format
+        if (\str_starts_with($rawKey, 'CTRL_')) {
+            $keyPart = \substr($rawKey, 5);
+
+            // Try direct match (CTRL_UP, CTRL_LEFT, etc.)
+            $key = Key::tryFrom($keyPart);
+            if ($key !== null) {
+                return KeyCombination::ctrl($key);
+            }
+
+            // Try as single letter (CTRL_C, CTRL_Q, etc.)
+            if (\strlen($keyPart) === 1 && \ctype_alpha($keyPart)) {
+                $key = Key::tryFrom(\strtoupper($keyPart));
+                if ($key !== null) {
+                    return KeyCombination::ctrl($key);
+                }
+            }
+
+            return null;
+        }
+
+        // Handle space character
+        if ($rawKey === ' ') {
+            return KeyCombination::key(Key::SPACE);
+        }
+
+        // Direct key match (F1, UP, ENTER, etc.)
+        $key = Key::tryFrom($rawKey);
+        if ($key !== null) {
+            return KeyCombination::key($key);
+        }
+
+        // Single letter
+        if (\strlen($rawKey) === 1 && \ctype_alpha($rawKey)) {
+            $key = Key::tryFrom(\strtoupper($rawKey));
+            if ($key !== null) {
+                return KeyCombination::key($key);
+            }
+        }
+
+        // Single digit
+        if (\strlen($rawKey) === 1 && \ctype_digit($rawKey)) {
+            $key = Key::tryFrom($rawKey);
+            if ($key !== null) {
+                return KeyCombination::key($key);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get next key as KeyCombination (non-blocking).
+     *
+     * @return KeyCombination|null Combination or null if no input
+     */
+    public function getKeyCombination(): ?KeyCombination
+    {
+        $raw = $this->getKey();
+        if ($raw === null) {
+            return null;
+        }
+
+        return $this->parseToCombination($raw);
+    }
+
+    /**
      * Read complete escape sequence
      */
     private function readEscapeSequence(): string
@@ -257,10 +303,9 @@ final class KeyboardHandler
             $sequence .= $char;
 
             // Check if we have a complete known sequence after each character
-            foreach (self::KEY_MAPPINGS as $knownSequence => $keyName) {
-                if ($sequence === $knownSequence) {
-                    return $keyName;
-                }
+            $mapping = $this->mappings->findBySequence($sequence);
+            if ($mapping !== null) {
+                return $mapping->toKeyName();
             }
 
             // Special handling for ESC O sequences (F1-F4 in xterm mode)
@@ -294,10 +339,9 @@ final class KeyboardHandler
         }
 
         // Final check for known sequences
-        foreach (self::KEY_MAPPINGS as $knownSequence => $keyName) {
-            if ($sequence === $knownSequence) {
-                return $keyName;
-            }
+        $mapping = $this->mappings->findBySequence($sequence);
+        if ($mapping !== null) {
+            return $mapping->toKeyName();
         }
 
         // If we got ESC + characters but no match, return for debugging

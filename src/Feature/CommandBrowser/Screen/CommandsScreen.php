@@ -7,6 +7,8 @@ namespace Butschster\Commander\Feature\CommandBrowser\Screen;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
 use Butschster\Commander\Feature\CommandBrowser\Service\CommandMetadata;
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Decorator\Padding;
 use Butschster\Commander\UI\Component\Display\ListComponent;
@@ -251,21 +253,13 @@ final class CommandsScreen implements ScreenInterface
      */
     private function handleGlobalShortcuts(string $key): bool
     {
-        switch ($key) {
-            case 'F10':
-                return false; // Let application handle quit
+        $input = KeyInput::from($key);
 
-            case 'F1':
-                $this->showHelpModal();
-                return true;
-
-            case 'CTRL_E':
-                $this->handleExecuteCommand();
-                return true;
-
-            default:
-                return false;
-        }
+        return match (true) {
+            $input->is(Key::F1) => $this->showHelpModal() ?? true,
+            $input->isCtrl(Key::E) => $this->handleExecuteCommand() ?? true,
+            default => false,
+        };
     }
 
     /**
@@ -273,21 +267,13 @@ final class CommandsScreen implements ScreenInterface
      */
     private function handlePanelNavigation(string $key): bool
     {
-        switch ($key) {
-            case 'TAB':
-                $this->switchPanel();
-                return true;
+        $input = KeyInput::from($key);
 
-            case 'ESCAPE':
-                if ($this->focusedPanelIndex === 1) {
-                    $this->switchToLeftPanel();
-                    return true;
-                }
-                return false;
-
-            default:
-                return false;
-        }
+        return match (true) {
+            $input->is(Key::TAB) => $this->switchPanel() ?? true,
+            $input->is(Key::ESCAPE) => $this->focusedPanelIndex === 1 ? ($this->switchToLeftPanel() ?? true) : false,
+            default => false,
+        };
     }
 
     /**

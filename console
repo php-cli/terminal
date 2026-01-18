@@ -14,6 +14,7 @@ use Butschster\Commander\Feature\ComposerManager\Screen\ComposerManagerScreen;
 use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
 use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
+use Butschster\Commander\Infrastructure\Keyboard\DefaultKeyBindings;
 use Butschster\Commander\UI\Menu\MenuBuilder;
 use Butschster\Commander\UI\Screen\ScreenRegistry;
 use Butschster\Commander\UI\Theme\ColorScheme;
@@ -51,7 +52,8 @@ try {
 
     // 3. Build menu system from registered screens
     //    Automatically groups screens by category and assigns F-keys
-    $menuBuilder = new MenuBuilder($registry);
+    $keyBindings = DefaultKeyBindings::createRegistry();
+    $menuBuilder = new MenuBuilder($registry, $keyBindings);
     $app->setMenuSystem($menuBuilder->build());
 
     // 4. Start with first registered screen

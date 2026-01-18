@@ -9,6 +9,8 @@ use Butschster\Commander\Feature\ComposerManager\Component\LinkList;
 use Butschster\Commander\Feature\ComposerManager\Component\PackageInfoSection;
 use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
 use Butschster\Commander\Feature\ComposerManager\Service\PackageInfo;
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Container\AbstractTab;
 use Butschster\Commander\UI\Component\Container\GridLayout;
@@ -74,15 +76,17 @@ final class InstalledPackagesTab extends AbstractTab
     #[\Override]
     public function handleInput(string $key): bool
     {
-        // Refresh data
-        if ($key === 'CTRL_R') {
+        $input = KeyInput::from($key);
+
+        // Refresh data (Ctrl+R)
+        if ($input->isCtrl(Key::R)) {
             $this->composerService->clearCache();
             $this->loadData();
             return true;
         }
 
         // Switch panel focus
-        if ($key === 'TAB') {
+        if ($input->is(Key::TAB)) {
             $this->focusedPanelIndex = ($this->focusedPanelIndex + 1) % 2;
             $this->updateFocus();
             return true;

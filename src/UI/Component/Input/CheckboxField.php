@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Input;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
@@ -64,7 +66,10 @@ final class CheckboxField extends FormField
 
     public function handleInput(string $key): bool
     {
-        if ($key === ' ' || $key === 'ENTER') {
+        $input = KeyInput::from($key);
+
+        // Toggle on space or enter
+        if ($input->isSpace() || $input->is(Key::ENTER)) {
             $this->value = !$this->value;
             return true;
         }

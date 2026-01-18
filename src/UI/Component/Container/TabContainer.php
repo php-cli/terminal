@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Container;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
+use Butschster\Commander\UI\Component\Concerns\HandlesInput;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
@@ -160,24 +163,26 @@ final class TabContainer extends AbstractComponent
     #[\Override]
     public function handleInput(string $key): bool
     {
+        $input = KeyInput::from($key);
+
         // Tab navigation with Ctrl+Left/Right
-        if ($key === 'CTRL_LEFT') {
+        if ($input->isCtrl(Key::LEFT)) {
             $this->previousTab();
             return true;
         }
 
-        if ($key === 'CTRL_RIGHT') {
+        if ($input->isCtrl(Key::RIGHT)) {
             $this->nextTab();
             return true;
         }
 
         // Delegate to active tab
-        $activeTab = $this->getActiveTab();
-        if ($activeTab !== null) {
-            return $activeTab->handleInput($key);
-        }
+        return $this->getActiveTab()?->handleInput($key) ?? false;
+    }
 
-        return false;
+    private function delegateToActiveTab(string $key): bool
+    {
+        return $this->getActiveTab()?->handleInput($key) ?? false;
     }
 
     #[\Override]

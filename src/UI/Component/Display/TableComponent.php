@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Display;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
+use Butschster\Commander\UI\Component\Concerns\HandlesInput;
 use Butschster\Commander\UI\Theme\ColorScheme;
 use Butschster\Commander\UI\Theme\ThemeContext;
 
@@ -37,6 +40,8 @@ use Butschster\Commander\UI\Theme\ThemeContext;
  */
 final class TableComponent extends AbstractComponent
 {
+    use HandlesInput;
+
     /** @var array<int, array<string, mixed>> */
     private array $rows = [];
 
@@ -217,61 +222,38 @@ final class TableComponent extends AbstractComponent
             return false;
         }
 
+        $input = KeyInput::from($key);
         $oldIndex = $this->selectedIndex;
 
-        switch ($key) {
-            case 'UP':
-                if ($this->selectedIndex > 0) {
-                    $this->selectedIndex--;
-                    $this->adjustScroll();
-                }
-                break;
+        // Handle vertical navigation using trait
+        $handled = $this->handleVerticalNavigation(
+            $input,
+            $this->selectedIndex,
+            \count($this->rows),
+            $this->visibleRows,
+        );
 
-            case 'DOWN':
-                if ($this->selectedIndex < \count($this->rows) - 1) {
-                    $this->selectedIndex++;
-                    $this->adjustScroll();
-                }
-                break;
-
-            case 'PAGE_UP':
-                $this->selectedIndex = \max(0, $this->selectedIndex - $this->visibleRows);
-                $this->adjustScroll();
-                break;
-
-            case 'PAGE_DOWN':
-                $this->selectedIndex = \min(
-                    \count($this->rows) - 1,
-                    $this->selectedIndex + $this->visibleRows,
-                );
-                $this->adjustScroll();
-                break;
-
-            case 'HOME':
-                $this->selectedIndex = 0;
-                $this->adjustScroll();
-                break;
-
-            case 'END':
-                $this->selectedIndex = \count($this->rows) - 1;
-                $this->adjustScroll();
-                break;
-
-            case 'ENTER':
-                if ($this->onSelect !== null) {
-                    ($this->onSelect)($this->rows[$this->selectedIndex], $this->selectedIndex);
-                }
-                return true;
-
-            default:
-                return false;
+        if ($handled !== null) {
+            $this->adjustScroll();
+            if ($oldIndex !== $this->selectedIndex && $this->onChange !== null) {
+                ($this->onChange)($this->rows[$this->selectedIndex], $this->selectedIndex);
+            }
+            return true;
         }
 
-        // Trigger change callback if selection changed
-        if ($oldIndex !== $this->selectedIndex && $this->onChange !== null) {
-            ($this->onChange)($this->rows[$this->selectedIndex], $this->selectedIndex);
+        // Handle Enter key
+        if ($input->is(Key::ENTER)) {
+            return $this->handleEnter();
         }
 
+        return false;
+    }
+
+    private function handleEnter(): bool
+    {
+        if ($this->onSelect !== null) {
+            ($this->onSelect)($this->rows[$this->selectedIndex], $this->selectedIndex);
+        }
         return true;
     }
 

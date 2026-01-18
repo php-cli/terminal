@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Layout;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Theme\ColorScheme;
@@ -190,56 +192,51 @@ final class Modal extends AbstractComponent
             return false;
         }
 
+        $input = KeyInput::from($key);
         $buttonLabels = \array_keys($this->buttons);
 
-        switch ($key) {
-            case 'LEFT':
-                if ($this->selectedButtonIndex > 0) {
-                    $this->selectedButtonIndex--;
-                }
-                return true;
+        return match (true) {
+            // Handle navigation
+            $input->is(Key::LEFT) => $this->selectedButtonIndex > 0
+                ? (--$this->selectedButtonIndex !== null)
+                : true,
+            $input->is(Key::RIGHT), $input->is(Key::TAB) => $this->selectedButtonIndex < \count($this->buttons) - 1
+                ? (++$this->selectedButtonIndex !== null)
+                : true,
+            // Handle selection (Enter or Space)
+            $input->is(Key::ENTER), $input->isSpace() => $this->activateButton($buttonLabels),
+            // Handle escape
+            $input->is(Key::ESCAPE) => $this->activateLastButton($buttonLabels),
+            // Quick access keys (1-9 for button indices)
+            $input->isDigit() => $this->handleDigitKey($input, $buttonLabels),
+            default => false,
+        };
+    }
 
-            case 'RIGHT':
-            case 'TAB':
-                if ($this->selectedButtonIndex < \count($this->buttons) - 1) {
-                    $this->selectedButtonIndex++;
-                }
-                return true;
+    private function activateButton(array $buttonLabels): bool
+    {
+        $selectedLabel = $buttonLabels[$this->selectedButtonIndex];
+        $callback = $this->buttons[$selectedLabel];
+        $callback();
+        return true;
+    }
 
-            case 'ENTER':
-            case ' ':
-                // Execute selected button callback
-                $selectedLabel = $buttonLabels[$this->selectedButtonIndex];
-                $callback = $this->buttons[$selectedLabel];
-                $callback();
-                return true;
+    private function activateLastButton(array $buttonLabels): bool
+    {
+        $lastLabel = \end($buttonLabels);
+        $callback = $this->buttons[$lastLabel];
+        $callback();
+        return true;
+    }
 
-            case 'ESCAPE':
-                // Close modal (equivalent to last button, usually Cancel/No)
-                $lastLabel = \end($buttonLabels);
-                $callback = $this->buttons[$lastLabel];
-                $callback();
-                return true;
-
-                // Quick access keys (1-9 for button indices)
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                $index = (int) $key - 1;
-                if (isset($buttonLabels[$index])) {
-                    $callback = $this->buttons[$buttonLabels[$index]];
-                    $callback();
-                    return true;
-                }
-                return false;
+    private function handleDigitKey(KeyInput $input, array $buttonLabels): bool
+    {
+        $index = (int) $input->raw - 1;
+        if ($index >= 0 && isset($buttonLabels[$index])) {
+            $callback = $this->buttons[$buttonLabels[$index]];
+            $callback();
+            return true;
         }
-
         return false;
     }
 

@@ -7,6 +7,15 @@ import:
     type: url
 
 tools:
+#  - id: terminal
+#    description: 'Terminal'
+#    type: run
+#    commands:
+#      - cmd: php
+#        workingDir: .
+#        args:
+#          - console
+
   - id: ctx-docs
     description: 'CTX docs'
     type: http

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Layout;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Menu\MenuItem;
@@ -110,31 +112,17 @@ final class MenuDropdown extends AbstractComponent
     #[\Override]
     public function handleInput(string $key): bool
     {
-        switch ($key) {
-            case 'UP':
-                $this->moveSelection(-1);
-                return true;
+        $input = KeyInput::from($key);
 
-            case 'DOWN':
-                $this->moveSelection(1);
-                return true;
-
-            case 'ENTER':
-            case ' ':
-                $this->selectCurrentItem();
-                return true;
-
-            case 'ESCAPE':
-                $this->close();
-                return true;
-
-            default:
-                // Check for hotkey match
-                if (\mb_strlen($key) === 1) {
-                    return $this->handleHotkey(\mb_strtolower($key));
-                }
-                return false;
-        }
+        return match (true) {
+            $input->is(Key::UP) => $this->moveSelection(-1) ?? true,
+            $input->is(Key::DOWN) => $this->moveSelection(1) ?? true,
+            $input->is(Key::ENTER) => $this->selectCurrentItem() ?? true,
+            $input->is(Key::ESCAPE) => $this->close() ?? true,
+            $input->isSpace() => $this->selectCurrentItem() ?? true,
+            $input->isPrintable() => $this->handleHotkey(\mb_strtolower($input->raw)),
+            default => false,
+        };
     }
 
     #[\Override]

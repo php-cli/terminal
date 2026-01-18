@@ -6,6 +6,8 @@ namespace Butschster\Commander\Feature\FileBrowser\Screen;
 
 use Butschster\Commander\Feature\FileBrowser\Component\FileContentViewer;
 use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Container\StackLayout;
 use Butschster\Commander\UI\Component\Container\Direction;
@@ -68,17 +70,16 @@ final class FileViewerScreen implements ScreenInterface
 
     public function handleInput(string $key): bool
     {
-        switch ($key) {
-            case 'ESCAPE':
-            case 'F10':
-                // Close viewer and return to browser
-                $this->screenManager->popScreen();
-                return true;
+        $input = KeyInput::from($key);
 
-            default:
-                // Delegate to content viewer for scrolling
-                return $this->contentViewer->handleInput($key);
+        if ($input->is(Key::ESCAPE)) {
+            // Close viewer and return to browser
+            $this->screenManager->popScreen();
+            return true;
         }
+
+        // Delegate to content viewer for scrolling
+        return $this->contentViewer->handleInput($key);
     }
 
     public function onActivate(): void

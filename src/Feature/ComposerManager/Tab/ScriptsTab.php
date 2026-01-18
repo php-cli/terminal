@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Butschster\Commander\Feature\ComposerManager\Tab;
 
 use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\Container\AbstractTab;
 use Butschster\Commander\UI\Component\Container\GridLayout;
@@ -104,13 +106,15 @@ final class ScriptsTab extends AbstractTab
     #[\Override]
     public function handleInput(string $key): bool
     {
+        $input = KeyInput::from($key);
+
         // Priority 1: Modal (if active)
         if ($this->activeModal !== null) {
             return $this->activeModal->handleInput($key);
         }
 
-        // Priority 2: Cancel running process with Ctrl+C
-        if ($this->isExecuting && $key === 'CTRL_C') {
+        // Priority 2: Cancel running process with Ctrl+C (NOT quit - this is process cancellation)
+        if ($this->isExecuting && $input->isCtrl(Key::C)) {
             $this->cancelExecution();
             return true;
         }
@@ -120,22 +124,22 @@ final class ScriptsTab extends AbstractTab
             return true;
         }
 
-        // Refresh data
-        if ($key === 'CTRL_R') {
+        // Refresh data (Ctrl+R)
+        if ($input->isCtrl(Key::R)) {
             $this->composerService->clearCache();
             $this->loadData();
             return true;
         }
 
         // Switch panel focus
-        if ($key === 'TAB') {
+        if ($input->is(Key::TAB)) {
             $this->focusedPanelIndex = ($this->focusedPanelIndex + 1) % 2;
             $this->updateFocus();
             return true;
         }
 
         // Escape from right panel
-        if ($key === 'ESCAPE' && $this->focusedPanelIndex === 1) {
+        if ($input->is(Key::ESCAPE) && $this->focusedPanelIndex === 1) {
             $this->focusedPanelIndex = 0;
             $this->updateFocus();
             return true;
