@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Infrastructure\Terminal;
 
+use Butschster\Commander\Infrastructure\Terminal\Driver\TerminalDriverInterface;
 use Butschster\Commander\UI\Theme\ThemeContext;
 
 /**
@@ -37,6 +38,7 @@ final class Renderer
     public function __construct(
         private readonly TerminalManager $terminal,
         private readonly ThemeContext $themeContext,
+        private readonly ?TerminalDriverInterface $driver = null,
     ) {
         $size = $terminal->getSize();
         $this->width = $size['width'];
@@ -186,8 +188,12 @@ final class Renderer
 
         // Flush all changes at once
         if ($output !== '') {
-            echo $output;
-            \flush();
+            if ($this->driver !== null) {
+                $this->driver->write($output);
+            } else {
+                echo $output;
+                \flush();
+            }
         }
     }
 

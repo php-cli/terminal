@@ -6,7 +6,64 @@ import:
   - url: https://gist.githubusercontent.com/butschster/29e84fb9c976ac837181141f88049a35/raw/ed38539950f8c9c45ca8c67f9e026a837c97bc66/01-dev-prompts.yaml
     type: url
 
+projects:
+  - name: ctx-docs
+    description: CTX docs
+
 tools:
+  - id: test
+    description: 'Run PHPUnit tests'
+    type: run
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - "--colors=always"
+
+  - id: test-unit
+    description: 'Run unit tests only'
+    type: run
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - "--testsuite=Unit"
+          - "--colors=always"
+
+  - id: test-integration
+    description: 'Run integration tests only'
+    type: run
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - "--testsuite=Integration"
+          - "--colors=always"
+
+  - id: test-e2e
+    description: 'Run E2E tests only'
+    type: run
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - "--testsuite=E2E"
+          - "--colors=always"
+
+  - id: test-filter
+    description: 'Run tests matching a filter pattern'
+    type: run
+    schema:
+      type: object
+      properties:
+        filter:
+          type: string
+          description: 'Filter pattern to match test names'
+      required:
+        - filter
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - --filter
+          - '{{filter}}'
+          - --colors=always
+
 #  - id: terminal
 #    description: 'Terminal'
 #    type: run

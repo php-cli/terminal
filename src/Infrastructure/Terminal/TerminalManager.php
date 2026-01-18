@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Infrastructure\Terminal;
 
+use Butschster\Commander\Infrastructure\Terminal\Driver\TerminalDriverInterface;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
@@ -15,6 +16,10 @@ final class TerminalManager
     private bool $rawModeEnabled = false;
     private ?string $originalTerminalSettings = null;
 
+    public function __construct(
+        private readonly ?TerminalDriverInterface $driver = null,
+    ) {}
+
     /**
      * Get terminal size
      *
@@ -22,6 +27,10 @@ final class TerminalManager
      */
     public function getSize(): array
     {
+        if ($this->driver !== null) {
+            return $this->driver->getSize();
+        }
+
         // Try to get size using stty
         $output = [];
         \exec('stty size 2>/dev/null', $output, $returnCode);
@@ -79,8 +88,7 @@ final class TerminalManager
      */
     public function clearScreen(): void
     {
-        echo "\033[2J\033[H";
-        \flush();
+        $this->write("\033[2J\033[H");
     }
 
     /**
@@ -88,8 +96,7 @@ final class TerminalManager
      */
     public function hideCursor(): void
     {
-        echo "\033[?25l";
-        \flush();
+        $this->write("\033[?25l");
     }
 
     /**
@@ -97,8 +104,7 @@ final class TerminalManager
      */
     public function showCursor(): void
     {
-        echo "\033[?25h";
-        \flush();
+        $this->write("\033[?25h");
     }
 
     /**
@@ -107,8 +113,7 @@ final class TerminalManager
      */
     public function enterAlternateScreen(): void
     {
-        echo "\033[?1049h";
-        \flush();
+        $this->write("\033[?1049h");
     }
 
     /**
@@ -117,8 +122,7 @@ final class TerminalManager
      */
     public function exitAlternateScreen(): void
     {
-        echo "\033[?1049l";
-        \flush();
+        $this->write("\033[?1049l");
     }
 
     /**
@@ -126,8 +130,7 @@ final class TerminalManager
      */
     public function moveCursor(int $x, int $y): void
     {
-        echo "\033[{$y};{$x}H";
-        \flush();
+        $this->write("\033[{$y};{$x}H");
     }
 
     /**
@@ -135,7 +138,20 @@ final class TerminalManager
      */
     public function resetAttributes(): void
     {
-        echo ColorScheme::RESET;
+        $this->write(ColorScheme::RESET);
+    }
+
+    /**
+     * Write output to terminal (uses driver if available)
+     */
+    public function write(string $output): void
+    {
+        if ($this->driver !== null) {
+            $this->driver->write($output);
+            return;
+        }
+
+        echo $output;
         \flush();
     }
 
@@ -144,6 +160,11 @@ final class TerminalManager
      */
     public function initialize(): void
     {
+        if ($this->driver !== null) {
+            $this->driver->initialize();
+            return;
+        }
+
         $this->enableRawMode();
         $this->enterAlternateScreen();
         $this->hideCursor();
@@ -155,6 +176,11 @@ final class TerminalManager
      */
     public function cleanup(): void
     {
+        if ($this->driver !== null) {
+            $this->driver->cleanup();
+            return;
+        }
+
         $this->resetAttributes();
         $this->showCursor();
         $this->exitAlternateScreen();

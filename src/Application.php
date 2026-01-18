@@ -9,6 +9,7 @@ use Butschster\Commander\Infrastructure\Keyboard\KeyBinding;
 use Butschster\Commander\Infrastructure\Keyboard\KeyBindingRegistry;
 use Butschster\Commander\Infrastructure\Keyboard\KeyBindingRegistryInterface;
 use Butschster\Commander\Infrastructure\Keyboard\KeyCombination;
+use Butschster\Commander\Infrastructure\Terminal\Driver\TerminalDriverInterface;
 use Butschster\Commander\Infrastructure\Terminal\KeyboardHandler;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\Infrastructure\Terminal\TerminalManager;
@@ -53,6 +54,7 @@ final class Application
 
     public function __construct(
         ?KeyBindingRegistryInterface $keyBindings = null,
+        private readonly ?TerminalDriverInterface $driver = null,
     ) {
         $this->frameTime = 1.0 / $this->targetFps;
 
@@ -63,10 +65,10 @@ final class Application
         // Apply theme to ColorScheme for backward compatibility
         ColorScheme::applyTheme($theme);
 
-        // Initialize services
-        $this->terminal = new TerminalManager();
-        $this->renderer = new Renderer($this->terminal, $this->themeContext);
-        $this->keyboard = new KeyboardHandler();
+        // Initialize services - pass driver to components
+        $this->terminal = new TerminalManager($this->driver);
+        $this->renderer = new Renderer($this->terminal, $this->themeContext, $this->driver);
+        $this->keyboard = new KeyboardHandler(driver: $this->driver);
         $this->screenManager = new ScreenManager();
 
         // Initialize key bindings

@@ -55,7 +55,7 @@ final class FileBrowserScreen implements ScreenInterface
         $this->initializeComponents();
     }
 
-    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = null, ?int $height = null): void
+    public function render(Renderer $renderer, int $x = 0, int $y = 0, ?int $width = 120, ?int $height = 64): void
     {
         // Get actual size if not provided
         if ($width === null || $height === null) {

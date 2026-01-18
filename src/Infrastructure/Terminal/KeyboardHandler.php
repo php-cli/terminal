@@ -7,6 +7,7 @@ namespace Butschster\Commander\Infrastructure\Terminal;
 use Butschster\Commander\Infrastructure\Keyboard\Key;
 use Butschster\Commander\Infrastructure\Keyboard\KeyCombination;
 use Butschster\Commander\Infrastructure\Keyboard\Mapping\KeyMappingRegistry;
+use Butschster\Commander\Infrastructure\Terminal\Driver\TerminalDriverInterface;
 
 /**
  * Keyboard input handler
@@ -23,6 +24,7 @@ final class KeyboardHandler
 
     public function __construct(
         private readonly KeyMappingRegistry $mappings = new KeyMappingRegistry(),
+        private readonly ?TerminalDriverInterface $driver = null,
     ) {
         $this->stdin = STDIN;
     }
@@ -70,13 +72,9 @@ final class KeyboardHandler
      */
     public function getKey(): ?string
     {
-        if (!$this->nonBlockingEnabled) {
-            $this->enableNonBlocking();
-        }
+        $char = $this->readChar();
 
-        $char = \fread($this->stdin, 1);
-
-        if ($char === false || $char === '') {
+        if ($char === null) {
             return null;
         }
 
@@ -141,6 +139,10 @@ final class KeyboardHandler
      */
     public function hasInput(): bool
     {
+        if ($this->driver !== null) {
+            return $this->driver->hasInput();
+        }
+
         $read = [$this->stdin];
         $write = null;
         $except = null;
@@ -274,6 +276,28 @@ final class KeyboardHandler
     }
 
     /**
+     * Read a single character from input (uses driver if available)
+     */
+    private function readChar(): ?string
+    {
+        if ($this->driver !== null) {
+            return $this->driver->readInput();
+        }
+
+        if (!$this->nonBlockingEnabled) {
+            $this->enableNonBlocking();
+        }
+
+        $char = \fread($this->stdin, 1);
+
+        if ($char === false || $char === '') {
+            return null;
+        }
+
+        return $char;
+    }
+
+    /**
      * Read complete escape sequence
      */
     private function readEscapeSequence(): string
@@ -284,19 +308,30 @@ final class KeyboardHandler
 
         for ($i = 0; $i < $maxLength; $i++) {
             // Check if data is available
-            $read = [$this->stdin];
-            $write = null;
-            $except = null;
+            if ($this->driver !== null) {
+                // For virtual driver, check hasInput directly
+                if (!$this->driver->hasInput()) {
+                    // Small delay for escape sequence timing
+                    \usleep(1000);
+                    if (!$this->driver->hasInput()) {
+                        break;
+                    }
+                }
+            } else {
+                $read = [$this->stdin];
+                $write = null;
+                $except = null;
 
-            $ready = \stream_select($read, $write, $except, 0, $timeout);
+                $ready = \stream_select($read, $write, $except, 0, $timeout);
 
-            if ($ready === false || $ready === 0) {
-                break;
+                if ($ready === false || $ready === 0) {
+                    break;
+                }
             }
 
-            $char = \fread($this->stdin, 1);
+            $char = $this->readCharDirect();
 
-            if ($char === false || $char === '') {
+            if ($char === null) {
                 break;
             }
 
@@ -351,5 +386,23 @@ final class KeyboardHandler
 
         // Return ESCAPE if just ESC key
         return 'ESCAPE';
+    }
+
+    /**
+     * Read a single character directly (bypasses blocking check for escape sequences)
+     */
+    private function readCharDirect(): ?string
+    {
+        if ($this->driver !== null) {
+            return $this->driver->readInput();
+        }
+
+        $char = \fread($this->stdin, 1);
+
+        if ($char === false || $char === '') {
+            return null;
+        }
+
+        return $char;
     }
 }
