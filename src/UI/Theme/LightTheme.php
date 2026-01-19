@@ -128,4 +128,10 @@ final class LightTheme extends AbstractTheme
     {
         return ColorScheme::combine(ColorScheme::BG_WHITE, ColorScheme::FG_BLUE, ColorScheme::BOLD);
     }
+
+    #[\Override]
+    public function getMutedText(): string
+    {
+        return ColorScheme::combine(ColorScheme::BG_WHITE, ColorScheme::FG_GRAY);
+    }
 }

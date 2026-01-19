@@ -36,7 +36,6 @@ final class Application
     private readonly TerminalManager $terminal;
     private readonly Renderer $renderer;
     private readonly KeyboardHandler $keyboard;
-    private readonly ScreenManager $screenManager;
     private readonly ThemeContext $themeContext;
     private readonly KeyBindingRegistryInterface $keyBindings;
 
@@ -55,7 +54,7 @@ final class Application
     public function __construct(
         ?KeyBindingRegistryInterface $keyBindings = null,
         private readonly ?TerminalDriverInterface $driver = null,
-        ?ScreenManager $screenManager = null,
+        private readonly ?ScreenManager $screenManager = new ScreenManager(),
     ) {
         $this->frameTime = 1.0 / (float) $this->targetFps;
 
@@ -70,7 +69,6 @@ final class Application
         $this->terminal = new TerminalManager($this->driver);
         $this->renderer = new Renderer($this->terminal, $this->themeContext, $this->driver);
         $this->keyboard = new KeyboardHandler(driver: $this->driver);
-        $this->screenManager = $screenManager ?? new ScreenManager();
 
         // Initialize key bindings
         $this->keyBindings = $keyBindings ?? $this->createDefaultRegistry();

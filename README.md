@@ -7,44 +7,48 @@
 
 ---
 
-## 🚀 Why Commander?
+## Why Commander?
 
 Build terminal UIs like you build web apps - with reusable components, clean architecture, and modern PHP.
 
 ```php
-// Simple as creating a PHP file
-$app = new Application($symfonyApp);
-$app->run(new CommandsScreen($commandDiscovery, $commandExecutor));
+use Butschster\Commander\SDK\Builder\ApplicationBuilder;
+use Butschster\Commander\Module\FileBrowser\FileBrowserModule;
+
+$app = ApplicationBuilder::create()
+    ->withModule(new FileBrowserModule())
+    ->withInitialScreen('file_browser')
+    ->build();
+
+$app->run();
 ```
 
 **No complex setup. No learning curve. Just beautiful terminal UIs.**
 
 ---
 
-## ✨ Features
+## Features
 
-- 🎨 **Multiple Color Themes** - Midnight Commander, Dark, and Light themes
-- ⚡ **Double-Buffered Rendering** - Flicker-free display with minimal ANSI sequences
-- 🧩 **Component-Based Architecture** - Reusable UI components (Tables, Forms, Lists, Panels)
-- ⌨️ **Full Keyboard Navigation** - Function keys, arrow keys, and shortcuts
-- 📦 **Built-in Features** - Command Browser, File Browser, Composer Manager
-- 🔌 **Extensible** - Easy to create custom screens and components
+- **Multiple Color Themes** - Midnight Commander, Dark, and Light themes
+- **Double-Buffered Rendering** - Flicker-free display with minimal ANSI sequences
+- **Component-Based Architecture** - Reusable UI components (Tables, Forms, Lists, Panels)
+- **Module SDK** - Extensible plugin system for adding new features
+- **Full Keyboard Navigation** - Function keys, arrow keys, and shortcuts
+- **Built-in Modules** - File Browser, Command Browser, Composer Manager, Git
 
 ---
 
-## 📋 Requirements
+## Requirements
 
 - PHP 8.3 or higher
 - Symfony Console 7.3+
-- Terminal with ANSI color support (most modern terminals)
+- Terminal with ANSI color support
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Installation
-
-Install via Composer:
 
 ```bash
 composer require cli/terminal
@@ -52,7 +56,7 @@ composer require cli/terminal
 
 ### 2. Create Launch Script
 
-Create a simple PHP file (e.g., `console` or `ui`) that launches the Commander interface:
+Create a PHP file (e.g., `console`) that launches the Commander interface:
 
 ```php
 #!/usr/bin/env php
@@ -62,49 +66,32 @@ declare(strict_types=1);
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Butschster\Commander\Application;
-use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
-use Butschster\Commander\UI\Component\Layout\MenuBar;
+use Butschster\Commander\SDK\Builder\ApplicationBuilder;
+use Butschster\Commander\Module\FileBrowser\FileBrowserModule;
+use Butschster\Commander\Module\CommandBrowser\CommandBrowserModule;
+use Butschster\Commander\Module\ComposerManager\ComposerModule;
+use Butschster\Commander\Module\Git\GitModule;
 use Butschster\Commander\UI\Theme\ColorScheme;
 use Butschster\Commander\UI\Theme\MidnightTheme;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
-// 1. Create Symfony Console Application
+// 1. Create Symfony Console Application (for command browser)
 $symfonyApp = new SymfonyApplication('My App', '1.0.0');
 
-// You can add your Symfony commands here:
-// $symfonyApp->add(new YourCustomCommand());
-
-// 2. Choose and apply theme
+// 2. Apply theme
 ColorScheme::applyTheme(new MidnightTheme());
-// Available: MidnightTheme, DarkTheme, LightTheme
 
-// 3. Create Commander application
-$app = new Application($symfonyApp);
-$app->setTargetFps(30);
+// 3. Build application with modules
+$app = ApplicationBuilder::create()
+    ->withModule(new FileBrowserModule())
+    ->withModule(new CommandBrowserModule($symfonyApp))
+    ->withModule(new ComposerModule(getcwd()))
+    ->withModule(new GitModule())
+    ->withInitialScreen('file_browser')
+    ->build();
 
-// 4. Setup global menu bar (optional)
-$globalMenu = new MenuBar([
-    'F1' => ' Help',
-    'F2' => ' Commands',
-    'F10' => ' Quit',
-]);
-$app->setGlobalMenuBar($globalMenu);
-
-// 5. Register global shortcuts (optional)
-$app->registerGlobalShortcut('F10', function () use ($app) {
-    $app->stop(); // Quit application
-});
-
-// 6. Create services and initial screen
-$commandDiscovery = new CommandDiscovery($symfonyApp);
-$commandExecutor = new CommandExecutor($symfonyApp);
-$initialScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
-
-// 7. Run the application
-$app->run($initialScreen);
+// 4. Run
+$app->run();
 ```
 
 ### 3. Make It Executable and Launch
@@ -116,65 +103,16 @@ chmod +x console
 
 **That's it!** You now have a fullscreen terminal UI with:
 
-- ✨ Midnight Commander-style interface
-- 📋 Command browser with search and execution
-- ⌨️ Keyboard navigation (↑↓, Enter, F10 to quit)
-- ⚡ Smooth, flicker-free rendering
+- Midnight Commander-style interface
+- File browser with dual-panel layout
+- Command browser for Symfony Console commands
+- Composer package manager
+- Git repository browser
+- Smooth, flicker-free rendering
 
 ---
 
-### Alternative: Symfony Console Command (Optional)
-
-If you're working within a Symfony/Laravel/Spiral application, you can create a Console command instead:
-
-<details>
-<summary>Click to see Symfony Console Command example</summary>
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Console;
-
-use Butschster\Commander\Application;
-use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
-use Butschster\Commander\UI\Theme\ColorScheme;
-use Butschster\Commander\UI\Theme\MidnightTheme;
-use Symfony\Component\Console\Attribute\AsCommand;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-
-#[AsCommand(name: 'app:ui', description: 'Launch Commander UI')]
-final class UICommand extends Command
-{
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $symfonyApp = $this->getApplication();
-        ColorScheme::applyTheme(new MidnightTheme());
-
-        $app = new Application($symfonyApp);
-        $commandDiscovery = new CommandDiscovery($symfonyApp);
-        $commandExecutor = new CommandExecutor($symfonyApp);
-        $screen = new CommandsScreen($commandDiscovery, $commandExecutor);
-
-        $app->run($screen);
-
-        return Command::SUCCESS;
-    }
-}
-```
-
-Then run: `php bin/console app:ui`
-
-</details>
-
----
-
-## 🎨 Available Themes
+## Available Themes
 
 Commander comes with three built-in themes:
 
@@ -205,229 +143,165 @@ use Butschster\Commander\UI\Theme\LightTheme;
 ColorScheme::applyTheme(new LightTheme());
 ```
 
-**💡 Tip:** Call `ColorScheme::applyTheme()` before creating your Application instance.
+**Tip:** Call `ColorScheme::applyTheme()` before building your Application.
 
 ---
 
-## 📦 Built-in Screens
+## Built-in Modules
 
-Commander includes several ready-to-use screens that you can integrate into your application:
+Commander includes four ready-to-use modules:
 
-### 1. Command Browser Screen
-
-Browse and execute all registered Symfony Console commands.
-
-```php
-use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
-
-$commandDiscovery = new CommandDiscovery($symfonyApp);
-$commandExecutor = new CommandExecutor($symfonyApp);
-$screen = new CommandsScreen($commandDiscovery, $commandExecutor);
-```
-
-**Features:**
-
-- ✅ Lists all available Symfony commands
-- 🔍 Search/filter commands by name or namespace
-- 📝 Shows command descriptions and arguments
-- ⚡ Execute commands directly from UI
-- 📊 Displays command output in real-time
-
-**Keyboard Shortcuts:**
-
-- `↑↓` - Navigate commands
-- `Enter` - Execute selected command
-- `Ctrl+R` - Refresh command list
-- `/` - Search commands
-- `Escape` - Cancel/go back
-
-### 2. File Browser Screen
+### 1. File Browser Module
 
 Navigate and browse the filesystem with a two-panel layout.
 
 ```php
-use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
-use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
+use Butschster\Commander\Module\FileBrowser\FileBrowserModule;
 
-$fileSystem = new FileSystemService();
-$screen = new FileBrowserScreen(
-    $fileSystem, 
-    $screenManager, 
-    '/path/to/start/directory'
-);
+->withModule(new FileBrowserModule('/path/to/start'))
 ```
 
 **Features:**
 
-- 📁 Two-panel layout (list + preview)
-- 📄 File/directory navigation
-- 👁️ File preview with syntax highlighting
-- 📊 Shows file sizes and modification times
-- 🔄 Sort by name, size, or date
+- Dual-panel layout (list + preview)
+- File/directory navigation
+- File preview with syntax highlighting
+- Shows file sizes and modification times
 
-**Keyboard Shortcuts:**
+**Keyboard:** `F1` menu | `↑↓` navigate | `Enter` open | `Tab` switch panels | `Ctrl+E` view file
 
-- `↑↓` - Navigate files
-- `Enter` - Open directory / view file
-- `Backspace` - Go to parent directory
-- `Tab` - Switch between panels
-- `F5` - Copy file
-- `F6` - Move file
-- `F8` - Delete file
+[Full Documentation](src/Module/FileBrowser/README.md)
 
-### 3. Composer Manager Screen
+### 2. Command Browser Module
+
+Browse and execute all registered Symfony Console commands.
+
+```php
+use Butschster\Commander\Module\CommandBrowser\CommandBrowserModule;
+
+->withModule(new CommandBrowserModule($symfonyApp))
+```
+
+**Features:**
+
+- Lists all available Symfony commands
+- Dynamic form generation for arguments and options
+- Shows command output in real-time
+- Dangerous command confirmation
+
+**Keyboard:** `F2` menu | `↑↓` navigate | `Tab` switch panels | `Ctrl+E` execute
+
+[Full Documentation](src/Module/CommandBrowser/README.md)
+
+### 3. Composer Manager Module
 
 Manage Composer packages with tabbed interface.
 
 ```php
-use Butschster\Commander\Feature\ComposerManager\Screen\ComposerManagerScreen;
-use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
+use Butschster\Commander\Module\ComposerManager\ComposerModule;
 
-$composerService = new ComposerService('/path/to/project');
-$screen = new ComposerManagerScreen($composerService);
-$screen->setScreenManager($screenManager);
+->withModule(new ComposerModule('/path/to/project'))
 ```
 
 **Features:**
 
-- 📦 View installed packages
-- 🔄 Check for outdated packages
-- 🔒 Security audit
-- ⬆️ Update packages
-- ➕ Install new packages
-- ❌ Remove packages
+- View installed packages
+- Check for outdated packages
+- Security audit
+- Run Composer scripts
 
-**Tabs:**
+**Tabs:** Scripts | Installed | Outdated | Security
 
-1. **Installed** - All installed packages with version info
-2. **Outdated** - Packages that have newer versions available
-3. **Security** - Packages with known security vulnerabilities
+**Keyboard:** `F3` menu | `Ctrl+←/→` switch tabs | `↑↓` navigate
 
-**Keyboard Shortcuts:**
+[Full Documentation](src/Module/ComposerManager/README.md)
 
-- `Ctrl+←/→` - Switch between tabs
-- `↑↓` - Navigate packages
-- `Enter` - View package details
-- `U` - Update selected package
-- `D` - Remove selected package
-- `Tab` - Switch between list and details panel
+### 4. Git Module
+
+Browse and manage Git repositories.
+
+```php
+use Butschster\Commander\Module\Git\GitModule;
+
+->withModule(new GitModule('/path/to/repo'))
+```
+
+**Features:**
+
+- View repository status
+- Stage/unstage files
+- View file diffs
+- Browse branches and tags
+
+**Tabs:** Status | Branches | Tags
+
+**Keyboard:** `F4` menu | `Ctrl+←/→` switch tabs | `Ctrl+G` global shortcut
+
+[Full Documentation](src/Module/Git/README.md)
 
 ---
 
-## 🔧 Customizing Screens
+## Module SDK
 
-All screens support customization of keyboard shortcuts and behavior:
+Create your own modules using the Module SDK. See the [Module SDK Developer Guide](docs/guides/module-sdk.md) for
+complete documentation.
 
-### Example: Custom Global Shortcuts
-
-```php
-$app = new Application($symfonyApp);
-$screenManager = $app->getScreenManager();
-
-// F2: Switch to Command Browser
-$app->registerGlobalShortcut('F2', function ($sm) use ($commandDiscovery, $commandExecutor) {
-    $screen = new CommandsScreen($commandDiscovery, $commandExecutor);
-    $sm->pushScreen($screen);
-});
-
-// F3: Switch to File Browser
-$app->registerGlobalShortcut('F3', function ($sm) use ($fileSystem) {
-    $screen = new FileBrowserScreen($fileSystem, $sm, getcwd());
-    $sm->pushScreen($screen);
-});
-
-// F5: Switch to Composer Manager
-$app->registerGlobalShortcut('F5', function ($sm) use ($composerService) {
-    $screen = new ComposerManagerScreen($composerService);
-    $screen->setScreenManager($sm);
-    $sm->pushScreen($screen);
-});
-
-// F10: Quit
-$app->registerGlobalShortcut('F10', function () use ($app) {
-    $app->stop();
-});
-```
-
-### Example: Custom Menu Bar
+### Quick Example
 
 ```php
-$globalMenu = new MenuBar([
-    'F1' => ' Help',
-    'F2' => ' Commands', 
-    'F3' => ' Files',
-    'F5' => ' Composer',
-    'F9' => ' Settings',
-    'F10' => ' Quit',
-]);
-$app->setGlobalMenuBar($globalMenu);
-```
+<?php
 
-### Example: Combining Multiple Screens
+declare(strict_types=1);
 
-```php
-// Start with command browser
-$welcomeScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
+namespace MyApp\Module\Todo;
 
-// User can navigate to other screens via shortcuts
-$app->registerGlobalShortcut('F3', function ($sm) {
-    // Pop all screens and push file browser
-    $sm->popUntil(fn($screen) => $screen instanceof FileBrowserScreen);
-    
-    if (!($sm->getCurrentScreen() instanceof FileBrowserScreen)) {
-        $screen = new FileBrowserScreen($fileSystem, $sm, getcwd());
-        $sm->pushScreen($screen);
-    }
-});
+use Butschster\Commander\SDK\Module\ModuleInterface;
+use Butschster\Commander\SDK\Module\ModuleMetadata;
+use Butschster\Commander\SDK\Module\ModuleContext;
+use Butschster\Commander\SDK\Provider\ScreenProviderInterface;
+use Butschster\Commander\SDK\Container\ContainerInterface;
 
-$app->run($welcomeScreen);
-```
-
----
-
-## 📚 Creating Custom Screens
-
-Want to create your own screen? Check out these guides:
-
-- 📖 [Creating Custom Screens](docs/creating-screens.md)
-- 🎨 [Component System](docs/components.md)
-- ⌨️ [Keyboard Handling](docs/keyboard-handling.md)
-- 🎭 [Styling with Themes](docs/themes.md)
-
-**Quick Example:**
-
-```php
-use Butschster\Commander\UI\Screen\ScreenInterface;
-use Butschster\Commander\Infrastructure\Terminal\Renderer;
-
-final class MyCustomScreen implements ScreenInterface
+final readonly class TodoModule implements ModuleInterface, ScreenProviderInterface
 {
-    public function render(Renderer $renderer): void
+    public function metadata(): ModuleMetadata
     {
-        $size = $renderer->getSize();
-        // Render your content...
+        return new ModuleMetadata(
+            name: 'todo',
+            title: 'Todo Manager',
+            version: '1.0.0',
+        );
     }
-    
-    public function handleInput(string $key): bool
+
+    public function screens(ContainerInterface $container): iterable
     {
-        // Handle keyboard input...
-        return true;
+        yield new TodoScreen();
     }
-    
-    public function getTitle(): string
+
+    public function boot(ModuleContext $context): void
     {
-        return 'My Custom Screen';
+        // Initialize module
     }
-    
-    // ... implement other required methods
+
+    public function shutdown(): void
+    {
+        // Cleanup
+    }
 }
 ```
 
+### Using Custom Modules
+
+```php
+$app = ApplicationBuilder::create()
+    ->withModule(new FileBrowserModule())
+    ->withModule(new TodoModule())  // Your custom module
+    ->withInitialScreen('todo')
+    ->build();
+```
+
 ---
 
-## 🧩 Available Components
+## Available Components
 
 Commander provides rich set of UI components:
 
@@ -452,141 +326,57 @@ Commander provides rich set of UI components:
 - `StatusBar` - Bottom status bar with shortcuts
 - `TabContainer` - Tabbed interface
 - `GridLayout` - Column-based layout
+- `SplitLayout` - Two-panel split layout
+- `StackLayout` - Vertical/horizontal stacking
 
 ---
 
-## 🎯 Real-World Example
-
-Here's a complete example showing all features together (see the included `console` file):
-
-```php
-#!/usr/bin/env php
-<?php
-
-declare(strict_types=1);
-
-require __DIR__ . '/vendor/autoload.php';
-
-use Butschster\Commander\Application;
-use Butschster\Commander\Feature\CommandBrowser\Screen\CommandsScreen;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandDiscovery;
-use Butschster\Commander\Feature\CommandBrowser\Service\CommandExecutor;
-use Butschster\Commander\Feature\ComposerManager\Screen\ComposerManagerScreen;
-use Butschster\Commander\Feature\ComposerManager\Service\ComposerService;
-use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
-use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
-use Butschster\Commander\UI\Component\Layout\MenuBar;
-use Butschster\Commander\UI\Theme\ColorScheme;
-use Butschster\Commander\UI\Theme\MidnightTheme;
-use Symfony\Component\Console\Application as SymfonyApplication;
-
-// Create Symfony Console Application
-$symfonyApp = new SymfonyApplication('My Console Application', '1.0.0');
-
-// Apply theme
-ColorScheme::applyTheme(new MidnightTheme());
-
-// Create and configure Commander application
-$app = new Application($symfonyApp);
-$app->setTargetFps(30);
-$screenManager = $app->getScreenManager();
-
-// Create services
-$commandDiscovery = new CommandDiscovery($symfonyApp);
-$commandExecutor = new CommandExecutor($symfonyApp);
-$fileSystem = new FileSystemService();
-
-// Setup global menu bar
-$globalMenu = new MenuBar([
-    'F1' => ' Help',
-    'F2' => ' Commands',
-    'F3' => ' Files',
-    'F5' => ' Composer',
-    'F10' => ' Quit',
-]);
-$app->setGlobalMenuBar($globalMenu);
-
-// Register global shortcuts for screen switching
-$app->registerGlobalShortcut('F2', function ($sm) use ($commandDiscovery, $commandExecutor) {
-    // Switch to command browser
-    $sm->popUntil(fn($screen) => $screen instanceof CommandsScreen);
-    if (!($sm->getCurrentScreen() instanceof CommandsScreen)) {
-        $sm->pushScreen(new CommandsScreen($commandDiscovery, $commandExecutor));
-    }
-});
-
-$app->registerGlobalShortcut('F3', function ($sm) use ($fileSystem) {
-    // Switch to file browser
-    $sm->popUntil(fn($screen) => $screen instanceof FileBrowserScreen);
-    if (!($sm->getCurrentScreen() instanceof FileBrowserScreen)) {
-        $sm->pushScreen(new FileBrowserScreen($fileSystem, $sm, getcwd()));
-    }
-});
-
-$app->registerGlobalShortcut('F5', function ($sm) {
-    // Switch to composer manager
-    $sm->popUntil(fn($screen) => $screen instanceof ComposerManagerScreen);
-    if (!($sm->getCurrentScreen() instanceof ComposerManagerScreen)) {
-        $composerService = new ComposerService(getcwd());
-        $screen = new ComposerManagerScreen($composerService);
-        $screen->setScreenManager($sm);
-        $sm->pushScreen($screen);
-    }
-});
-
-$app->registerGlobalShortcut('F10', function () use ($app) {
-    $app->stop();
-});
-
-// Start with command browser screen
-$welcomeScreen = new CommandsScreen($commandDiscovery, $commandExecutor);
-$app->run($welcomeScreen);
-```
-
-**This example demonstrates:**
-
-- ✅ All three built-in screens (Commands, Files, Composer)
-- ✅ Global menu bar with function key shortcuts
-- ✅ Screen switching via F2, F3, F5
-- ✅ Proper screen stack management
-- ✅ Service initialization
-- ✅ Theme application
-
----
-
-## 🎓 Architecture Overview
+## Architecture Overview
 
 ### Project Structure
 
 ```
 src/
-├── Application.php                      # Main application entry point
-├── Feature/                             # Feature modules
-│   ├── CommandBrowser/                  # Command browser feature
-│   ├── FileBrowser/                     # File browser feature
-│   └── ComposerManager/                 # Composer manager feature
-├── Infrastructure/                      # Core infrastructure
-│   └── Terminal/
-│       ├── KeyboardHandler.php         # Keyboard input processing
-│       ├── Renderer.php                # Double-buffered rendering
-│       └── TerminalManager.php         # Terminal control
-└── UI/                                  # UI framework
-    ├── Component/                       # Reusable components
-    ├── Screen/                          # Screen management
-    └── Theme/                           # Color themes
+├── Application.php              # Main application entry point
+├── Module/                      # Built-in modules
+│   ├── FileBrowser/             # File browser module
+│   ├── CommandBrowser/          # Command browser module
+│   ├── ComposerManager/         # Composer manager module
+│   └── Git/                     # Git module
+├── SDK/                         # Module SDK
+│   ├── Builder/                 # ApplicationBuilder
+│   ├── Container/               # Dependency injection
+│   ├── Module/                  # Module interfaces
+│   └── Provider/                # Provider interfaces
+├── Infrastructure/              # Core infrastructure
+│   ├── Keyboard/                # Key binding system
+│   └── Terminal/                # Rendering, input handling
+└── UI/                          # UI framework
+    ├── Component/               # Reusable components
+    ├── Screen/                  # Screen management
+    └── Theme/                   # Color themes
 ```
 
 ### Key Concepts
 
-1. **Screens** - Full-screen views (like pages in a web app)
-2. **Components** - Reusable UI elements (tables, forms, panels)
-3. **Double Buffering** - Prevents flickering by rendering off-screen first
-4. **Event System** - Components communicate via callbacks
+1. **Modules** - Self-contained features (File Browser, Git, etc.)
+2. **Screens** - Full-screen views (like pages in a web app)
+3. **Components** - Reusable UI elements (tables, forms, panels)
+4. **Double Buffering** - Prevents flickering by rendering off-screen first
 5. **Theme System** - Customizable color schemes
 
 ---
 
-## 🌟 Use Cases
+## Documentation
+
+- [Module SDK Developer Guide](docs/guides/module-sdk.md) - Create custom modules
+- [Keyboard Architecture](docs/guides/keyboard-architecture.md) - Key handling internals
+- [Testing Guide](docs/guides/testing.md) - Testing screens and components
+- [Menu System](docs/guides/menu-system.md) - Menus and navigation
+
+---
+
+## Use Cases
 
 Commander is perfect for:
 
@@ -600,18 +390,18 @@ Commander is perfect for:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-## 📄 License
+## License
 
 MIT License. See [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 Inspired by [Midnight Commander](https://midnight-commander.org/) - the legendary file manager.

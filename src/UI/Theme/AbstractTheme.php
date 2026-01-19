@@ -38,4 +38,10 @@ abstract class AbstractTheme implements ThemeInterface
     {
         return $this->getInputBg() . $this->getInputFg();
     }
+
+    #[\Override]
+    public function getMutedText(): string
+    {
+        return $this->getNormalBg() . ColorScheme::FG_GRAY;
+    }
 }

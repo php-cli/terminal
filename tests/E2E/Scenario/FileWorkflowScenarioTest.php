@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\E2E\Scenario;
 
-use Butschster\Commander\Feature\FileBrowser\Screen\FileBrowserScreen;
-use Butschster\Commander\Feature\FileBrowser\Service\FileSystemService;
+use Butschster\Commander\Module\FileBrowser\Screen\FileBrowserScreen;
+use Butschster\Commander\Module\FileBrowser\Service\FileSystemService;
 use Butschster\Commander\UI\Screen\ScreenManager;
 use Tests\TerminalTestCase;
 

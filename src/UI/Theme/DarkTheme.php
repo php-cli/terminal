@@ -128,4 +128,10 @@ final class DarkTheme extends AbstractTheme
     {
         return ColorScheme::combine(ColorScheme::BG_BLACK, ColorScheme::FG_CYAN, ColorScheme::BOLD);
     }
+
+    #[\Override]
+    public function getMutedText(): string
+    {
+        return ColorScheme::combine(ColorScheme::BG_BLACK, ColorScheme::FG_GRAY);
+    }
 }

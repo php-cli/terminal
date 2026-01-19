@@ -153,4 +153,9 @@ final readonly class ThemeContext
     {
         return $this->normal->background;
     }
+
+    public function getMutedText(): string
+    {
+        return $this->theme->getMutedText();
+    }
 }

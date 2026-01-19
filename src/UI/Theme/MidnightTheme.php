@@ -138,4 +138,10 @@ final class MidnightTheme extends AbstractTheme
     {
         return ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_WHITE, ColorScheme::BOLD);
     }
+
+    #[\Override]
+    public function getMutedText(): string
+    {
+        return ColorScheme::combine(ColorScheme::BG_BLUE, ColorScheme::FG_GRAY);
+    }
 }

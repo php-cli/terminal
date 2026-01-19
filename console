@@ -9,12 +9,13 @@ use Butschster\Commander\ExceptionRenderer;
 use Butschster\Commander\Module\CommandBrowser\CommandBrowserModule;
 use Butschster\Commander\Module\ComposerManager\ComposerModule;
 use Butschster\Commander\Module\FileBrowser\FileBrowserModule;
+use Butschster\Commander\Module\Git\GitModule;
 use Butschster\Commander\SDK\Builder\ApplicationBuilder;
 use Butschster\Commander\UI\Theme\MidnightTheme;
 use Symfony\Component\Console\Application as SymfonyApplication;
 
 // Create Symfony Console Application
-$symfonyApp = new SymfonyApplication('My Console Application', '1.0.0');
+$symfonyApp = new SymfonyApplication(name: 'My Console Application', version: '1.0.0');
 
 // Add more commands here as needed
 // $symfonyApp->add(new AnotherCommand());
@@ -22,16 +23,17 @@ $symfonyApp = new SymfonyApplication('My Console Application', '1.0.0');
 try {
     $app = ApplicationBuilder::create()
         // Register modules
-        ->withModule(new CommandBrowserModule($symfonyApp))
-        ->withModule(new FileBrowserModule((string) getcwd()))
-        ->withModule(new ComposerModule(__DIR__))
+        ->withModule(module: new CommandBrowserModule(symfonyApp: $symfonyApp))
+        ->withModule(module: new FileBrowserModule(initialPath: (string) \getcwd()))
+        ->withModule(module: new ComposerModule(projectPath: __DIR__))
+        ->withModule(module: new GitModule(repositoryPath: (string) \getcwd()))
 
         // Configuration
-        ->withTheme(new MidnightTheme())
-        ->withFps(30)
+        ->withTheme(theme: new MidnightTheme())
+        ->withFps(fps: 30)
 
         // Start with command browser
-        ->withInitialScreen('command_browser')
+        ->withInitialScreen(screenName: 'command_browser')
 
         ->build();
 
