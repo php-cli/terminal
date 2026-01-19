@@ -114,7 +114,7 @@ final class UpdateProgressModal extends AbstractComponent
         $modalY = $y + (int) (($height - self::MODAL_HEIGHT) / 2);
 
         // Draw dimmed overlay
-        $dimColor = ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_BRIGHT_BLACK);
+        $dimColor = ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_GRAY);
         for ($row = $y; $row < $y + $height; $row++) {
             $renderer->writeAt($x, $row, \str_repeat(' ', $width), $dimColor);
         }
@@ -147,7 +147,7 @@ final class UpdateProgressModal extends AbstractComponent
 
         foreach ($visibleLines as $i => $line) {
             $truncatedLine = \mb_substr((string) $line, 0, self::MODAL_WIDTH - 4);
-            $renderer->writeAt($modalX + 2, $outputY + $i, $truncatedLine, ColorScheme::$NORMAL_TEXT);
+            $renderer->writeAt($modalX + 2, $outputY + (int) $i, $truncatedLine, ColorScheme::$NORMAL_TEXT);
         }
 
         // Draw separator before buttons

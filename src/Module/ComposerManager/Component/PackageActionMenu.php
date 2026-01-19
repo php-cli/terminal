@@ -93,7 +93,7 @@ final class PackageActionMenu implements ComponentInterface
         $menuY = $y + (int) (($height - $menuHeight) / 2);
 
         // Draw overlay
-        $dimColor = ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_BRIGHT_BLACK);
+        $dimColor = ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_GRAY);
         for ($row = $y; $row < $y + $height; $row++) {
             $renderer->writeAt($x, $row, \str_repeat(' ', $width), $dimColor);
         }
@@ -102,14 +102,14 @@ final class PackageActionMenu implements ComponentInterface
         $borderColor = ColorScheme::combine(ColorScheme::BG_CYAN, ColorScheme::FG_WHITE);
         $contentColor = ColorScheme::combine(ColorScheme::BG_CYAN, ColorScheme::FG_WHITE);
         $selectedColor = ColorScheme::combine(ColorScheme::BG_WHITE, ColorScheme::FG_BLACK, ColorScheme::BOLD);
-        $disabledColor = ColorScheme::combine(ColorScheme::BG_CYAN, ColorScheme::FG_BRIGHT_BLACK);
+        $disabledColor = ColorScheme::combine(ColorScheme::BG_CYAN, ColorScheme::FG_GRAY);
 
         // Top border
         $renderer->writeAt($menuX, $menuY, '┌' . \str_repeat('─', $menuWidth - 2) . '┐', $borderColor);
 
         // Menu items
         foreach ($this->items as $i => $item) {
-            $rowY = $menuY + 1 + $i;
+            $rowY = $menuY + 1 + (int) $i;
             $isSelected = $i === $this->selectedIndex;
 
             $label = $item['label'];

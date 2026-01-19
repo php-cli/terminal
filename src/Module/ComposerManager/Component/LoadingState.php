@@ -79,7 +79,7 @@ final class LoadingState
         $textWidth = \mb_strlen($text);
 
         // Draw semi-transparent overlay effect (dim the area)
-        $dimColor = ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_BRIGHT_BLACK);
+        $dimColor = ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_GRAY);
         for ($row = $y; $row < $y + $height; $row++) {
             $renderer->writeAt($x, $row, \str_repeat(' ', $width), $dimColor);
         }

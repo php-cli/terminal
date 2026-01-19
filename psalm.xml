@@ -20,8 +20,8 @@
         <ForbiddenCode>
             <errorLevel type="suppress">
                 <directory name="src/Infrastructure/Terminal" />
-                <directory name="src/Feature/ComposerManager/Service" />
                 <directory name="src/Module/ComposerManager/Service" />
+                <directory name="src/Module/Git/Service" />
             </errorLevel>
         </ForbiddenCode>
         <MissingOverrideAttribute errorLevel="suppress" />

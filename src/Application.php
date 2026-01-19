@@ -54,7 +54,7 @@ final class Application
     public function __construct(
         ?KeyBindingRegistryInterface $keyBindings = null,
         private readonly ?TerminalDriverInterface $driver = null,
-        private readonly ?ScreenManager $screenManager = new ScreenManager(),
+        private readonly ScreenManager $screenManager = new ScreenManager(),
     ) {
         $this->frameTime = 1.0 / (float) $this->targetFps;
 

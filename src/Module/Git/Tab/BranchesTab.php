@@ -272,7 +272,7 @@ final class BranchesTab extends AbstractTab
     private function checkoutSelectedBranch(): bool
     {
         $selectedIndex = $this->table->getSelectedIndex();
-        if ($selectedIndex === null || !isset($this->branches[$selectedIndex])) {
+        if (!isset($this->branches[$selectedIndex])) {
             return false;
         }
 
