@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Input;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Theme\ColorScheme;
@@ -19,11 +21,17 @@ final class FormComponent extends AbstractComponent
     private int $focusedFieldIndex = 0;
     private int $scrollOffset = 0;
 
-    /** @var callable|null Callback when form is submitted */
-    private $onSubmit = null;
+    /** @var \Closure(array<string, mixed>): void */
+    private \Closure $onSubmit;
 
-    /** @var callable|null Callback when form is cancelled */
-    private $onCancel = null;
+    /** @var \Closure(): void */
+    private \Closure $onCancel;
+
+    public function __construct()
+    {
+        $this->onSubmit = static fn(array $values) => null;
+        $this->onCancel = static fn() => null;
+    }
 
     /**
      * Add a text input field
@@ -68,11 +76,11 @@ final class FormComponent extends AbstractComponent
     /**
      * Set callback for form submission
      *
-     * @param callable(array): void $callback
+     * @param callable(array<string, mixed>): void $callback
      */
     public function onSubmit(callable $callback): void
     {
-        $this->onSubmit = $callback;
+        $this->onSubmit = $callback(...);
     }
 
     /**
@@ -82,7 +90,7 @@ final class FormComponent extends AbstractComponent
      */
     public function onCancel(callable $callback): void
     {
-        $this->onCancel = $callback;
+        $this->onCancel = $callback(...);
     }
 
     /**
@@ -103,6 +111,7 @@ final class FormComponent extends AbstractComponent
         return $errors;
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -148,45 +157,33 @@ final class FormComponent extends AbstractComponent
             return false;
         }
 
-        switch ($key) {
-            case 'UP':
-                if ($this->focusedFieldIndex > 0) {
-                    $this->focusedFieldIndex--;
-                    $this->adjustScroll();
-                }
-                return true;
+        $input = KeyInput::from($key);
 
-            case 'DOWN':
-            case 'TAB':
-                if ($this->focusedFieldIndex < \count($this->fields) - 1) {
-                    $this->focusedFieldIndex++;
-                    $this->adjustScroll();
-                }
-                return true;
-
-            case 'F2':
-            case 'ENTER':
-                // Validate and submit
-                $errors = $this->validate();
-
-                if (empty($errors)) {
-                    if ($this->onSubmit !== null) {
-                        ($this->onSubmit)($this->getValues());
-                    }
-                }
-                return true;
-
-            case 'ESCAPE':
-                if ($this->onCancel !== null) {
-                    ($this->onCancel)();
-                }
-                return true;
-
-            default:
-                // Delegate to focused field
-                $field = $this->fields[$this->focusedFieldIndex];
-                return $field->handleInput($key);
+        if ($input->is(Key::UP)) {
+            if ($this->focusedFieldIndex > 0) {
+                --$this->focusedFieldIndex;
+                $this->adjustScroll();
+            }
+            return true;
         }
+
+        if ($input->is(Key::DOWN) || $input->is(Key::TAB)) {
+            if ($this->focusedFieldIndex < \count($this->fields) - 1) {
+                ++$this->focusedFieldIndex;
+                $this->adjustScroll();
+            }
+            return true;
+        }
+
+        if ($input->is(Key::ENTER)) {
+            return $this->handleSubmit();
+        }
+
+        if ($input->is(Key::ESCAPE)) {
+            return $this->handleCancel();
+        }
+
+        return $this->fields[$this->focusedFieldIndex]->handleInput($key);
     }
 
     #[\Override]
@@ -195,9 +192,24 @@ final class FormComponent extends AbstractComponent
         return ['width' => 40, 'height' => 10];
     }
 
+    private function handleSubmit(): bool
+    {
+        $errors = $this->validate();
+        if (empty($errors)) {
+            ($this->onSubmit)($this->getValues());
+        }
+        return true;
+    }
+
+    private function handleCancel(): bool
+    {
+        ($this->onCancel)();
+        return true;
+    }
+
     private function renderButtons(Renderer $renderer, int $x, int $y, int $width): void
     {
-        $buttonsText = '[F2] Execute   [ESC] Cancel';
+        $buttonsText = '[Ctrl+E] Execute   [ESC] Cancel';
         $buttonsX = $x + (int) (($width - \mb_strlen($buttonsText)) / 2);
 
         $renderer->writeAt(

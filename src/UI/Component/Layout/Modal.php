@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Layout;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Theme\ColorScheme;
@@ -32,8 +34,8 @@ final class Modal extends AbstractComponent
     private int $modalWidth = 60;
     private int $modalHeight = 15;
 
-    /** @var callable|null Callback when modal is closed */
-    private $onClose = null;
+    /** @var \Closure(mixed): void */
+    private \Closure $onClose;
 
     /**
      * @param string $title Modal title
@@ -45,6 +47,7 @@ final class Modal extends AbstractComponent
         string $content,
         private readonly string $type = self::TYPE_INFO,
     ) {
+        $this->onClose = static fn(mixed $result = null) => null;
         $this->setContent($content);
         $this->setupDefaultButtons();
     }
@@ -126,13 +129,14 @@ final class Modal extends AbstractComponent
     /**
      * Set callback for when modal is closed
      *
-     * @param callable(): void $callback
+     * @param callable(mixed): void $callback
      */
     public function onClose(callable $callback): void
     {
-        $this->onClose = $callback;
+        $this->onClose = $callback(...);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -190,54 +194,38 @@ final class Modal extends AbstractComponent
             return false;
         }
 
+        $input = KeyInput::from($key);
         $buttonLabels = \array_keys($this->buttons);
 
-        switch ($key) {
-            case 'LEFT':
-                if ($this->selectedButtonIndex > 0) {
-                    $this->selectedButtonIndex--;
-                }
-                return true;
+        // Handle navigation left
+        if ($input->is(Key::LEFT)) {
+            if ($this->selectedButtonIndex > 0) {
+                --$this->selectedButtonIndex;
+            }
+            return true;
+        }
 
-            case 'RIGHT':
-            case 'TAB':
-                if ($this->selectedButtonIndex < \count($this->buttons) - 1) {
-                    $this->selectedButtonIndex++;
-                }
-                return true;
+        // Handle navigation right/tab
+        if ($input->is(Key::RIGHT) || $input->is(Key::TAB)) {
+            if ($this->selectedButtonIndex < \count($this->buttons) - 1) {
+                ++$this->selectedButtonIndex;
+            }
+            return true;
+        }
 
-            case 'ENTER':
-            case ' ':
-                // Execute selected button callback
-                $selectedLabel = $buttonLabels[$this->selectedButtonIndex];
-                $callback = $this->buttons[$selectedLabel];
-                $callback();
-                return true;
+        // Handle selection (Enter or Space)
+        if ($input->is(Key::ENTER) || $input->isSpace()) {
+            return $this->activateButton($buttonLabels);
+        }
 
-            case 'ESCAPE':
-                // Close modal (equivalent to last button, usually Cancel/No)
-                $lastLabel = \end($buttonLabels);
-                $callback = $this->buttons[$lastLabel];
-                $callback();
-                return true;
+        // Handle escape
+        if ($input->is(Key::ESCAPE)) {
+            return $this->activateLastButton($buttonLabels);
+        }
 
-                // Quick access keys (1-9 for button indices)
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                $index = (int) $key - 1;
-                if (isset($buttonLabels[$index])) {
-                    $callback = $this->buttons[$buttonLabels[$index]];
-                    $callback();
-                    return true;
-                }
-                return false;
+        // Quick access keys (1-9 for button indices)
+        if ($input->isDigit()) {
+            return $this->handleDigitKey($input, $buttonLabels);
         }
 
         return false;
@@ -252,6 +240,33 @@ final class Modal extends AbstractComponent
         ];
     }
 
+    private function activateButton(array $buttonLabels): bool
+    {
+        $selectedLabel = $buttonLabels[$this->selectedButtonIndex];
+        $callback = $this->buttons[$selectedLabel];
+        $callback();
+        return true;
+    }
+
+    private function activateLastButton(array $buttonLabels): bool
+    {
+        $lastLabel = \end($buttonLabels);
+        $callback = $this->buttons[$lastLabel];
+        $callback();
+        return true;
+    }
+
+    private function handleDigitKey(KeyInput $input, array $buttonLabels): bool
+    {
+        $index = (int) $input->raw - 1;
+        if ($index >= 0 && isset($buttonLabels[$index])) {
+            $callback = $this->buttons[$buttonLabels[$index]];
+            $callback();
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Setup default buttons based on modal type
      */
@@ -263,7 +278,7 @@ final class Modal extends AbstractComponent
                 'No' => fn() => $this->close(false),
             ],
             default => [
-                'OK' => fn() => $this->close(),
+                'OK' => $this->close(...),
             ],
         };
     }
@@ -273,9 +288,7 @@ final class Modal extends AbstractComponent
      */
     private function close(mixed $result = null): void
     {
-        if ($this->onClose !== null) {
-            ($this->onClose)($result);
-        }
+        ($this->onClose)($result);
     }
 
     /**

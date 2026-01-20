@@ -127,6 +127,7 @@ final class Padding extends AbstractLayoutComponent
         ];
     }
 
+    #[\Override]
     protected function draw(Renderer $renderer, int $x, int $y): void
     {
         // Calculate content position (with padding offset)

@@ -4,27 +4,23 @@ declare(strict_types=1);
 
 namespace Butschster\Commander;
 
-use Codedungeon\PHPCliColors\Color;
-use Spiral\Exceptions\Renderer\Highlighter;
-use Spiral\Exceptions\Style\ConsoleStyle;
-use Spiral\Exceptions\Style\PlainStyle;
-
 final class ExceptionRenderer
 {
     public const int SHOW_LINES = 2;
-    protected const array FORMATS = ['console', 'cli'];
+
+    // ANSI escape codes for colors
     protected const array COLORS = [
-        'bg:red' => Color::BG_RED,
-        'bg:cyan' => Color::BG_CYAN,
-        'bg:magenta' => Color::BG_MAGENTA,
-        'bg:white' => Color::BG_WHITE,
-        'white' => Color::LIGHT_WHITE,
-        'green' => Color::GREEN,
-        'gray' => Color::GRAY,
-        'black' => Color::BLACK,
-        'red' => Color::RED,
-        'yellow' => Color::YELLOW,
-        'reset' => Color::RESET,
+        'bg:red' => "\033[41m",
+        'bg:cyan' => "\033[46m",
+        'bg:magenta' => "\033[45m",
+        'bg:white' => "\033[47m",
+        'white' => "\033[97m",
+        'green' => "\033[32m",
+        'gray' => "\033[90m",
+        'black' => "\033[30m",
+        'red' => "\033[31m",
+        'yellow' => "\033[33m",
+        'reset' => "\033[0m",
     ];
 
     private array $lines = [];
@@ -80,12 +76,7 @@ final class ExceptionRenderer
             );
 
             if ($verbose) {
-                $row .= $this->renderTrace(
-                    $exception,
-                    new Highlighter(
-                        $this->colorsSupport ? new ConsoleStyle() : new PlainStyle(),
-                    ),
-                );
+                $row .= $this->renderTrace($exception);
             }
 
             $result[] = $row;
@@ -98,9 +89,6 @@ final class ExceptionRenderer
 
     /**
      * Render title using outlining border.
-     *
-     * @param string $title Title.
-     * @param string $style Formatting.
      */
     private function renderHeader(string $title, string $style, int $padding = 0): string
     {
@@ -118,9 +106,9 @@ final class ExceptionRenderer
         foreach ($lines as $line) {
             $result .= $this->format(
                 "<{$style}>%s%s%s</reset>\n",
-                \str_repeat('', $padding + 1),
+                \str_repeat(' ', $padding + 1),
                 $line,
-                \str_repeat('', $length - \mb_strlen($line) + 1),
+                \str_repeat(' ', $length - \mb_strlen($line) + 1),
             );
         }
 
@@ -130,7 +118,7 @@ final class ExceptionRenderer
     /**
      * Render exception call stack.
      */
-    private function renderTrace(\Throwable $e, ?Highlighter $h = null): string
+    private function renderTrace(\Throwable $e): string
     {
         $stacktrace = $this->getStacktrace($e);
         if (empty($stacktrace)) {
@@ -144,7 +132,7 @@ final class ExceptionRenderer
 
         foreach ($stacktrace as $i => $trace) {
             $file = isset($trace['file']) ? (string) $trace['file'] : null;
-            $classColor = 'while';
+            $classColor = 'white';
 
             if ($file !== null) {
                 \str_starts_with($file, $rootDir) and $file = \substr($file, \strlen($rootDir) + 1);
@@ -169,7 +157,7 @@ final class ExceptionRenderer
                 $line .= $this->format(
                     ' <yellow>at</reset> <green>%s</reset><yellow>:</reset><white>%s</reset>',
                     $file,
-                    $trace['line'],
+                    $trace['line'] ?? '?',
                 );
             }
 
@@ -181,14 +169,50 @@ final class ExceptionRenderer
 
             $result .= $line . "\n";
 
-            if ($h !== null && !empty($trace['file'])) {
-                $str = @\file_get_contents($trace['file']);
-                $result .= $h->highlightLines(
-                    $str,
-                    $trace['line'],
-                    self::SHOW_LINES,
-                ) . "\n";
-                unset($str);
+            // Show code snippet if file exists
+            if (!empty($trace['file']) && \is_readable($trace['file']) && isset($trace['line'])) {
+                $result .= $this->renderCodeSnippet($trace['file'], (int) $trace['line']) . "\n";
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Render code snippet around the error line.
+     */
+    private function renderCodeSnippet(string $file, int $line): string
+    {
+        $lines = @\file($file);
+        if ($lines === false) {
+            return '';
+        }
+
+        $start = \max(0, $line - self::SHOW_LINES - 1);
+        $end = \min(\count($lines), $line + self::SHOW_LINES);
+
+        $result = '';
+        $padLength = \strlen((string) $end);
+
+        for ($i = $start; $i < $end; $i++) {
+            $lineNum = $i + 1;
+            $code = \rtrim($lines[$i]);
+            $isErrorLine = $lineNum === $line;
+
+            $lineNumStr = \str_pad((string) $lineNum, $padLength, ' ', \STR_PAD_LEFT);
+
+            if ($isErrorLine) {
+                $result .= $this->format(
+                    "    <bg:red,white> %s </reset> <white>%s</reset>\n",
+                    $lineNumStr,
+                    $code,
+                );
+            } else {
+                $result .= $this->format(
+                    "    <gray> %s </reset> <gray>%s</reset>\n",
+                    $lineNumStr,
+                    $code,
+                );
             }
         }
 
@@ -205,7 +229,7 @@ final class ExceptionRenderer
             return [];
         }
 
-        //Let's let's clarify exception location
+        // Clarify exception location
         $header = [
             'file' => $e->getFile(),
             'line' => $e->getLine(),
@@ -243,7 +267,6 @@ final class ExceptionRenderer
 
     /**
      * Returns true if the STDOUT supports colorization.
-     * @codeCoverageIgnore
      * @link https://github.com/symfony/Console/blob/master/Output/StreamOutput.php#L94
      */
     private function isColorsSupported(mixed $stream = STDOUT): bool

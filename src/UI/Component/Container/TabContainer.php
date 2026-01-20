@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Container;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Component\Layout\StatusBar;
@@ -123,6 +125,7 @@ final class TabContainer extends AbstractComponent
         $this->statusBarHeight = $height;
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -160,24 +163,21 @@ final class TabContainer extends AbstractComponent
     #[\Override]
     public function handleInput(string $key): bool
     {
+        $input = KeyInput::from($key);
+
         // Tab navigation with Ctrl+Left/Right
-        if ($key === 'CTRL_LEFT') {
+        if ($input->isCtrl(Key::LEFT)) {
             $this->previousTab();
             return true;
         }
 
-        if ($key === 'CTRL_RIGHT') {
+        if ($input->isCtrl(Key::RIGHT)) {
             $this->nextTab();
             return true;
         }
 
         // Delegate to active tab
-        $activeTab = $this->getActiveTab();
-        if ($activeTab !== null) {
-            return $activeTab->handleInput($key);
-        }
-
-        return false;
+        return $this->getActiveTab()?->handleInput($key) ?? false;
     }
 
     #[\Override]
@@ -190,6 +190,11 @@ final class TabContainer extends AbstractComponent
         if ($activeTab !== null) {
             $activeTab->setFocused($focused);
         }
+    }
+
+    private function delegateToActiveTab(string $key): bool
+    {
+        return $this->getActiveTab()?->handleInput($key) ?? false;
     }
 
     /**

@@ -57,6 +57,7 @@ final class Section extends TextComponent
         return $this;
     }
 
+    #[\Override]
     protected function render(): string
     {
         // Check if content is empty or null

@@ -167,6 +167,7 @@ final class StackLayout extends AbstractLayoutComponent
             : ['width' => $totalMainAxis, 'height' => $maxCrossAxis];
     }
 
+    #[\Override]
     protected function draw(Renderer $renderer, int $x, int $y): void
     {
         $isVertical = $this->direction === Direction::VERTICAL;
@@ -242,7 +243,7 @@ final class StackLayout extends AbstractLayoutComponent
         $remainingSpace = \max(0, $remainingSpace - $percentageTotal);
 
         // Calculate fractional unit value
-        $fractionUnit = $flexTotal > 0 ? $remainingSpace / $flexTotal : 0;
+        $fractionUnit = $flexTotal > 0 ? (float) $remainingSpace / $flexTotal : 0.0;
 
         // Calculate final sizes
         $sizes = [];

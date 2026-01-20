@@ -7,7 +7,6 @@ namespace Butschster\Commander\UI\Component\Layout;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
 use Butschster\Commander\UI\Component\ComponentInterface;
-use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
  * Panel component with border and title
@@ -51,9 +50,11 @@ final class Panel extends AbstractComponent
         }
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
+        $theme = $renderer->getThemeContext();
 
         // Fill interior with blue background first
         if ($width > 2 && $height > 2) {
@@ -63,14 +64,14 @@ final class Panel extends AbstractComponent
                 $width - 2,
                 $height - 2,
                 ' ',
-                ColorScheme::$NORMAL_TEXT,
+                $theme->getNormalText(),
             );
         }
 
         // Determine border color based on focus
         $borderColor = $this->isFocused()
-            ? ColorScheme::$ACTIVE_BORDER
-            : ColorScheme::$INACTIVE_BORDER;
+            ? $theme->getActiveBorder()
+            : $theme->getInactiveBorder();
 
         // Draw border
         $renderer->drawBox($x, $y, $width, $height, $borderColor);

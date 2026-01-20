@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Input;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Theme\ColorScheme;
 
@@ -30,6 +32,7 @@ class TextField extends FormField
         return $this->required;
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, bool $focused): int
     {
         $currentY = $y;
@@ -104,58 +107,54 @@ class TextField extends FormField
         return ($this->description !== '' ? 4 : 3);
     }
 
+    #[\Override]
     public function handleInput(string $key): bool
     {
+        $input = KeyInput::from($key);
         $valueStr = (string) $this->value;
 
-        switch ($key) {
-            case 'LEFT':
-                if ($this->cursorPosition > 0) {
-                    $this->cursorPosition--;
-                }
-                return true;
+        return match (true) {
+            $input->is(Key::LEFT) => $this->cursorPosition > 0 ? --$this->cursorPosition !== null : true,
+            $input->is(Key::RIGHT) => $this->cursorPosition < \mb_strlen($valueStr) ? ++$this->cursorPosition !== null : true,
+            $input->is(Key::HOME) => ($this->cursorPosition = 0) !== null,
+            $input->is(Key::END) => ($this->cursorPosition = \mb_strlen($valueStr)) !== null,
+            $input->is(Key::BACKSPACE) => $this->handleBackspace($valueStr),
+            $input->is(Key::DELETE) => $this->handleDelete($valueStr),
+            default => $this->handleCharacterInput($key, $valueStr),
+        };
+    }
 
-            case 'RIGHT':
-                if ($this->cursorPosition < \mb_strlen($valueStr)) {
-                    $this->cursorPosition++;
-                }
-                return true;
-
-            case 'HOME':
-                $this->cursorPosition = 0;
-                return true;
-
-            case 'END':
-                $this->cursorPosition = \mb_strlen($valueStr);
-                return true;
-
-            case 'BACKSPACE':
-                if ($this->cursorPosition > 0) {
-                    $before = \mb_substr($valueStr, 0, $this->cursorPosition - 1);
-                    $after = \mb_substr($valueStr, $this->cursorPosition);
-                    $this->value = $before . $after;
-                    $this->cursorPosition--;
-                }
-                return true;
-
-            case 'DELETE':
-                if ($this->cursorPosition < \mb_strlen($valueStr)) {
-                    $before = \mb_substr($valueStr, 0, $this->cursorPosition);
-                    $after = \mb_substr($valueStr, $this->cursorPosition + 1);
-                    $this->value = $before . $after;
-                }
-                return true;
-
-            default:
-                // Add character if it's printable
-                if (\mb_strlen($key) === 1 && \ord($key) >= 32 && \ord($key) < 127) {
-                    $before = \mb_substr($valueStr, 0, $this->cursorPosition);
-                    $after = \mb_substr($valueStr, $this->cursorPosition);
-                    $this->value = $before . $key . $after;
-                    $this->cursorPosition++;
-                    return true;
-                }
-                return false;
+    private function handleBackspace(string $valueStr): bool
+    {
+        if ($this->cursorPosition > 0) {
+            $before = \mb_substr($valueStr, 0, $this->cursorPosition - 1);
+            $after = \mb_substr($valueStr, $this->cursorPosition);
+            $this->value = $before . $after;
+            $this->cursorPosition--;
         }
+        return true;
+    }
+
+    private function handleDelete(string $valueStr): bool
+    {
+        if ($this->cursorPosition < \mb_strlen($valueStr)) {
+            $before = \mb_substr($valueStr, 0, $this->cursorPosition);
+            $after = \mb_substr($valueStr, $this->cursorPosition + 1);
+            $this->value = $before . $after;
+        }
+        return true;
+    }
+
+    private function handleCharacterInput(string $key, string $valueStr): bool
+    {
+        // Add character if it's printable
+        if (\mb_strlen($key) === 1 && \ord($key) >= 32 && \ord($key) < 127) {
+            $before = \mb_substr($valueStr, 0, $this->cursorPosition);
+            $after = \mb_substr($valueStr, $this->cursorPosition);
+            $this->value = $before . $key . $after;
+            $this->cursorPosition++;
+            return true;
+        }
+        return false;
     }
 }

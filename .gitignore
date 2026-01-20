@@ -9,3 +9,4 @@ protoc-gen-php-grpc*
 .context
 mcp-*.log
 runtime
+composer.lock

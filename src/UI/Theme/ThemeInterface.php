@@ -134,4 +134,10 @@ interface ThemeInterface
      * Used for: directories, direct dependencies, script names, etc.
      */
     public function getHighlightText(): string;
+
+    /**
+     * Muted/dimmed text color
+     * Used for: secondary information, hints, disabled items
+     */
+    public function getMutedText(): string;
 }

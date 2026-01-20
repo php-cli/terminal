@@ -4,45 +4,23 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Menu;
 
+use Butschster\Commander\Infrastructure\Keyboard\KeyBindingRegistryInterface;
 use Butschster\Commander\UI\Screen\ScreenRegistry;
 
 /**
  * Menu Builder - automatically builds menu system from registered screens
  *
- * Groups screens by category and assigns F-keys automatically.
+ * Groups screens by category and assigns F-keys from the key binding registry.
  */
 final class MenuBuilder
 {
-    /** Default F-key assignments for categories */
-    private const array DEFAULT_FKEY_MAP = [
-        'help' => 'F1',
-        'tools' => 'F2',
-        'files' => 'F3',
-        'system' => 'F4',
-    ];
-
     /** @var array<string, MenuDefinition> */
     private array $menus = [];
 
-    /** @var array<string, string> Custom F-key assignments */
-    private array $fkeyMap = [];
-
     public function __construct(
         private readonly ScreenRegistry $registry,
-    ) {
-        $this->fkeyMap = self::DEFAULT_FKEY_MAP;
-    }
-
-    /**
-     * Set custom F-key mapping for categories
-     *
-     * @param array<string, string> $map Category => F-key mapping
-     */
-    public function withFKeys(array $map): self
-    {
-        $this->fkeyMap = \array_merge($this->fkeyMap, $map);
-        return $this;
-    }
+        private readonly KeyBindingRegistryInterface $keyBindings,
+    ) {}
 
     /**
      * Build menu system from registry
@@ -60,13 +38,15 @@ final class MenuBuilder
                 continue;
             }
 
-            // Get F-key for category (if assigned)
-            $fkey = $this->fkeyMap[$category] ?? null;
+            // Get F-key from registry using action ID convention: menu.{category}
+            $actionId = 'menu.' . $category;
+            $binding = $this->keyBindings->getPrimaryByActionId($actionId);
+            $fkey = $binding?->combination;
 
             // Create menu items from screens
             $items = [];
             foreach ($screens as $metadata) {
-                $items[] = MenuItem::screen(
+                $items[] = ScreenMenuItem::create(
                     $metadata->getDisplayText(),
                     $metadata->name,
                 );
@@ -82,13 +62,13 @@ final class MenuBuilder
             );
         }
 
-        // Add standalone Quit menu with F10
-        // Note: The quit action will be handled by Application via a special marker
+        // Add standalone Quit menu - get F-key from registry (F12 from DefaultKeyBindings)
+        $quitBinding = $this->keyBindings->getPrimaryByActionId('app.quit');
         $this->menus['quit'] = new MenuDefinition(
             'Quit',
-            'F10',
+            $quitBinding?->combination,
             [
-                MenuItem::action('Quit', static function (): void {
+                ActionMenuItem::create('Quit', static function (): void {
                     // This is a marker action that MenuSystem will recognize
                     // It will be handled by Application to actually stop
                 }, 'q'),
@@ -103,9 +83,9 @@ final class MenuBuilder
      * Add custom menu item to category
      *
      * @param string $category Category name
-     * @param MenuItem $item Menu item to add
+     * @param MenuItemInterface $item Menu item to add
      */
-    public function addItem(string $category, MenuItem $item): self
+    public function addItem(string $category, MenuItemInterface $item): self
     {
         if (!isset($this->menus[$category])) {
             throw new \RuntimeException("Category not found: {$category}");
@@ -132,6 +112,6 @@ final class MenuBuilder
      */
     public function addSeparator(string $category): self
     {
-        return $this->addItem($category, MenuItem::separator());
+        return $this->addItem($category, SeparatorMenuItem::create());
     }
 }

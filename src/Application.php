@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace Butschster\Commander;
 
+use Butschster\Commander\Infrastructure\Keyboard\DefaultKeyBindings;
+use Butschster\Commander\Infrastructure\Keyboard\KeyBinding;
+use Butschster\Commander\Infrastructure\Keyboard\KeyBindingRegistry;
+use Butschster\Commander\Infrastructure\Keyboard\KeyBindingRegistryInterface;
+use Butschster\Commander\Infrastructure\Keyboard\KeyCombination;
+use Butschster\Commander\Infrastructure\Terminal\Driver\TerminalDriverInterface;
 use Butschster\Commander\Infrastructure\Terminal\KeyboardHandler;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\Infrastructure\Terminal\TerminalManager;
@@ -12,6 +18,9 @@ use Butschster\Commander\UI\Menu\MenuDefinition;
 use Butschster\Commander\UI\Screen\ScreenInterface;
 use Butschster\Commander\UI\Screen\ScreenManager;
 use Butschster\Commander\UI\Screen\ScreenRegistry;
+use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\ThemeContext;
+use Butschster\Commander\UI\Theme\ThemeManager;
 
 /**
  * Main MC-style console application
@@ -27,10 +36,11 @@ final class Application
     private readonly TerminalManager $terminal;
     private readonly Renderer $renderer;
     private readonly KeyboardHandler $keyboard;
-    private readonly ScreenManager $screenManager;
+    private readonly ThemeContext $themeContext;
+    private readonly KeyBindingRegistryInterface $keyBindings;
 
-    /** @var array<string, callable> Global function key shortcuts */
-    private array $globalShortcuts = [];
+    /** @var array<string, callable> Action handlers by action ID */
+    private array $actionHandlers = [];
 
     /** @var MenuSystem|null Global menu system (menu bar + dropdowns) */
     private ?MenuSystem $menuSystem = null;
@@ -41,15 +51,30 @@ final class Application
     /** Track screen depth to detect screen changes */
     private int $lastScreenDepth = 0;
 
-    public function __construct()
-    {
-        $this->frameTime = 1.0 / $this->targetFps;
+    public function __construct(
+        ?KeyBindingRegistryInterface $keyBindings = null,
+        private readonly ?TerminalDriverInterface $driver = null,
+        private readonly ScreenManager $screenManager = new ScreenManager(),
+    ) {
+        $this->frameTime = 1.0 / (float) $this->targetFps;
 
-        // Initialize services
-        $this->terminal = new TerminalManager();
-        $this->renderer = new Renderer($this->terminal);
-        $this->keyboard = new KeyboardHandler();
-        $this->screenManager = new ScreenManager();
+        // Initialize theme context from current theme
+        $theme = ThemeManager::getCurrentTheme();
+        $this->themeContext = new ThemeContext($theme);
+
+        // Apply theme to ColorScheme for backward compatibility
+        ColorScheme::applyTheme($theme);
+
+        // Initialize services - pass driver to components
+        $this->terminal = new TerminalManager($this->driver);
+        $this->renderer = new Renderer($this->terminal, $this->themeContext, $this->driver);
+        $this->keyboard = new KeyboardHandler(driver: $this->driver);
+
+        // Initialize key bindings
+        $this->keyBindings = $keyBindings ?? $this->createDefaultRegistry();
+
+        // Register core action handlers
+        $this->registerCoreActions();
 
         // Setup signal handlers for graceful shutdown
         $this->setupSignalHandlers();
@@ -61,7 +86,7 @@ final class Application
     public function setTargetFps(int $fps): void
     {
         $this->targetFps = \max(1, \min(60, $fps));
-        $this->frameTime = 1.0 / $this->targetFps;
+        $this->frameTime = 1.0 / (float) $this->targetFps;
     }
 
     /**
@@ -73,9 +98,15 @@ final class Application
     }
 
     /**
+     * Get the key binding registry
+     */
+    public function getKeyBindings(): KeyBindingRegistryInterface
+    {
+        return $this->keyBindings;
+    }
+
+    /**
      * Set menu system from MenuBuilder
-     *
-     * Automatically registers F-key shortcuts for menu navigation.
      *
      * @param array<string, MenuDefinition> $menus
      */
@@ -94,20 +125,49 @@ final class Application
 
         // Set quit callback
         $this->menuSystem->onQuit(fn() => $this->stop());
-
-        // Note: F-key shortcuts are now handled by MenuSystem itself
-        // No need to register them separately as global shortcuts
     }
 
     /**
-     * Register a global function key shortcut
+     * Register handler for an action ID.
      *
-     * @param string $key Function key (e.g., 'F3', 'F4')
+     * @param string $actionId Action ID from KeyBinding (e.g., 'app.quit')
+     * @param callable $handler Handler callback (receives ScreenManager)
+     */
+    public function onAction(string $actionId, callable $handler): void
+    {
+        $this->actionHandlers[$actionId] = $handler;
+    }
+
+    /**
+     * Register a global function key shortcut.
+     *
+     * @deprecated Use onAction() with KeyBinding action IDs instead
+     *
+     * @param string $key Function key (e.g., 'F3', 'Ctrl+R')
      * @param callable $callback Callback to execute (receives ScreenManager)
      */
     public function registerGlobalShortcut(string $key, callable $callback): void
     {
-        $this->globalShortcuts[$key] = $callback;
+        // Create ad-hoc binding for backward compatibility
+        try {
+            $combination = KeyCombination::fromString($key);
+        } catch (\InvalidArgumentException) {
+            // If parsing fails, try direct key match
+            $combination = KeyCombination::fromString($key);
+        }
+
+        $actionId = 'legacy.' . \strtolower(\str_replace(['+', ' '], '_', $key));
+
+        if ($this->keyBindings instanceof KeyBindingRegistry) {
+            $this->keyBindings->register(new KeyBinding(
+                combination: $combination,
+                actionId: $actionId,
+                description: 'Legacy shortcut',
+                category: 'legacy',
+            ));
+        }
+
+        $this->actionHandlers[$actionId] = $callback;
     }
 
     /**
@@ -123,6 +183,13 @@ final class Application
      */
     public function run(ScreenInterface $initialScreen): void
     {
+        // Register shutdown handler as last-resort cleanup
+        \register_shutdown_function(function (): void {
+            if ($this->running) {
+                $this->cleanup();
+            }
+        });
+
         try {
             // Initialize terminal
             $this->terminal->initialize();
@@ -184,7 +251,7 @@ final class Application
 
             // Sleep to maintain target FPS
             if ($frameDuration < $this->frameTime) {
-                \usleep((int) (($this->frameTime - $frameDuration) * 1000000));
+                \usleep((int) (($this->frameTime - $frameDuration) * 1000000.0));
             }
 
             $lastFrameTime = $frameEnd;
@@ -206,24 +273,23 @@ final class Application
                 }
             }
 
-            // Priority 2: Global shortcuts (Ctrl+C, custom shortcuts)
-            if (isset($this->globalShortcuts[$key])) {
-                $callback = $this->globalShortcuts[$key];
-
-                $callback($this->screenManager);
-
-                // Invalidate renderer after global shortcut (likely changed screen)
-                $this->checkScreenChange();
-                continue;
+            // Priority 2: Global key bindings from registry
+            $binding = $this->keyBindings->match($key);
+            if ($binding !== null) {
+                $executed = $this->executeAction($binding->actionId);
+                if ($executed) {
+                    $this->checkScreenChange();
+                    continue;
+                }
             }
 
-            // Priority 4: Route to current screen
+            // Priority 3: Route to current screen
             $handled = $this->screenManager->handleInput($key);
 
             // Check if screen changed (e.g., via navigation in the current screen)
             $this->checkScreenChange();
 
-            // Priority 5: ESC to go back (if not handled by screen)
+            // Priority 4: ESC to go back (if not handled by screen)
             if (!$handled && $key === 'ESCAPE') {
                 if ($this->screenManager->getDepth() > 1) {
                     $this->screenManager->popScreen();
@@ -231,6 +297,19 @@ final class Application
                 }
             }
         }
+    }
+
+    /**
+     * Execute action by ID.
+     */
+    private function executeAction(string $actionId): bool
+    {
+        if (!isset($this->actionHandlers[$actionId])) {
+            return false;
+        }
+
+        ($this->actionHandlers[$actionId])($this->screenManager);
+        return true;
     }
 
     /**
@@ -281,62 +360,22 @@ final class Application
     }
 
     /**
-     * Register F-key shortcut for menu navigation
-     *
-     * When F-key is pressed, navigate to first screen in that menu category.
+     * Create default key binding registry with standard bindings.
      */
-    private function registerMenuShortcut(MenuDefinition $menu): void
+    private function createDefaultRegistry(): KeyBindingRegistry
     {
-        if ($menu->fkey === null || $this->screenRegistry === null) {
-            return;
-        }
+        $registry = new KeyBindingRegistry();
+        DefaultKeyBindings::register($registry);
+        return $registry;
+    }
 
-        // Special handling for F10 (Quit)
-        if ($menu->fkey === 'F10') {
-            $this->registerGlobalShortcut('F10', fn() => $this->stop());
-            return;
-        }
-
-        // Get first screen from menu
-        $firstItem = $menu->getFirstItem();
-        if ($firstItem === null || !$firstItem->isScreen()) {
-            return;
-        }
-
-        $screenName = $firstItem->screenName;
-
-        // Register shortcut to navigate to this screen
-        $this->registerGlobalShortcut($menu->fkey, function (ScreenManager $screenManager) use ($screenName): void {
-            $screen = $this->screenRegistry?->getScreen($screenName);
-
-            if ($screen === null) {
-                return;
-            }
-
-            // Check if we're already on this screen
-            $current = $screenManager->getCurrentScreen();
-            if ($current !== null && $current::class === $screen::class) {
-                // Already on this screen, don't navigate
-                return;
-            }
-
-            // Check if screen is already in stack
-            $found = false;
-            foreach ($screenManager->getStack() as $stackScreen) {
-                if ($stackScreen::class === $screen::class) {
-                    $found = true;
-                    break;
-                }
-            }
-
-            if ($found) {
-                // Screen already in stack, pop until we reach it
-                $screenManager->popUntil(static fn($s): bool => $s::class === $screen::class);
-            } else {
-                // Not in stack, push it
-                $screenManager->pushScreen($screen);
-            }
-        });
+    /**
+     * Register core action handlers.
+     */
+    private function registerCoreActions(): void
+    {
+        // Register quit handler for app.quit action
+        $this->onAction('app.quit', fn() => $this->stop());
     }
 
     /**
@@ -346,6 +385,11 @@ final class Application
     {
         if (!\function_exists('pcntl_signal')) {
             return;
+        }
+
+        // Enable async signals so they work during blocking operations
+        if (\function_exists('pcntl_async_signals')) {
+            \pcntl_async_signals(true);
         }
 
         // Handle SIGINT (Ctrl+C)
@@ -369,6 +413,9 @@ final class Application
      */
     private function cleanup(): void
     {
+        // Prevent double cleanup via shutdown handler
+        $this->running = false;
+
         $this->keyboard->disableNonBlocking();
         $this->terminal->cleanup();
     }

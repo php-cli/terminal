@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\Infrastructure\Terminal;
 
-use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\Infrastructure\Terminal\Driver\TerminalDriverInterface;
+use Butschster\Commander\UI\Theme\ThemeContext;
 
 /**
  * Double-buffered renderer to prevent flickering
@@ -36,12 +37,22 @@ final class Renderer
 
     public function __construct(
         private readonly TerminalManager $terminal,
+        private readonly ThemeContext $themeContext,
+        private readonly ?TerminalDriverInterface $driver = null,
     ) {
         $size = $terminal->getSize();
         $this->width = $size['width'];
         $this->height = $size['height'];
 
         $this->initBuffers();
+    }
+
+    /**
+     * Get the theme context
+     */
+    public function getThemeContext(): ThemeContext
+    {
+        return $this->themeContext;
     }
 
     /**
@@ -52,7 +63,7 @@ final class Renderer
         $this->cellsUpdated = 0;
 
         // Clear back buffer with default background
-        $emptyCell = ['char' => ' ', 'color' => ColorScheme::$NORMAL_TEXT];
+        $emptyCell = ['char' => ' ', 'color' => $this->themeContext->getNormalText()];
 
         for ($y = 0; $y < $this->height; $y++) {
             $this->backBuffer[$y] = \array_fill(0, $this->width, $emptyCell);
@@ -177,8 +188,12 @@ final class Renderer
 
         // Flush all changes at once
         if ($output !== '') {
-            echo $output;
-            \flush();
+            if ($this->driver !== null) {
+                $this->driver->write($output);
+            } else {
+                echo $output;
+                \flush();
+            }
         }
     }
 
@@ -241,7 +256,7 @@ final class Renderer
      */
     private function initBuffers(): void
     {
-        $emptyCell = ['char' => ' ', 'color' => ColorScheme::$NORMAL_TEXT];
+        $emptyCell = ['char' => ' ', 'color' => $this->themeContext->getNormalText()];
 
         for ($y = 0; $y < $this->height; $y++) {
             $this->backBuffer[$y] = \array_fill(0, $this->width, $emptyCell);

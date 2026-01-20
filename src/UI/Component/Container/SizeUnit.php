@@ -71,7 +71,7 @@ final readonly class SizeUnit
     {
         return match ($this->type) {
             SizeType::FIXED => (int) $this->value,
-            SizeType::PERCENTAGE => (int) ($availableSpace * ($this->value / 100)),
+            SizeType::PERCENTAGE => (int) ((float) $availableSpace * ($this->value / 100.0)),
             SizeType::FRACTION => (int) ($this->value * $fractionUnit),
         };
     }

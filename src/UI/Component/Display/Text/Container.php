@@ -27,6 +27,7 @@ final class Container extends TextComponent
         return $this;
     }
 
+    #[\Override]
     protected function render(): string
     {
         $parts = [];

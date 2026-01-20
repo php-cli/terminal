@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Display;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
-use Butschster\Commander\UI\Theme\ColorScheme;
 
 /**
  * Text display component with scrolling support
@@ -19,12 +20,15 @@ final class TextDisplay extends AbstractComponent
     private int $scrollOffset = 0;
     private int $visibleLines = 0;
     private bool $autoScroll = true;
+    private readonly Scrollbar $scrollbar;
 
     /**
      * @param string|\Stringable $text Initial text content
      */
     public function __construct(string|\Stringable $text = '')
     {
+        $this->scrollbar = new Scrollbar();
+
         if ($text !== '') {
             $this->setText($text);
         }
@@ -104,17 +108,19 @@ final class TextDisplay extends AbstractComponent
         }
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
         $this->visibleLines = $height;
+        $theme = $renderer->getThemeContext();
 
         if (empty($this->lines)) {
             return;
         }
 
         // Check if scrollbar is needed and reserve space for it
-        $needsScrollbar = \count($this->lines) > $this->visibleLines;
+        $needsScrollbar = Scrollbar::needsScrollbar(\count($this->lines), $this->visibleLines);
         $contentWidth = $needsScrollbar ? $width - 1 : $width;
 
         // Calculate visible range
@@ -140,7 +146,7 @@ final class TextDisplay extends AbstractComponent
                     $x,
                     $rowY,
                     $wrappedLine,
-                    ColorScheme::$NORMAL_TEXT,
+                    $theme->getNormalText(),
                 );
 
                 $rowY++;
@@ -149,7 +155,16 @@ final class TextDisplay extends AbstractComponent
 
         // Draw scrollbar if needed
         if ($needsScrollbar) {
-            $this->drawScrollbar($renderer, $x + $contentWidth, $y, $height);
+            $this->scrollbar->render(
+                $renderer,
+                x: $x + $contentWidth,
+                y: $y,
+                height: $height,
+                theme: $theme,
+                totalItems: \count($this->lines),
+                visibleItems: $this->visibleLines,
+                scrollOffset: $this->scrollOffset,
+            );
         }
     }
 
@@ -160,41 +175,45 @@ final class TextDisplay extends AbstractComponent
             return false;
         }
 
-        switch ($key) {
-            case 'UP':
-                if ($this->scrollOffset > 0) {
-                    $this->scrollOffset--;
-                    $this->autoScroll = false; // Disable auto-scroll when manually scrolling
-                }
-                return true;
+        $input = KeyInput::from($key);
+        $maxOffset = \max(0, \count($this->lines) - $this->visibleLines);
 
-            case 'DOWN':
-                if ($this->scrollOffset < \count($this->lines) - $this->visibleLines) {
-                    $this->scrollOffset++;
-                }
-                return true;
-
-            case 'PAGE_UP':
-                $this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines);
+        if ($input->is(Key::UP)) {
+            if ($this->scrollOffset > 0) {
+                --$this->scrollOffset;
                 $this->autoScroll = false;
-                return true;
+            }
+            return true;
+        }
 
-            case 'PAGE_DOWN':
-                $this->scrollOffset = \min(
-                    \count($this->lines) - $this->visibleLines,
-                    $this->scrollOffset + $this->visibleLines,
-                );
-                return true;
+        if ($input->is(Key::DOWN)) {
+            if ($this->scrollOffset < $maxOffset) {
+                ++$this->scrollOffset;
+            }
+            return true;
+        }
 
-            case 'HOME':
-                $this->scrollOffset = 0;
-                $this->autoScroll = false;
-                return true;
+        if ($input->is(Key::PAGE_UP)) {
+            $this->scrollOffset = \max(0, $this->scrollOffset - $this->visibleLines);
+            $this->autoScroll = false;
+            return true;
+        }
 
-            case 'END':
-                $this->scrollToBottom();
-                $this->autoScroll = true;
-                return true;
+        if ($input->is(Key::PAGE_DOWN)) {
+            $this->scrollOffset = \min($maxOffset, $this->scrollOffset + $this->visibleLines);
+            return true;
+        }
+
+        if ($input->is(Key::HOME)) {
+            $this->scrollOffset = 0;
+            $this->autoScroll = false;
+            return true;
+        }
+
+        if ($input->is(Key::END)) {
+            $this->scrollToBottom();
+            $this->autoScroll = true;
+            return true;
         }
 
         return false;
@@ -227,26 +246,5 @@ final class TextDisplay extends AbstractComponent
         }
 
         return $wrapped;
-    }
-
-    /**
-     * Draw scrollbar indicator
-     */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
-    {
-        $totalLines = \count($this->lines);
-
-        if ($totalLines <= $this->visibleLines) {
-            return;
-        }
-
-        // Calculate thumb size and position
-        $thumbHeight = \max(1, (int) ($height * $this->visibleLines / $totalLines));
-        $thumbPosition = (int) ($height * $this->scrollOffset / $totalLines);
-
-        for ($i = 0; $i < $height; $i++) {
-            $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
-        }
     }
 }

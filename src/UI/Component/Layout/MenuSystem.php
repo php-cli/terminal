@@ -6,8 +6,11 @@ namespace Butschster\Commander\UI\Component\Layout;
 
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
+use Butschster\Commander\UI\Menu\ActionMenuItem;
 use Butschster\Commander\UI\Menu\MenuDefinition;
-use Butschster\Commander\UI\Menu\MenuItem;
+use Butschster\Commander\UI\Menu\MenuItemInterface;
+use Butschster\Commander\UI\Menu\ScreenMenuItem;
+use Butschster\Commander\UI\Menu\SubmenuMenuItem;
 use Butschster\Commander\UI\Screen\ScreenManager;
 use Butschster\Commander\UI\Screen\ScreenRegistry;
 use Butschster\Commander\UI\Theme\ColorScheme;
@@ -27,14 +30,14 @@ final class MenuSystem extends AbstractComponent
     /** @var array<MenuDefinition> Sorted menus for rendering */
     private array $sortedMenus = [];
 
-    /** @var array<string, int> F-key to menu index mapping */
+    /** @var array<string, string> Raw key string to menu key mapping */
     private array $fkeyMap = [];
 
     private ?MenuDropdown $activeDropdown = null;
     private ?string $activeMenuKey = null;
 
-    /** @var callable|null Callback when quit is requested */
-    private $onQuit = null;
+    /** @var \Closure(): void */
+    private \Closure $onQuit;
 
     /**
      * @param array<string, MenuDefinition> $menus Menu definitions
@@ -46,6 +49,7 @@ final class MenuSystem extends AbstractComponent
         private readonly ScreenRegistry $registry,
         private readonly ScreenManager $screenManager,
     ) {
+        $this->onQuit = static fn() => null;
         $this->initializeMenus();
     }
 
@@ -54,9 +58,10 @@ final class MenuSystem extends AbstractComponent
      */
     public function onQuit(callable $callback): void
     {
-        $this->onQuit = $callback;
+        $this->onQuit = $callback(...);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
@@ -93,16 +98,16 @@ final class MenuSystem extends AbstractComponent
             }
         }
 
-        // Handle F-key menu activation
+        // Handle F-key menu activation using raw key matching
         if (isset($this->fkeyMap[$key])) {
             $menuKey = $this->fkeyMap[$key];
 
-            // Special handling for F10 (Quit) - execute immediately without dropdown
-            if ($key === 'F10') {
+            // Special handling for Quit menu - execute immediately without dropdown
+            if ($menuKey === 'quit') {
                 $menu = $this->menus[$menuKey] ?? null;
                 if ($menu !== null) {
                     $firstItem = $menu->getFirstItem();
-                    if ($firstItem !== null && $firstItem->isAction()) {
+                    if ($firstItem instanceof ActionMenuItem) {
                         $this->handleMenuItemSelected($firstItem);
                         return true;
                     }
@@ -152,10 +157,10 @@ final class MenuSystem extends AbstractComponent
         $this->sortedMenus = $this->menus;
         \uasort($this->sortedMenus, static fn($a, $b) => $a->priority <=> $b->priority);
 
-        // Build F-key map - map F-key directly to menu category key
+        // Build F-key map using KeyCombination::toRawKey() for matching
         foreach ($this->sortedMenus as $categoryKey => $menu) {
             if ($menu->fkey !== null) {
-                $this->fkeyMap[$menu->fkey] = $categoryKey;
+                $this->fkeyMap[$menu->fkey->toRawKey()] = $categoryKey;
             }
         }
     }
@@ -216,10 +221,11 @@ final class MenuSystem extends AbstractComponent
             $renderer->writeAt($currentX, $y, ' ', $textColor);
             $currentX += 1;
 
-            // Render F-key if present (bold white on cyan/black)
+            // Render F-key if present using KeyCombination's __toString()
             if ($menu->fkey !== null) {
-                $renderer->writeAt($currentX, $y, $menu->fkey, $textColor);
-                $currentX += \mb_strlen($menu->fkey);
+                $fkeyText = (string) $menu->fkey;
+                $renderer->writeAt($currentX, $y, $fkeyText, $textColor);
+                $currentX += \mb_strlen($fkeyText);
             }
 
             // Space between F-key and label
@@ -250,18 +256,19 @@ final class MenuSystem extends AbstractComponent
             );
 
             $label = $quitMenu->label;
+            $fkeyText = $quitMenu->fkey !== null ? (string) $quitMenu->fkey : '';
             // Calculate total width: leading space + F-key + space + label + trailing space
-            $quitWidth = 1 + \mb_strlen($quitMenu->fkey ?? '') + 1 + \mb_strlen($label) + 1;
+            $quitWidth = 1 + \mb_strlen($fkeyText) + 1 + \mb_strlen($label) + 1;
             $quitX = $x + $width - $quitWidth - 1; // Position from right edge with 1 space padding
 
             // Render leading space
             $renderer->writeAt($quitX, $y, ' ', $textColor);
             $quitX += 1;
 
-            // Render F-key (F10)
+            // Render F-key (F12)
             if ($quitMenu->fkey !== null) {
-                $renderer->writeAt($quitX, $y, $quitMenu->fkey, $textColor);
-                $quitX += \mb_strlen($quitMenu->fkey);
+                $renderer->writeAt($quitX, $y, $fkeyText, $textColor);
+                $quitX += \mb_strlen($fkeyText);
             }
 
             // Space between F-key and label
@@ -306,7 +313,7 @@ final class MenuSystem extends AbstractComponent
         $this->addChild($this->activeDropdown);
 
         // Set callbacks
-        $this->activeDropdown->onSelect(function (MenuItem $item): void {
+        $this->activeDropdown->onSelect(function (MenuItemInterface $item): void {
             $this->handleMenuItemSelected($item);
         });
 
@@ -329,9 +336,9 @@ final class MenuSystem extends AbstractComponent
                 return $x;
             }
 
-            // Account for F-key width
+            // Account for F-key width using KeyCombination's __toString()
             if ($menu->fkey !== null) {
-                $x += \mb_strlen($menu->fkey);
+                $x += \mb_strlen((string) $menu->fkey);
             }
 
             // Account for label width + spacing
@@ -344,21 +351,29 @@ final class MenuSystem extends AbstractComponent
     /**
      * Handle menu item selection
      */
-    private function handleMenuItemSelected(MenuItem $item): void
+    private function handleMenuItemSelected(MenuItemInterface $item): void
     {
         // Close dropdown first
         $this->closeDropdown();
 
-        // Execute item action based on type
-        if ($item->isScreen()) {
-            $this->navigateToScreen($item->screenName);
-        } elseif ($item->isAction()) {
-            // Check if this is the Quit action
-            if ($item->label === 'Quit' && $this->onQuit !== null) {
-                ($this->onQuit)();
-            } elseif ($item->action !== null) {
-                ($item->action)();
-            }
+        // Execute item action based on type using pattern matching
+        match (true) {
+            $item instanceof ScreenMenuItem => $this->navigateToScreen($item->screenName),
+            $item instanceof ActionMenuItem => $this->executeAction($item),
+            $item instanceof SubmenuMenuItem => null, // TODO: Handle submenu opening
+            default => null,
+        };
+    }
+
+    /**
+     * Execute action menu item
+     */
+    private function executeAction(ActionMenuItem $item): void
+    {
+        if ($item->getLabel() === 'Quit') {
+            ($this->onQuit)();
+        } else {
+            ($item->action)();
         }
     }
 

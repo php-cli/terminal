@@ -26,8 +26,8 @@ final class SplitLayout extends AbstractLayoutComponent
         int $gap = 0,
     ) {
         // Calculate percentages from ratio
-        $firstPercent = ($ratio * 100) . '%';
-        $secondPercent = ((1.0 - $ratio) * 100) . '%';
+        $firstPercent = (int) ($ratio * 100.0) . '%';
+        $secondPercent = (int) ((1.0 - $ratio) * 100.0) . '%';
 
         // Create grid based on direction
         if ($direction === Direction::HORIZONTAL) {
@@ -102,6 +102,7 @@ final class SplitLayout extends AbstractLayoutComponent
         return $this->grid->getMinSize();
     }
 
+    #[\Override]
     protected function draw(Renderer $renderer, int $x, int $y): void
     {
         $this->grid->render($renderer, $x, $y, $this->allocatedWidth, $this->allocatedHeight);

@@ -31,6 +31,7 @@ final class StatusBar extends AbstractComponent
         $this->hints = $hints;
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);

@@ -4,29 +4,40 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Display;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
-use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Component\Concerns\HandlesInput;
 
 /**
  * Scrollable list component with keyboard navigation
  */
 final class ListComponent extends AbstractComponent
 {
+    use HandlesInput;
+
     private int $selectedIndex = 0;
     private int $scrollOffset = 0;
     private int $visibleRows = 0;
 
-    /** @var callable|null Callback when item is selected */
-    private $onSelect = null;
+    /** @var \Closure(string, int): void */
+    private \Closure $onSelect;
 
-    /** @var callable|null Callback when selection changes */
-    private $onChange = null;
+    /** @var \Closure(string|null, int): void */
+    private \Closure $onChange;
+
+    private readonly Scrollbar $scrollbar;
 
     /**
      * @param array<string> $items
      */
-    public function __construct(private array $items = []) {}
+    public function __construct(private array $items = [])
+    {
+        $this->scrollbar = new Scrollbar();
+        $this->onSelect = static fn(string $item, int $index) => null;
+        $this->onChange = static fn(?string $item, int $index) => null;
+    }
 
     /**
      * Set list items
@@ -39,10 +50,7 @@ final class ListComponent extends AbstractComponent
         $this->selectedIndex = 0;
         $this->scrollOffset = 0;
 
-        // Trigger change callback
-        if ($this->onChange !== null) {
-            ($this->onChange)($this->getSelectedItem(), $this->selectedIndex);
-        }
+        ($this->onChange)($this->getSelectedItem(), $this->selectedIndex);
     }
 
     /**
@@ -68,7 +76,7 @@ final class ListComponent extends AbstractComponent
      */
     public function onSelect(callable $callback): void
     {
-        $this->onSelect = $callback;
+        $this->onSelect = $callback(...);
     }
 
     /**
@@ -78,13 +86,15 @@ final class ListComponent extends AbstractComponent
      */
     public function onChange(callable $callback): void
     {
-        $this->onChange = $callback;
+        $this->onChange = $callback(...);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
         $this->visibleRows = $height;
+        $theme = $renderer->getThemeContext();
 
         if (empty($this->items)) {
             // Show empty state
@@ -92,12 +102,12 @@ final class ListComponent extends AbstractComponent
             $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
             $emptyY = $y + (int) ($height / 2);
 
-            $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::$NORMAL_TEXT);
+            $renderer->writeAt($emptyX, $emptyY, $emptyText, $theme->getNormalText());
             return;
         }
 
         // Check if scrollbar is needed and reserve space for it
-        $needsScrollbar = \count($this->items) > $this->visibleRows;
+        $needsScrollbar = Scrollbar::needsScrollbar(\count($this->items), $this->visibleRows);
         $contentWidth = $needsScrollbar ? $width - 1 : $width;
 
         // Calculate visible range
@@ -121,92 +131,76 @@ final class ListComponent extends AbstractComponent
                     $x,
                     $rowY,
                     $displayText,
-                    ColorScheme::$SELECTED_TEXT,
+                    $theme->getSelectedText(),
                 );
             } else {
                 $renderer->writeAt(
                     $x,
                     $rowY,
                     $displayText,
-                    ColorScheme::$NORMAL_TEXT,
+                    $theme->getNormalText(),
                 );
             }
         }
 
         // Draw scrollbar if needed
         if ($needsScrollbar) {
-            $this->drawScrollbar($renderer, $x + $contentWidth, $y, $height);
+            $this->scrollbar->render(
+                $renderer,
+                x: $x + $contentWidth,
+                y: $y,
+                height: $height,
+                theme: $theme,
+                totalItems: \count($this->items),
+                visibleItems: $this->visibleRows,
+                scrollOffset: $this->scrollOffset,
+            );
         }
     }
 
     #[\Override]
     public function handleInput(string $key): bool
     {
+        $input = KeyInput::from($key);
         $oldIndex = $this->selectedIndex;
 
-        switch ($key) {
-            case 'UP':
-                if ($this->selectedIndex > 0) {
-                    $this->selectedIndex--;
-                    $this->adjustScroll();
-                }
-                break;
+        // Handle vertical navigation using trait
+        $handled = $this->handleVerticalNavigation(
+            $input,
+            $this->selectedIndex,
+            \count($this->items),
+            $this->visibleRows,
+        );
 
-            case 'DOWN':
-                if ($this->selectedIndex < \count($this->items) - 1) {
-                    $this->selectedIndex++;
-                    $this->adjustScroll();
-                }
-                break;
-
-            case 'PAGE_UP':
-                $this->selectedIndex = \max(0, $this->selectedIndex - $this->visibleRows);
-                $this->adjustScroll();
-                break;
-
-            case 'PAGE_DOWN':
-                $this->selectedIndex = \min(
-                    \count($this->items) - 1,
-                    $this->selectedIndex + $this->visibleRows,
-                );
-                $this->adjustScroll();
-                break;
-
-            case 'HOME':
-                $this->selectedIndex = 0;
-                $this->adjustScroll();
-                break;
-
-            case 'END':
-                $this->selectedIndex = \count($this->items) - 1;
-                $this->adjustScroll();
-                break;
-
-            case 'ENTER':
-                if ($this->onSelect !== null) {
-                    $item = $this->getSelectedItem();
-                    if ($item !== null) {
-                        ($this->onSelect)($item, $this->selectedIndex);
-                    }
-                }
-                return true;
-
-            default:
-                return false;
+        if ($handled !== null) {
+            $this->adjustScroll();
+            if ($oldIndex !== $this->selectedIndex) {
+                ($this->onChange)($this->getSelectedItem(), $this->selectedIndex);
+            }
+            return true;
         }
 
-        // Trigger change callback if selection changed
-        if ($oldIndex !== $this->selectedIndex && $this->onChange !== null) {
-            ($this->onChange)($this->getSelectedItem(), $this->selectedIndex);
+        // Handle Enter key
+        if ($input->is(Key::ENTER)) {
+            return $this->handleEnter();
         }
 
-        return true;
+        return false;
     }
 
     #[\Override]
     public function getMinSize(): array
     {
         return ['width' => 20, 'height' => 5];
+    }
+
+    private function handleEnter(): bool
+    {
+        $item = $this->getSelectedItem();
+        if ($item !== null) {
+            ($this->onSelect)($item, $this->selectedIndex);
+        }
+        return true;
     }
 
     /**
@@ -220,23 +214,6 @@ final class ListComponent extends AbstractComponent
         } // Scroll down if selected item is below visible area
         elseif ($this->selectedIndex >= $this->scrollOffset + $this->visibleRows) {
             $this->scrollOffset = $this->selectedIndex - $this->visibleRows + 1;
-        }
-    }
-
-    /**
-     * Draw scrollbar indicator
-     */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
-    {
-        $totalItems = \count($this->items);
-
-        // Calculate thumb size and position
-        $thumbHeight = \max(1, (int) ($height * $this->visibleRows / $totalItems));
-        $thumbPosition = (int) ($height * $this->scrollOffset / $totalItems);
-
-        for ($i = 0; $i < $height; $i++) {
-            $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
         }
     }
 }

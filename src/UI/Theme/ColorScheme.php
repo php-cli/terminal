@@ -85,6 +85,7 @@ final class ColorScheme
     public static string $ERROR_TEXT;
     public static string $WARNING_TEXT;
     public static string $HIGHLIGHT_TEXT;
+    public static string $MUTED_TEXT;
 
     /**
      * Initialize theme colors from current theme
@@ -119,6 +120,7 @@ final class ColorScheme
         self::$ERROR_TEXT = $theme->getErrorText();
         self::$WARNING_TEXT = $theme->getWarningText();
         self::$HIGHLIGHT_TEXT = $theme->getHighlightText();
+        self::$MUTED_TEXT = $theme->getMutedText();
     }
 
     /**

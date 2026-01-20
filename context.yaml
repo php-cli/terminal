@@ -1,5 +1,95 @@
 $schema: 'https://raw.githubusercontent.com/context-hub/generator/refs/heads/main/json-schema.json'
 
+import:
+  - path: ./docs
+    format: md
+  - url: https://gist.githubusercontent.com/butschster/29e84fb9c976ac837181141f88049a35/raw/ed38539950f8c9c45ca8c67f9e026a837c97bc66/01-dev-prompts.yaml
+    type: url
+
+projects:
+  - name: ctx-docs
+    description: CTX docs
+
+tools:
+  - id: test
+    description: 'Run PHPUnit tests'
+    type: run
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - "--colors=always"
+
+  - id: test-unit
+    description: 'Run unit tests only'
+    type: run
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - "--testsuite=Unit"
+          - "--colors=always"
+
+  - id: test-integration
+    description: 'Run integration tests only'
+    type: run
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - "--testsuite=Integration"
+          - "--colors=always"
+
+  - id: test-e2e
+    description: 'Run E2E tests only'
+    type: run
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - "--testsuite=E2E"
+          - "--colors=always"
+
+  - id: test-filter
+    description: 'Run tests matching a filter pattern'
+    type: run
+    schema:
+      type: object
+      properties:
+        filter:
+          type: string
+          description: 'Filter pattern to match test names'
+      required:
+        - filter
+    commands:
+      - cmd: vendor/bin/phpunit
+        args:
+          - --filter
+          - '{{filter}}'
+          - --colors=always
+
+#  - id: terminal
+#    description: 'Terminal'
+#    type: run
+#    commands:
+#      - cmd: php
+#        workingDir: .
+#        args:
+#          - console
+
+  - id: ctx-docs
+    description: 'CTX docs'
+    type: http
+    schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: "Question or task to get documentation for"
+    requests:
+      - url: "https://context7.com/api/v2/context"
+        method: "GET"
+        query:
+          libraryId: "/context-hub/generator"
+          type: "txt"
+          query: "{{query}}"
+
 documents:
   - description: 'PHP Project Structure'
     outputPath: docs/php-structure.md
@@ -7,75 +97,3 @@ documents:
       - type: tree
         sourcePaths:
           - src
-
-  - description: Core
-    outputPath: core.md
-    sources:
-      - type: file
-        sourcePaths:
-          - src/Infrastructure
-          - src/UI/Screen
-          - src/UI/Component/Container
-          - src/UI/Component/Decorator
-          - src/UI/Component/Layout
-
-  - description: Table component
-    outputPath: table.md
-    sources:
-      - type: file
-        sourcePaths:
-          - src/UI/Component/Display/TableComponent.php
-          - src/UI/Component/Display/TableColumn.php
-          - src/Feature/ComposerManager/Tab/InstalledPackagesTab.php
-          - console
-
-  - description: Components
-    outputPath: table.md
-    sources:
-      - type: file
-        sourcePaths:
-          - src/UI/Component/Display/Text
-          - src/Feature/ComposerManager/Component
-          - src/Feature/ComposerManager/Tab/InstalledPackagesTab.php
-          - src/UI/Component/Display/TextDisplay.php
-
-  - description: Menu
-    outputPath: menu.md
-    sources:
-      - type: file
-        sourcePaths:
-          - src/UI/Menu
-          - console
-
-  - description: File Browser
-    outputPath: file.md
-    sources:
-      - type: tree
-        sourcePaths:
-          - src
-      - type: file
-        sourcePaths:
-          - console
-          - src/Feature/FileBrowser
-
-  - description: Command Browser
-    outputPath: command.md
-    sources:
-      - type: tree
-        sourcePaths:
-          - src
-      - type: file
-        sourcePaths:
-          - console
-          - src/Feature/CommandBrowser
-
-  - description: Composer manager
-    outputPath: composer.md
-    sources:
-      - type: tree
-        sourcePaths:
-          - src
-      - type: file
-        sourcePaths:
-          - console
-          - src/Feature/ComposerManager

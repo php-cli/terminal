@@ -38,6 +38,7 @@ final class TextBlock extends TextComponent
         return new self(\implode($separator, $values));
     }
 
+    #[\Override]
     protected function render(): string
     {
         if ($this->wrapWidth > 0) {

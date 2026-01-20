@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Butschster\Commander\UI\Component\Display;
 
+use Butschster\Commander\Infrastructure\Keyboard\Key;
+use Butschster\Commander\Infrastructure\Keyboard\KeyInput;
 use Butschster\Commander\Infrastructure\Terminal\Renderer;
 use Butschster\Commander\UI\Component\AbstractComponent;
+use Butschster\Commander\UI\Component\Concerns\HandlesInput;
 use Butschster\Commander\UI\Theme\ColorScheme;
+use Butschster\Commander\UI\Theme\ThemeContext;
 
 /**
  * Generic table component with configurable columns
@@ -36,6 +40,10 @@ use Butschster\Commander\UI\Theme\ColorScheme;
  */
 final class TableComponent extends AbstractComponent
 {
+    use HandlesInput;
+
+    private readonly Scrollbar $scrollbar;
+
     /** @var array<int, array<string, mixed>> */
     private array $rows = [];
 
@@ -46,17 +54,22 @@ final class TableComponent extends AbstractComponent
     /** @var array<int, int> Calculated column widths in characters */
     private array $calculatedWidths = [];
 
-    /** @var callable|null Callback when item is selected (Enter pressed) */
-    private $onSelect = null;
+    /** @var \Closure(array<string, mixed>, int): void */
+    private \Closure $onSelect;
 
-    /** @var callable|null Callback when selection changes (arrow keys) */
-    private $onChange = null;
+    /** @var \Closure(array<string, mixed>, int): void */
+    private \Closure $onChange;
 
     /**
      * @param array<TableColumn> $columns Column definitions
      * @param bool $showHeader Whether to show header row
      */
-    public function __construct(private array $columns = [], private bool $showHeader = true) {}
+    public function __construct(private array $columns = [], private bool $showHeader = true)
+    {
+        $this->scrollbar = new Scrollbar();
+        $this->onSelect = static fn(array $row, int $index) => null;
+        $this->onChange = static fn(array $row, int $index) => null;
+    }
 
     /**
      * Set table columns
@@ -80,8 +93,7 @@ final class TableComponent extends AbstractComponent
         $this->selectedIndex = 0;
         $this->scrollOffset = 0;
 
-        // Trigger change callback
-        if ($this->onChange !== null && !empty($this->rows)) {
+        if (!empty($this->rows)) {
             ($this->onChange)($this->rows[$this->selectedIndex], $this->selectedIndex);
         }
     }
@@ -121,7 +133,7 @@ final class TableComponent extends AbstractComponent
             $this->selectedIndex = $index;
             $this->adjustScroll();
 
-            if ($this->onChange !== null && !empty($this->rows)) {
+            if (!empty($this->rows)) {
                 ($this->onChange)($this->rows[$this->selectedIndex], $this->selectedIndex);
             }
         }
@@ -134,7 +146,7 @@ final class TableComponent extends AbstractComponent
      */
     public function onSelect(callable $callback): void
     {
-        $this->onSelect = $callback;
+        $this->onSelect = $callback(...);
     }
 
     /**
@@ -144,15 +156,20 @@ final class TableComponent extends AbstractComponent
      */
     public function onChange(callable $callback): void
     {
-        $this->onChange = $callback;
+        $this->onChange = $callback(...);
     }
 
+    #[\Override]
     public function render(Renderer $renderer, int $x, int $y, int $width, int $height): void
     {
         $this->setBounds($x, $y, $width, $height);
+        $theme = $renderer->getThemeContext();
+
+        // Calculate visible rows accounting for header
+        $this->visibleRows = $this->showHeader ? $height - 2 : $height;
 
         // Check if scrollbar is needed
-        $needsScrollbar = \count($this->rows) > ($this->showHeader ? $height - 2 : $height);
+        $needsScrollbar = Scrollbar::needsScrollbar(\count($this->rows), $this->visibleRows);
 
         // Reserve space for scrollbar if needed
         $contentWidth = $needsScrollbar ? $width - 1 : $width;
@@ -166,23 +183,18 @@ final class TableComponent extends AbstractComponent
 
         // Render header if enabled
         if ($this->showHeader) {
-            $this->renderHeader($renderer, $x, $currentY, $contentWidth);
+            $this->renderHeader($renderer, $x, $currentY, $contentWidth, $theme);
             $currentY += 1;
 
             // Render separator line
             $separator = \str_repeat('─', $contentWidth);
-            $renderer->writeAt($x, $currentY, $separator, ColorScheme::$INACTIVE_BORDER);
+            $renderer->writeAt($x, $currentY, $separator, $theme->getInactiveBorder());
             $currentY += 1;
-
-            // Adjust visible rows to account for header
-            $this->visibleRows = $height - 2;
-        } else {
-            $this->visibleRows = $height;
         }
 
         if (empty($this->rows)) {
             // Show empty state
-            $this->renderEmptyState($renderer, $x, $currentY, $contentWidth, $this->visibleRows);
+            $this->renderEmptyState($renderer, $x, $currentY, $contentWidth, $this->visibleRows, $theme);
             return;
         }
 
@@ -199,12 +211,21 @@ final class TableComponent extends AbstractComponent
             $row = $this->rows[$i];
             $selected = ($i === $this->selectedIndex);
 
-            $this->renderRow($renderer, $x, $rowY, $contentWidth, $row, $selected);
+            $this->renderRow($renderer, $x, $rowY, $contentWidth, $row, $selected, $theme);
         }
 
         // Draw scrollbar if needed
         if ($needsScrollbar) {
-            $this->drawScrollbar($renderer, $x + $contentWidth, $currentY, $this->visibleRows);
+            $this->scrollbar->render(
+                $renderer,
+                x: $x + $contentWidth,
+                y: $currentY,
+                height: $this->visibleRows,
+                theme: $theme,
+                totalItems: \count($this->rows),
+                visibleItems: $this->visibleRows,
+                scrollOffset: $this->scrollOffset,
+            );
         }
     }
 
@@ -215,62 +236,31 @@ final class TableComponent extends AbstractComponent
             return false;
         }
 
+        $input = KeyInput::from($key);
         $oldIndex = $this->selectedIndex;
 
-        switch ($key) {
-            case 'UP':
-                if ($this->selectedIndex > 0) {
-                    $this->selectedIndex--;
-                    $this->adjustScroll();
-                }
-                break;
+        // Handle vertical navigation using trait
+        $handled = $this->handleVerticalNavigation(
+            $input,
+            $this->selectedIndex,
+            \count($this->rows),
+            $this->visibleRows,
+        );
 
-            case 'DOWN':
-                if ($this->selectedIndex < \count($this->rows) - 1) {
-                    $this->selectedIndex++;
-                    $this->adjustScroll();
-                }
-                break;
-
-            case 'PAGE_UP':
-                $this->selectedIndex = \max(0, $this->selectedIndex - $this->visibleRows);
-                $this->adjustScroll();
-                break;
-
-            case 'PAGE_DOWN':
-                $this->selectedIndex = \min(
-                    \count($this->rows) - 1,
-                    $this->selectedIndex + $this->visibleRows,
-                );
-                $this->adjustScroll();
-                break;
-
-            case 'HOME':
-                $this->selectedIndex = 0;
-                $this->adjustScroll();
-                break;
-
-            case 'END':
-                $this->selectedIndex = \count($this->rows) - 1;
-                $this->adjustScroll();
-                break;
-
-            case 'ENTER':
-                if ($this->onSelect !== null) {
-                    ($this->onSelect)($this->rows[$this->selectedIndex], $this->selectedIndex);
-                }
-                return true;
-
-            default:
-                return false;
+        if ($handled !== null) {
+            $this->adjustScroll();
+            if ($oldIndex !== $this->selectedIndex) {
+                ($this->onChange)($this->rows[$this->selectedIndex], $this->selectedIndex);
+            }
+            return true;
         }
 
-        // Trigger change callback if selection changed
-        if ($oldIndex !== $this->selectedIndex && $this->onChange !== null) {
-            ($this->onChange)($this->rows[$this->selectedIndex], $this->selectedIndex);
+        // Handle Enter key
+        if ($input->is(Key::ENTER)) {
+            return $this->handleEnter();
         }
 
-        return true;
+        return false;
     }
 
     #[\Override]
@@ -284,6 +274,12 @@ final class TableComponent extends AbstractComponent
         );
 
         return ['width' => \max($minWidth, 60), 'height' => 10];
+    }
+
+    private function handleEnter(): bool
+    {
+        ($this->onSelect)($this->rows[$this->selectedIndex], $this->selectedIndex);
+        return true;
     }
 
     /**
@@ -306,7 +302,7 @@ final class TableComponent extends AbstractComponent
             } elseif (\str_ends_with($width, '%')) {
                 // Percentage width
                 $percentage = (float) \rtrim($width, '%');
-                $calculatedWidth = (int) ($totalWidth * $percentage / 100);
+                $calculatedWidth = (int) ((float) $totalWidth * $percentage / 100.0);
                 $this->calculatedWidths[$index] = \min($calculatedWidth, $remainingWidth);
                 $remainingWidth -= $this->calculatedWidths[$index];
             } elseif ($width === '*') {
@@ -328,7 +324,7 @@ final class TableComponent extends AbstractComponent
     /**
      * Render header row
      */
-    private function renderHeader(Renderer $renderer, int $x, int $y, int $width): void
+    private function renderHeader(Renderer $renderer, int $x, int $y, int $width, ThemeContext $theme): void
     {
         $headerParts = [];
         $currentX = 0;
@@ -351,7 +347,7 @@ final class TableComponent extends AbstractComponent
             $x,
             $y,
             $headerLine,
-            ColorScheme::combine(ColorScheme::$NORMAL_BG, ColorScheme::FG_YELLOW, ColorScheme::BOLD),
+            $theme->getNormalColors()->withStyle(ColorScheme::FG_YELLOW . ColorScheme::BOLD),
         );
     }
 
@@ -367,13 +363,14 @@ final class TableComponent extends AbstractComponent
         int $width,
         array $row,
         bool $selected,
+        ThemeContext $theme,
     ): void {
         $currentX = $x;
 
         // Default color
         $defaultColor = $selected && $this->isFocused()
-            ? ColorScheme::$SELECTED_TEXT
-            : ColorScheme::$NORMAL_TEXT;
+            ? $theme->getSelectedText()
+            : $theme->getNormalText();
 
         foreach ($this->columns as $index => $column) {
             $colWidth = $this->calculatedWidths[$index] ?? 10;
@@ -400,13 +397,13 @@ final class TableComponent extends AbstractComponent
     /**
      * Render empty state message
      */
-    private function renderEmptyState(Renderer $renderer, int $x, int $y, int $width, int $height): void
+    private function renderEmptyState(Renderer $renderer, int $x, int $y, int $width, int $height, ThemeContext $theme): void
     {
         $emptyText = '(No data)';
         $emptyX = $x + (int) (($width - \mb_strlen($emptyText)) / 2);
         $emptyY = $y + (int) ($height / 2);
 
-        $renderer->writeAt($emptyX, $emptyY, $emptyText, ColorScheme::$NORMAL_TEXT);
+        $renderer->writeAt($emptyX, $emptyY, $emptyText, $theme->getNormalText());
     }
 
     /**
@@ -443,23 +440,6 @@ final class TableComponent extends AbstractComponent
             $this->scrollOffset = $this->selectedIndex;
         } elseif ($this->selectedIndex >= $this->scrollOffset + $this->visibleRows) {
             $this->scrollOffset = $this->selectedIndex - $this->visibleRows + 1;
-        }
-    }
-
-    /**
-     * Draw scrollbar indicator
-     */
-    private function drawScrollbar(Renderer $renderer, int $x, int $y, int $height): void
-    {
-        $totalItems = \count($this->rows);
-
-        // Calculate thumb size and position
-        $thumbHeight = \max(1, (int) ($height * $this->visibleRows / $totalItems));
-        $thumbPosition = (int) ($height * $this->scrollOffset / $totalItems);
-
-        for ($i = 0; $i < $height; $i++) {
-            $char = ($i >= $thumbPosition && $i < $thumbPosition + $thumbHeight) ? '█' : '░';
-            $renderer->writeAt($x, $y + $i, $char, ColorScheme::$SCROLLBAR);
         }
     }
 }
